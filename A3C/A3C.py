@@ -1,5 +1,5 @@
 import logging
-from multiprocessing import Value, Array, Lock
+from multiprocessing import Value, Array, Lock, Pool
 
 import gym
 import torch
@@ -43,3 +43,7 @@ class A3C(object):
 
         optimizer = SharedRMSProp(shared_model.parameters(), lr=self.lr)
         optimizer.share_memory()
+
+        # TODO
+        # worker
+        Pool()

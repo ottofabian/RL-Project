@@ -19,8 +19,8 @@ class ActorCritic(torch.nn.Module):
         self.fc1 = nn.Linear(n_inputs, 512)
 
         n_outputs = action_space.n
-        self.critic_linear = nn.Linear(256, 1)
-        self.actor_linear = nn.Linear(256, n_outputs)
+        self.critic_linear = nn.Linear(1)
+        self.actor_linear = nn.Linear(n_outputs)
 
         self.apply(self.init_weights)
 

@@ -94,7 +94,7 @@ class Worker(object):
                 state, reward, done, _ = self.env.step(action.numpy())
 
                 done = done or t >= self.t_max
-                reward = max(min(reward, 1), -1)
+                # reward = max(min(reward, 1), -1)
 
                 with self.T.get_lock():
                     self.T.value += 1
@@ -116,7 +116,7 @@ class Worker(object):
 
             # if non terminal state is present
             if not done:
-                value, _, _ = model(state.unsqueeze(0))
+                value, _ = model(state.unsqueeze(0))
                 R = value.detach()
 
             values.append(R)
