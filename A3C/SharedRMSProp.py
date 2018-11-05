@@ -5,8 +5,8 @@ import torch.optim as optim
 
 class SharedRMSProp(optim.RMSprop):
 
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0):
-        super(SharedRMSProp, self).__init__(params, lr, betas, eps, weight_decay)
+    def __init__(self, params, lr=1e-2, alpha=0.99, eps=1e-8, weight_decay=0, momentum=0, centered=False):
+        super(SharedRMSProp, self).__init__(params, lr, alpha, eps, weight_decay, momentum, centered)
 
     def share_memory(self):
         raise NotImplementedError

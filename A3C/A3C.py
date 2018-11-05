@@ -1,49 +1,55 @@
 import logging
-from multiprocessing import Value, Array, Lock, Pool
+from multiprocessing import Value
 
 import gym
 import torch
 
-from A3C.ActorCritic import ActorCritic
-from A3C.SharedRMSProp import SharedRMSProp
+from A3C.ActorCriticNetwork import ActorCriticNetwork
 from A3C.Worker import Worker
 
 
 class A3C(object):
 
-    def __init__(self, n_worker, env_name):
+    def __init__(self, n_worker: int, env_name: str) -> None:
         self.seed = 123
         self.env_name = env_name
         self.lr = 1e-4  # Paper sampled between 1e-4 to 1e-2
 
-        # parameters
-        self.theta = Array()  # TODO
-        self.theta_v = Array()  # TODO
-        self.T = Value('i', 0)  # global counter
-        self.lock = Lock()
+        # global counter
+        self.T = Value('i', 0)
 
+        # worker handling
         self.n_worker = n_worker
         self.worker_pool = []
 
         self.logger = logging.getLogger(__name__)
 
-    def create_worker(self, theta, theta_v, T, env_name):
-        """
-        Create new worker instance
-        :return:
-        """
-        worker = Worker(theta=theta, theta_v=theta_v, T=T, env_name=env_name)
-        self.worker_pool.append(worker)
-
     def run(self):
         torch.manual_seed(self.seed)
         env = gym.make(self.env_name)
-        shared_model = ActorCritic(env.observation_space.shape[0], env.action_space)
-        shared_model.share_memory()
-
-        optimizer = SharedRMSProp(shared_model.parameters(), lr=self.lr)
-        optimizer.share_memory()
+        global_model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space)
+        global_model.share_memory()
 
         # TODO
-        # worker
-        Pool()
+        # optimizer = SharedRMSProp(global_model.parameters(), lr=self.lr)
+        # optimizer.share_memory()
+
+        w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T, seed=self.seed,
+                   lr=self.lr, n_steps=20, t_max=100000, gamma=.99, tau=1, beta=.01, value_loss_coef=.5, optimizer=None,
+                   is_train=False)
+        w.start()
+        self.worker_pool.append(w)
+
+        for wid in range(0, self.n_worker):
+            print("Worker {} created".format(wid))
+            w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, seed=self.seed,
+                       lr=self.lr, t_max=100000, optimizer=None, is_train=True)
+            w.start()
+            self.worker_pool.append(w)
+
+        for w in self.worker_pool:
+            w.join()
+
+    def stop(self):
+        self.worker_pool = []
+        self.T = Value('i', 0)
