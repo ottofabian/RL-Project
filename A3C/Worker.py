@@ -55,10 +55,8 @@ class Worker(Thread):
         # shared params
         self.optimizer = optimizer
         self.global_model = global_model
-        self.n_worker = worker_id
+        self.worker_id = worker_id
         self.T = T
-
-        print(worker_id, T, is_train)
 
         # logging instance
         self.logger = logging.getLogger(__name__)
@@ -66,9 +64,9 @@ class Worker(Thread):
     def train(self):
         # code from https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
 
-        torch.manual_seed(self.seed + self.n_worker)
+        torch.manual_seed(self.seed + self.worker_id)
 
-        self.env.seed(self.seed + self.n_worker)
+        self.env.seed(self.seed + self.worker_id)
 
         model = ActorCriticNetwork(self.env.observation_space.shape[0], self.env.action_space)
 
@@ -95,7 +93,7 @@ class Worker(Thread):
 
             for step in range(self.n_steps):
                 t += 1
-                # print(t)
+                print(self.worker_id, self.T)
                 value, logit, = model(state.unsqueeze(0))
                 prob = F.softmax(logit, dim=-1)
                 log_prob = F.log_softmax(logit, dim=-1)
@@ -146,6 +144,7 @@ class Worker(Thread):
                 shared_param._grad = param.grad
 
             self.optimizer.step()
+            print("end", self.worker_id)
 
     def compute_loss(self, R, rewards, values, log_probs, entropies):
         policy_loss = 0
@@ -173,10 +172,10 @@ class Worker(Thread):
 
     def test(self):
 
-        torch.manual_seed(self.seed + self.n_worker)
+        torch.manual_seed(self.seed + self.worker_id)
 
         env = gym.make(self.env_name)
-        env.seed(self.seed + self.n_worker)
+        env.seed(self.seed + self.worker_id)
 
         model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space)
         model.eval()
