@@ -35,15 +35,15 @@ class A3C(object):
         # optimizer.share_memory()
 
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T, seed=self.seed,
-                   lr=self.lr, n_steps=20, t_max=100000, gamma=.99, tau=1, beta=.01, value_loss_coef=.5, optimizer=None,
-                   is_train=False)
+                   lr=self.lr, t_max=100000, optimizer=None, is_train=False)
         w.start()
         self.worker_pool.append(w)
 
         for wid in range(0, self.n_worker):
             print("Worker {} created".format(wid))
-            w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, seed=self.seed,
-                       lr=self.lr, t_max=100000, optimizer=None, is_train=True)
+            w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, T=self.T,
+                       seed=self.seed, lr=self.lr, n_steps=20, t_max=100000, gamma=.99, tau=1, beta=.01,
+                       value_loss_coef=.5, optimizer=None, is_train=True)
             w.start()
             self.worker_pool.append(w)
 

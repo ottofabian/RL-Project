@@ -13,7 +13,7 @@ from A3C.ActorCriticNetwork import ActorCriticNetwork
 
 class Worker(Thread):
 
-    def __init__(self, env_name: str, worker_id: int, global_model: ActorCriticNetwork, seed: int, T: Value = None,
+    def __init__(self, env_name: str, worker_id: int, global_model: ActorCriticNetwork, seed: int, T: Value,
                  lr: float = 1e-4, n_steps: int = 0, t_max: int = 100000, gamma: float = .99,
                  tau: float = 1, beta: float = .01, value_loss_coef: float = .5,
                  optimizer: Optimizer = None, is_train: bool = True) -> None:
@@ -58,21 +58,13 @@ class Worker(Thread):
         self.n_worker = worker_id
         self.T = T
 
+        print(worker_id, T, is_train)
+
         # logging instance
         self.logger = logging.getLogger(__name__)
 
-    def run(self):
-        if self.is_train:
-            self.train()
-        else:
-            self.test()
-
     def train(self):
-        """
-         code from https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
-
-        :return:
-        """
+        # code from https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
 
         torch.manual_seed(self.seed + self.n_worker)
 
@@ -99,9 +91,11 @@ class Worker(Thread):
             rewards = []
             entropies = []
 
+            # print(self.n_steps, self.is_train)
+
             for step in range(self.n_steps):
                 t += 1
-                print(t)
+                # print(t)
                 value, logit, = model(state.unsqueeze(0))
                 prob = F.softmax(logit, dim=-1)
                 log_prob = F.log_softmax(logit, dim=-1)
@@ -113,7 +107,7 @@ class Worker(Thread):
                 action = prob.multinomial(num_samples=1).detach()
                 log_prob = log_prob.gather(1, action)
 
-                state, reward, done, _ = self.env.step(action.numpy())
+                state, reward, done, _ = self.env.step(action.numpy()[0, 0])
 
                 done = done or t >= self.t_max
                 # reward = max(min(reward, 1), -1)
@@ -229,3 +223,9 @@ class Worker(Thread):
                 time.sleep(60)
 
             state = torch.from_numpy(state)
+
+    def run(self):
+        if self.is_train:
+            self.train()
+        else:
+            self.test()
