@@ -4,14 +4,25 @@ from multiprocessing import Value
 from threading import Thread
 
 import gym
+import quanser_robots
+import quanser_robots.cartpole
+import quanser_robots.cartpole.cartpole
 import torch
 import torch.nn.functional as F
+from gym.spaces import Discrete, Box
 from torch.optim import Optimizer
 
 from A3C.ActorCriticNetwork import ActorCriticNetwork
 
 
-def ensure_shared_grads(model, shared_model):
+def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
+    """
+    This method synchronizes the grads of the local network with the global network.
+    :return:
+    :param model: local worker model
+    :param shared_model: shared global model
+    :return:
+    """
     for param, shared_param in zip(model.parameters(),
                                    shared_model.parameters()):
         if shared_param.grad is not None:
@@ -24,16 +35,17 @@ class Worker(Thread):
     def __init__(self, env_name: str, worker_id: int, global_model: ActorCriticNetwork, seed: int, T: Value,
                  lr: float = 1e-4, n_steps: int = 0, t_max: int = 100000, gamma: float = .99,
                  tau: float = 1, beta: float = .01, value_loss_coef: float = .5,
-                 optimizer: Optimizer = None, is_train: bool = True) -> None:
+                 optimizer: Optimizer = None, is_train: bool = True, use_gae: bool = True) -> None:
         """
         Initialize Worker thread for A3C algorithm
+        :param use_gae: use Generalize Advantage Estimate
         :param t_max: maximum episodes for training
         :param env_name: gym environment name
         :param worker_id: number of workers
         :param T: global shared counter
         :param optimizer: torch optimizer instance, either shared Optimizer or None for individual
-        :param beta: Entropy weight factor
-        :param tau: TODO
+        :param beta: entropy weight factor
+        :param tau: TODO hyperparam for GAE
         :param gamma: discount factor
         :param global_model: shared global model to get the parameters from
         :param seed: seed to ensure reproducibility
@@ -45,6 +57,7 @@ class Worker(Thread):
 
         # separate env for each worker
         self.env_name = env_name
+        self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
         self.env = gym.make(self.env_name)
 
         # training params
@@ -53,6 +66,7 @@ class Worker(Thread):
         self.gamma = gamma
         self.beta = beta
         self.value_loss_coef = value_loss_coef
+        self.use_gae = use_gae
 
         # training and testing params
         self.seed = seed
@@ -95,7 +109,7 @@ class Worker(Thread):
         model.train()
 
         state = self.env.reset()
-        state = torch.from_numpy(state)
+        state = torch.tensor(state)
         done = True
 
         t = 0
@@ -122,15 +136,21 @@ class Worker(Thread):
                 entropy = -(log_prob * prob).sum(1, keepdim=True)
                 entropies.append(entropy)
 
+                # if prob.min() < 0:
+                #     print(prob.min())
+
                 # choose action based on prop dist
                 action = prob.multinomial(num_samples=1).detach()
                 log_prob = log_prob.gather(1, action)
 
                 # make selected move
-                state, reward, done, _ = self.env.step(action.numpy()[0, 0])
+                if isinstance(self.env.action_space, Discrete):
+                    action = action.numpy()[0, 0]
+                elif isinstance(self.env.action_space, Box):
+                    action = action.numpy()[0]
 
+                state, reward, done, _ = self.env.step(action)
                 done = done or t >= self.t_max
-                # reward = max(min(reward, 1), -1)
 
                 with self.T.get_lock():
                     self.T.value += 1
@@ -139,8 +159,10 @@ class Worker(Thread):
                 if done:
                     t = 0
                     state = self.env.reset()
+                    # if not isinstance(state, np.ndarray):
+                    #     state = np.array(state)
 
-                state = torch.from_numpy(state)
+                state = torch.tensor(state)
                 values.append(value)
                 log_probs.append(log_prob)
                 rewards.append(reward)
@@ -161,7 +183,7 @@ class Worker(Thread):
             self._compute_loss(R, rewards, values, log_probs, entropies)
 
             # print("Check shared grads for worker {}".format(self.worker_id))
-            ensure_shared_grads(model, self.global_model)
+            sync_grads(model, self.global_model)
 
             self.optimizer.step()
 
@@ -178,12 +200,13 @@ class Worker(Thread):
             advantage = R - values[i]
             value_loss += 0.5 * advantage.pow(2)
 
-            # Generalized Advantage Estimation
-            # TODO not sure about this part
-            delta_t = rewards[i] + self.gamma * values[i + 1] - values[i]
-            gae = gae * self.gamma * self.tau + delta_t
-
-            policy_loss -= log_probs[i] * gae.detach() - self.beta * entropies[i]
+            if self.use_gae:
+                # Generalized Advantage Estimation
+                delta_t = rewards[i] + self.gamma * values[i + 1].detach() - values[i].detach()
+                gae = gae * self.gamma * self.tau + delta_t
+                policy_loss -= log_probs[i] * gae.detach() - self.beta * entropies[i]
+            else:
+                policy_loss -= log_probs[i] * advantage - self.beta * entropies[i]
 
         # zero grads to avoid computation issues in the next step
         self.optimizer.zero_grad()
@@ -207,18 +230,13 @@ class Worker(Thread):
         model.eval()
 
         state = self.env.reset()
-        state = torch.from_numpy(state)
+        state = torch.tensor(state)
         reward_sum = 0
         done = True
 
-        start_time = time.time()
-
-        # a quick hack to prevent the agent from stucking
-        # actions = deque(maxlen=100)
         t = 0
         while True:
             self.env.render()
-
             t += 1
             # Get params from shared global model
             if done:
@@ -230,28 +248,25 @@ class Worker(Thread):
 
             # prop dist of action space
             prob = F.softmax(logit, dim=-1)
-            action = prob.max(1, keepdim=True)[1].numpy()[0, 0]
+            action = prob.max(1, keepdim=True)[1]
+
+            if isinstance(self.env.action_space, Discrete):
+                action = action.numpy()[0, 0]
+            elif isinstance(self.env.action_space, Box):
+                action = action.numpy()[0]
 
             state, reward, done, _ = self.env.step(action)
             done = done or t >= self.t_max
             reward_sum += reward
 
-            # a quick hack to prevent the agent from stucking
-            # actions.append(action)
-            # if actions.count(actions[0]) == actions.maxlen:
-            #     done = True
-
             # print current performance if terminal state or max episodes was reached
             if done:
-                print("Time {}, num steps {}, FPS {:.0f}, episode reward {}, episode length {}".format(
-                    time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start_time)), self.T.value,
-                    self.T.value / (time.time() - start_time), reward_sum, t))
+                print("T={}, reward={}, episode_len={}".format(self.T.value, reward_sum, t))
                 # reset current cumulated reward and episode counter as well as env
                 reward_sum = 0
                 t = 0
-                # actions.clear()
                 state = self.env.reset()
-                # delay _test run for 30s to give the network some time to train
+                # delay _test run for 10s to give the network some time to train
                 time.sleep(10)
 
-            state = torch.from_numpy(state)
+            state = torch.tensor(state)
