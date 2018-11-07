@@ -58,7 +58,7 @@ class Worker(Thread):
         # separate env for each worker
         self.env_name = env_name
         self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
-        self.env = gym.make(self.env_name)
+        # self.env = gym.make(self.env_name)
 
         # training params
         self.n_steps = n_steps
