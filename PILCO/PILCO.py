@@ -35,6 +35,7 @@ class PILCO(object):
 
         self.noise_var = np.random.normal(0, np.identity(
             self.env.observation_space[0]))  # TODO learn noise variance by evidence maximization
+        # self.noise_var = np.diag(np.std(X, axis=1))  # TODO Figure this out
 
         i = 0
         while i < n_init:
@@ -99,6 +100,12 @@ class PILCO(object):
         self.mgp.fit(X, y)
 
     def analytic_approximate_policy_evaluation(self):
+        # TODO
+        # Compute mean and covar of policy/control dist
+        # Compute cross covar[x-1, u-1]
+        # approx state control dist p(\tildex-1) = p(x-1, u-1) = N(x\tilde-1|mu-1,sigma-1)
+        #
+
         raise NotImplementedError
 
     def policy_improvement(self):

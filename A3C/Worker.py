@@ -137,8 +137,8 @@ class Worker(Thread):
                 entropy = -(log_prob * prob).sum(1, keepdim=True)
                 entropies.append(entropy)
 
-                if prob.min() < 0:
-                    print(prob.min())
+                # if prob.min() < 0:
+                #     print(prob.min())
 
                 # choose action based on prop dist
                 action = prob.multinomial(num_samples=1).detach()
