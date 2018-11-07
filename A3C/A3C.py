@@ -14,10 +14,11 @@ from A3C.Worker import Worker
 
 class A3C(object):
 
-    def __init__(self, n_worker: int, env_name: str, lr: float = 1e-4) -> None:
+    def __init__(self, n_worker: int, env_name: str, lr: float = 1e-4, is_discrete: bool = False) -> None:
         self.seed = 123
         self.env_name = env_name
         self.lr = lr  # Paper sampled between 1e-4 to 1e-2
+        self.is_discrete = is_discrete
 
         # global counter
         self.T = Value('i', 0)
@@ -40,15 +41,15 @@ class A3C(object):
         optimizer.share_memory()
 
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T, seed=self.seed,
-                   lr=self.lr, t_max=200, optimizer=None, is_train=False)
+                   lr=self.lr, t_max=200, optimizer=None, is_train=False, is_discrete=self.is_discrete)
         w.start()
         self.worker_pool.append(w)
 
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, T=self.T,
-                       seed=self.seed, lr=self.lr, n_steps=20, t_max=200, gamma=.99, tau=1, beta=.01,
-                       value_loss_coef=.5, optimizer=None, is_train=True)
+                       seed=self.seed, lr=self.lr, n_steps=20, t_max=1000, gamma=.99, tau=1, beta=.01,
+                       value_loss_coef=.5, optimizer=None, is_train=True, is_discrete=self.is_discrete)
             w.start()
             self.worker_pool.append(w)
 

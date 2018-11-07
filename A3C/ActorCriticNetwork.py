@@ -13,21 +13,28 @@ def init_weights(m):
 
 
 class ActorCriticNetwork(torch.nn.Module):
-    def __init__(self, n_inputs, action_space):
+    def __init__(self, n_inputs, action_space, is_discrete=False):
         super(ActorCriticNetwork, self).__init__()
 
-        self.fc1 = nn.Linear(n_inputs, 1024)
+        self.is_discrete = is_discrete
+        self.action_space = action_space
+
+        self.fc1 = nn.Linear(n_inputs, 100)
         self.dropout1 = nn.Dropout(0.5)
         self.fc2 = nn.Linear(1024, 1024)
         self.dropout2 = nn.Dropout(0.5)
 
         n_outputs = action_space.n if isinstance(action_space, Discrete) else action_space.shape[0]
-        # n_outputs = action_space.n
-        self.critic_linear = nn.Linear(1024, 1)
-        self.actor_linear = nn.Linear(1024, n_outputs)
+
+        if self.is_discrete:
+            self.actor_linear = nn.Linear(1024, n_outputs)
+        else:
+            self.mu = nn.Linear(100, n_outputs)
+            self.sigma = nn.Linear(100, n_outputs)
+
+        self.critic_linear = nn.Linear(100, 1)
 
         self.apply(init_weights)
-
         self.train()
 
     def forward(self, inputs):
@@ -36,4 +43,9 @@ class ActorCriticNetwork(torch.nn.Module):
         # x = F.relu(self.fc2(x))
         # x = self.dropout2(x)
 
-        return self.critic_linear(x), self.actor_linear(x)
+        if self.is_discrete:
+            return self.critic_linear(x), self.actor_linear(x)
+
+        mu = 24 * torch.tanh(self.mu(x))
+        sigma = F.softplus(self.sigma(x)) + 1e-5
+        return self.critic_linear(x), mu, sigma

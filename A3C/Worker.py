@@ -4,6 +4,7 @@ from multiprocessing import Value
 from threading import Thread
 
 import gym
+import numpy as np
 import quanser_robots
 import quanser_robots.cartpole
 import quanser_robots.cartpole.cartpole
@@ -35,7 +36,8 @@ class Worker(Thread):
     def __init__(self, env_name: str, worker_id: int, global_model: ActorCriticNetwork, seed: int, T: Value,
                  lr: float = 1e-4, n_steps: int = 0, t_max: int = 100000, gamma: float = .99,
                  tau: float = 1, beta: float = .01, value_loss_coef: float = .5,
-                 optimizer: Optimizer = None, is_train: bool = True, use_gae: bool = True) -> None:
+                 optimizer: Optimizer = None, is_train: bool = True, use_gae: bool = True,
+                 is_discrete: bool = False) -> None:
         """
         Initialize Worker thread for A3C algorithm
         :param use_gae: use Generalize Advantage Estimate
@@ -54,6 +56,8 @@ class Worker(Thread):
         :param value_loss_coef: factor for scaling the value loss
         """
         super(Worker, self).__init__()
+
+        self.is_discrete = is_discrete
 
         # separate env for each worker
         self.env_name = env_name
@@ -125,23 +129,38 @@ class Worker(Thread):
 
             for step in range(self.n_steps):
                 t += 1
-                # forward pass
-                value, logit = model(state.unsqueeze(0))
 
-                # prop dist over actions
-                prob = F.softmax(logit, dim=-1)
-                log_prob = F.log_softmax(logit, dim=-1)
+                if self.is_discrete:
+                    # forward pass
+                    value, logit = model(state.unsqueeze(0))
+
+                    # prop dist over actions
+                    prob = F.softmax(logit, dim=-1)
+                    log_prob = F.log_softmax(logit, dim=-1)
+
+                else:
+                    value, mu, sigma = model(state.unsqueeze(0))
+                    prob = torch.distributions.Normal(mu.view(1, ).data, sigma.view(1, ).data)
+                    log_prob = torch.distributions.LogNormal(mu.view(1, ).data, sigma.view(1, ).data)
 
                 # compute entropy for loss
-                entropy = -(log_prob * prob).sum(1, keepdim=True)
+                if self.is_discrete:
+                    entropy = -(log_prob * prob).sum(1, keepdim=True)
+                else:
+                    entropy = 0.5 + 0.5 * np.log(2 * np.pi) + torch.log(prob.scale)
+
                 entropies.append(entropy)
 
                 # if prob.min() < 0:
                 #     print(prob.min())
 
                 # choose action based on prop dist
-                action = prob.multinomial(num_samples=1).detach()
-                log_prob = log_prob.gather(1, action)
+                if self.is_discrete:
+                    action = prob.multinomial(num_samples=1).detach()
+                    log_prob = log_prob.gather(1, action)
+                else:
+                    action = prob.sample(self.env.action_space.shape)
+                    log_prob = log_prob.sample()
 
                 # make selected move
                 if isinstance(self.env.action_space, Discrete):
@@ -175,7 +194,7 @@ class Worker(Thread):
 
             # if non terminal state is present set R to be value of current state
             if not done:
-                value, _ = model(state.unsqueeze(0))
+                value = model(state.unsqueeze(0))[0]
                 R = value.detach()
 
             values.append(R)
@@ -244,14 +263,18 @@ class Worker(Thread):
 
             # forward pass
             with torch.no_grad():
-                value, logit = model(state.unsqueeze(0))
+                if self.is_discrete:
+                    _, logit = model(state.unsqueeze(0))
 
-            # prob dist of action space
-            prob = F.softmax(logit, dim=-1)
-            action = prob.max(1, keepdim=True)[1]
+                    # prob dist of action space, select best action
+                    prob = F.softmax(logit, dim=-1)
+                    action = prob.max(1, keepdim=True)[1]
 
-            if prob.min() < 0:
-                print(prob)
+                else:
+                    # select mean of normal dist as action --> Expectation
+                    _, mu, sigma = model(state.unsqueeze(0))
+                    print(mu, sigma)
+                    action = mu
 
             if isinstance(self.env.action_space, Discrete):
                 action = action.numpy()[0, 0]
