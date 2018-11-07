@@ -4,7 +4,6 @@ from multiprocessing import Value
 from threading import Thread
 
 import gym
-import numpy as np
 import quanser_robots
 import quanser_robots.cartpole
 import quanser_robots.cartpole.cartpole
@@ -151,7 +150,7 @@ class Worker(Thread):
                     action = action.numpy()[0]
 
                 state, reward, done, _ = self.env.step(action)
-                done = np.all(done) or t >= self.t_max
+                done = done or t >= self.t_max
 
                 with self.T.get_lock():
                     self.T.value += 1
@@ -260,7 +259,7 @@ class Worker(Thread):
                 action = action.numpy()[0]
 
             state, reward, done, _ = self.env.step(action)
-            done = np.all(done) or t >= self.t_max
+            done = done or t >= self.t_max
             reward_sum += reward
 
             # print current performance if terminal state or max episodes was reached
