@@ -4,6 +4,7 @@ from multiprocessing import Value
 from threading import Thread
 
 import gym
+import numpy as np
 import quanser_robots
 import quanser_robots.cartpole
 import quanser_robots.cartpole.cartpole
@@ -53,7 +54,7 @@ class Worker(Thread):
         :param n_steps: amount of steps for training
         :param value_loss_coef: factor for scaling the value loss
         """
-        super().__init__()
+        super(Worker, self).__init__()
 
         # separate env for each worker
         self.env_name = env_name
@@ -136,8 +137,8 @@ class Worker(Thread):
                 entropy = -(log_prob * prob).sum(1, keepdim=True)
                 entropies.append(entropy)
 
-                # if prob.min() < 0:
-                #     print(prob.min())
+                if prob.min() < 0:
+                    print(prob.min())
 
                 # choose action based on prop dist
                 action = prob.multinomial(num_samples=1).detach()
@@ -150,7 +151,7 @@ class Worker(Thread):
                     action = action.numpy()[0]
 
                 state, reward, done, _ = self.env.step(action)
-                done = done or t >= self.t_max
+                done = np.all(done) or t >= self.t_max
 
                 with self.T.get_lock():
                     self.T.value += 1
@@ -246,9 +247,12 @@ class Worker(Thread):
             with torch.no_grad():
                 value, logit = model(state.unsqueeze(0))
 
-            # prop dist of action space
+            # prob dist of action space
             prob = F.softmax(logit, dim=-1)
             action = prob.max(1, keepdim=True)[1]
+
+            if prob.min() < 0:
+                print(prob)
 
             if isinstance(self.env.action_space, Discrete):
                 action = action.numpy()[0, 0]
@@ -256,7 +260,7 @@ class Worker(Thread):
                 action = action.numpy()[0]
 
             state, reward, done, _ = self.env.step(action)
-            done = done or t >= self.t_max
+            done = np.all(done) or t >= self.t_max
             reward_sum += reward
 
             # print current performance if terminal state or max episodes was reached
