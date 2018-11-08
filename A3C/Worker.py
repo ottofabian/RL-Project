@@ -61,8 +61,13 @@ class Worker(Thread):
 
         # separate env for each worker
         self.env_name = env_name
-        self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
-        # self.env = gym.make(self.env_name)
+
+        # check if the requested environment is a quanser robot env
+        if self.env_name in ['CartpoleStabShort-v0']:
+            self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
+        else:
+            # use the official gym env as default
+            self.env = gym.make(self.env_name)
 
         # training params
         self.n_steps = n_steps
@@ -104,7 +109,7 @@ class Worker(Thread):
         self.env.seed(self.seed + self.worker_id)
 
         # init local NN instance for worker thread
-        model = ActorCriticNetwork(self.env.observation_space.shape[0], self.env.action_space)
+        model = ActorCriticNetwork(self.env.observation_space.shape[0], self.env.action_space, self.is_discrete)
 
         # if no shared optimizer is provided use individual one
         if self.optimizer is None:
@@ -245,7 +250,8 @@ class Worker(Thread):
         torch.manual_seed(self.seed + self.worker_id)
         self.env.seed(self.seed + self.worker_id)
 
-        model = ActorCriticNetwork(self.env.observation_space.shape[0], self.env.action_space)
+        # get an instance of the current global model state
+        model = ActorCriticNetwork(self.env.observation_space.shape[0], self.env.action_space, self.is_discrete)
         model.eval()
 
         state = self.env.reset()
@@ -273,7 +279,6 @@ class Worker(Thread):
                 else:
                     # select mean of normal dist as action --> Expectation
                     _, mu, sigma = model(state.unsqueeze(0))
-                    print(mu, sigma)
                     action = mu
 
             if isinstance(self.env.action_space, Discrete):
