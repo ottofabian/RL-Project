@@ -19,29 +19,53 @@ class ActorCriticNetwork(torch.nn.Module):
         self.is_discrete = is_discrete
         self.action_space = action_space
 
-        self.fc1 = nn.Linear(n_inputs, 100)
+        # network architecture specification
+        fc1_out = 100
+        #fc2_out = 128
+        # fc_tower_out defines the number of units after the tower forward pass
+        fc_tower_out = fc1_out
+
+        self.fc1 = nn.Linear(n_inputs, fc1_out)
         self.dropout1 = nn.Dropout(0.5)
-        #self.fc2 = nn.Linear(1024, 1024)
+        #self.fc2 = nn.Linear(fc1_out, fc2_out)
         #self.dropout2 = nn.Dropout(0.5)
 
+        # Define the two heads of the network
+        # -----------------------------------
+
+        # * Value head
+        # The value head has only 1 output
+        self.critic_linear = nn.Linear(fc_tower_out, 1)
+
+        # * Policy head
+        # Define the number of output for the policy
         n_outputs = action_space.n if isinstance(action_space, Discrete) else action_space.shape[0]
 
         if self.is_discrete:
-            self.actor_linear = nn.Linear(100, n_outputs)
+            # in the dicrete case it has
+            self.actor_linear = nn.Linear(fc_tower_out, n_outputs)
         else:
-            self.mu = nn.Linear(100, n_outputs)
-            self.sigma = nn.Linear(100, n_outputs)
+            # in the continuous case it has one output for the mu and one for the sigma variable
+            # later the workers can sample from a normal distribution
+            self.mu = nn.Linear(fc_tower_out, n_outputs)
+            self.sigma = nn.Linear(fc_tower_out, n_outputs)
 
-        self.critic_linear = nn.Linear(100, 1)
-
+        # initialize the weights using Xavier initialization
         self.apply(init_weights)
         self.train()
 
     def forward(self, inputs):
+        """
+        Defines the forward pass of the network.
+
+        :param inputs: Input array object which sufficiently represents the full state of the environment.
+        :return: In the discrete case: value, policy
+                 In the continuous case: value, mu, sigma
+        """
         x = F.relu(self.fc1(inputs.float()))
         x = self.dropout1(x)
-        # x = F.relu(self.fc2(x))
-        # x = self.dropout2(x)
+        #x = F.relu(self.fc2(x))
+        #x = self.dropout2(x)
 
         if self.is_discrete:
             return self.critic_linear(x), self.actor_linear(x)

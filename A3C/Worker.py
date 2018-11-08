@@ -237,8 +237,10 @@ class Worker(Thread):
 
         # compute combined loss of policy_loss and value_loss
         # avoid overfitting on value loss by scaling it down
-        (policy_loss + self.value_loss_coef * value_loss).backward()
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad_norm)
+        combined_loss = policy_loss + self.value_loss_coef * value_loss
+        combined_loss.backward()
+        #(policy_loss + self.value_loss_coef * value_loss).backward()
+        #torch.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad_norm)
 
     def _test(self):
         """
