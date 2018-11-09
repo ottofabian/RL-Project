@@ -14,6 +14,8 @@ class MGPR(GaussianProcessRegressor):
         super(MGPR, self).__init__(kernel, alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train,
                                    random_state)
         self.dim = dim
+        # For a D-dimensional state space, we use D separate GPs, one for each state dimension.
+        # - Efficient Reinforcement Learning using Gaussian Processes, Marc Peter Deisenroth
         self.gp_container = [
             GaussianProcessRegressor(kernel, alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train,
                                      random_state) for _ in range(dim)]
@@ -22,7 +24,7 @@ class MGPR(GaussianProcessRegressor):
         assert (self.dim == Y.shape[1])
 
         for i in range(self.dim):
-            self.gp_container[i].fit(X, Y[:, i])
+           self.gp_container[i].fit(X, Y[:, i])
 
     def predict(self, X, return_std=False, return_cov=False):
         Y = np.empty((X.shape[0], self.dim))

@@ -1,5 +1,7 @@
 from A3C.A3C import A3C
 
+from PILCO.PILCO import PILCO
+
 # currently tested on the following environments:
 # CartPole-v0
 # ------------
@@ -30,3 +32,7 @@ from A3C.A3C import A3C
 # a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-3, is_discrete=False)
 a3c = A3C(n_worker=4, env_name='MountainCarContinuous-v0', lr=1e-4, is_discrete=False)
 a3c.run()
+
+
+pilco = PILCO(env_name='CartPole-v0', seed=42, n_features=4)
+pilco.run(50)

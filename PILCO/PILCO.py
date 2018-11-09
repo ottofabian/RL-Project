@@ -16,8 +16,19 @@ class PILCO(object):
         self.noise_var = None
 
         # env
-        self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
-        self.env = gym.make(self.env_name)
+        #self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
+
+        # check if the requested environment is a quanser robot env
+        if self.env_name in ['CartpoleStabShort-v0']:
+            self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
+        else:
+            # use the official gym env as default
+            self.env = gym.make(self.env_name)
+
+        # get the number of available action from the environment
+        self.state_dim = self.env.observation_space.shape[0]
+        self.n_actions = self.env.action_space.shape[0]
+
         self.env.seed(self.seed)
 
         # dynamics model
@@ -27,14 +38,14 @@ class PILCO(object):
         self.states = []
         self.actions = []
 
-    def run(self, n_features, n_init):
+    def run(self, n_init):
         # sample dataset with random actions
         X = []
         y = []
         rewards = []
 
-        self.noise_var = np.random.normal(0, np.identity(
-            self.env.observation_space[0]))  # TODO learn noise variance by evidence maximization
+        self.noise_var = np.random.normal(0, np.ones(
+            self.env.observation_space.shape[0]))  # TODO learn noise variance by evidence maximization
         # self.noise_var = np.diag(np.std(X, axis=1))  # TODO Figure this out
 
         i = 0
@@ -43,14 +54,14 @@ class PILCO(object):
             done = False
 
             while not done or i < n_init:
-                action = self.env.sample()
-                state, reward, _, _ = self.env.step(action)
+                action = self.env.action_space.sample()
+                state, reward, done, _ = self.env.step(action)
 
                 # state-action pair as input
                 X.append(np.append(state_prev, action))
 
                 # delta with following state as output plus some noise
-                epsilon = np.random.normal(0, self.noise_var)
+                epsilon = np.random.normal(0, np.abs(self.noise_var))
                 y.append(state - state_prev + epsilon)
 
                 rewards.append(reward)
@@ -66,13 +77,15 @@ class PILCO(object):
         # init model params
 
         # dimension of state vector
-        D = self.env.observation_space[0]
+
+        print('self.env.observation_space.shape[0]:' + str(self.env.observation_space.shape[0]))
+        D = self.env.observation_space.shape[0]
         # dimension of action vector
         F = self.env.action_space
 
-        W = np.random.normal(0, np.identity(n_features), size=(D, n_features))
+        W = np.random.normal(0, np.identity(self.n_features), size=(D, self.n_features))
         sigma = np.random.normal(0, np.identity(X.shape[1]))
-        mu = np.random.normal(0, 1, n_features)
+        mu = np.random.normal(0, 1, self.n_features)
 
         # create controller/policy with those params
         policy = RBFController(W, sigma, mu)
@@ -83,6 +96,7 @@ class PILCO(object):
             # TODO model based policy search
 
             while True:
+                self.rollout()
                 self.analytic_approximate_policy_evaluation()
                 self.policy_improvement()
                 W, sigma, mu = self.update_params(W, sigma, mu)
@@ -96,6 +110,9 @@ class PILCO(object):
             np.append(y, y_test)
             np.append(rewards, reward_test)
 
+            # for debugging
+            break
+
     def learn_dynamics_model(self, X, y):
         self.mgp.fit(X, y)
 
@@ -107,6 +124,93 @@ class PILCO(object):
         #
 
         raise NotImplementedError
+
+    def rollout(self, start, policy, episode_len, plant, cost):
+        """
+        # from: pilco-matlab - https://github.com/ICL-SML/pilco-matlab
+
+        Run multiple rollouts on a trajectory until you reach a terminal state.
+
+        % 1. Generate trajectory rollout given the current policy
+
+        if isfield(plant,'constraint'), HH = maxH; else HH = H; end
+
+        # 1. Generate a trajectory rollout by applying the current policy to the system
+        #  The initial state is sampled from p(x0 ) = N (mu0, S0)
+        [xx, yy, realCost{j+J}, latent{j}] = ...
+          rollout(gaussian(mu0, S0), policy, HH, plant, cost);
+
+
+        disp(xx);                           % display states of observed trajectory
+
+        x = [x; xx]; y = [y; yy];                            % augment training set
+
+        if plotting.verbosity > 0
+          if ~ishandle(3); figure(3); else set(0,'CurrentFigure',3); end
+          hold on; plot(1:length(realCost{J+j}),realCost{J+j},'r'); drawnow;
+        end
+
+
+        function [x y L latent] = rollout(start, policy, H, plant, cost)
+        %% Code
+        % augi indicies for variables augmented to the ode variables
+
+        if isfield(plant,'augment'), augi = plant.augi;             % sort out indices!
+        else plant.augment = inline('[]'); augi = []; end
+
+        if isfield(plant,'subplant'), subi = plant.subi;
+        else plant.subplant = inline('[]',1); subi = []; end
+
+        odei = plant.odei; poli = plant.poli; dyno = plant.dyno; angi = plant.angi;
+        simi = sort([odei subi]);
+        nX = length(simi)+length(augi); nU = length(policy.maxU); nA = length(angi);
+
+        state(simi) = start; state(augi) = plant.augment(state);      % initializations
+        x = zeros(H+1, nX+2*nA);
+        x(1,simi) = start' + randn(size(simi))*chol(plant.noise);
+        x(1,augi) = plant.augment(x(1,:));
+        u = zeros(H, nU); latent = zeros(H+1, size(state,2)+nU);
+        y = zeros(H, nX); L = zeros(1, H); next = zeros(1,length(simi));
+
+        for i = 1:H % --------------------------------------------- generate trajectory
+          s = x(i,dyno)'; sa = gTrig(s, zeros(length(s)), angi); s = [s; sa];
+          x(i,end-2*nA+1:end) = s(end-2*nA+1:end);
+
+          % 1. Apply policy ... or random actions --------------------------------------
+          if isfield(policy, 'fcn')
+            u(i,:) = policy.fcn(policy,s(poli),zeros(length(poli)));
+          else
+            u(i,:) = policy.maxU.*(2*rand(1,nU)-1);
+          end
+          latent(i,:) = [state u(i,:)];                                  % latent state
+
+        :return:
+        """
+
+        # check for system constraint boundaries
+        #self.env.action_space.high
+        #self.env.action_space.low
+
+        # For our gym-environments we don't need the ODE because we already get sufficient env-feedback
+        #idces_ode_solver = None
+        #idces_agugmenting_ode = None
+        #idces_dynamics_out = None
+        # ...
+
+        # variable
+        x = np.zeros([episode_len + 1, self.state_dim + 2 * self.n_actions])
+        # x[0, odei] = multivariate_normal(start, plant.noise)
+
+        actions_u = np.zeros((episode_len, self.n_actions))
+        targets_y = np.zeros((episode_len, self.state_dim))
+        loss_l = np.zeros(episode_len)
+        latent = np.zeros((episode_len + 1, self.n_features + self.state_dim))
+
+        # run multiple rollouts along a trajectory for episode_len number of steps.
+        for i in range(episode_len):
+            raise NotImplementedError
+
+        return x, targets_y, loss_l, latent
 
     def policy_improvement(self):
         raise NotImplementedError
