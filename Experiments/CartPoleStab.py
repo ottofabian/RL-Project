@@ -30,8 +30,8 @@ from PILCO.PILCO import PILCO
 
 # a3c = A3C(n_worker=4, env_name='CartPole-v0', lr=1e-3, is_discrete=True)
 
-#a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-3, is_discrete=False)
-#a3c.run()
+a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-3, is_discrete=False)
+a3c.run()
 
 
 pilco = PILCO(env_name='CartPole-v0', seed=42, n_features=4)
