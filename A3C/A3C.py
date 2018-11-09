@@ -25,7 +25,7 @@ class A3C(object):
                             This setting has effect on the network architecture as well as the loss function used.
                             For more detail see: p.12 - Asynchronous Methods for Deep Reinforcement Learning.pdf
         """
-        self.seed = 123
+        self.seed = 1234
         self.env_name = env_name
         self.lr = lr  # Paper sampled between 1e-4 to 1e-2
         self.is_discrete = is_discrete
@@ -50,11 +50,11 @@ class A3C(object):
         optimizer.share_memory()
 
         # start the test worker which is visualized to see how the current progress is
-        #w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T, seed=self.seed,
-        #           lr=self.lr, t_max=200, optimizer=None, is_train=False, is_discrete=self.is_discrete)
+        # w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T,
+        #            seed=self.seed, lr=self.lr, t_max=200, optimizer=None, is_train=False, is_discrete=self.is_discrete)
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T,
-                   seed=self.seed, lr=self.lr, n_steps=0, t_max=100000, gamma=.99, tau=1, beta=.01,
-                   value_loss_coef=.5, optimizer=None, is_train=False, is_discrete=self.is_discrete)
+                   seed=self.seed, lr=self.lr, n_steps=0, t_max=100000, gamma=.09, tau=1, beta=.01,
+                   value_loss_coef=.5, optimizer=optimizer, is_train=False, use_gae=False, is_discrete=self.is_discrete)
         w.start()
         self.worker_pool.append(w)
 
@@ -62,8 +62,9 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, T=self.T,
-                       seed=self.seed, lr=self.lr, n_steps=20, t_max=100000, gamma=.99, tau=1, beta=.01,
-                       value_loss_coef=.5, optimizer=None, is_train=True, is_discrete=self.is_discrete)
+                       seed=self.seed, lr=self.lr, n_steps=5, t_max=100000, gamma=.09, tau=1, beta=.01,
+                       value_loss_coef=.5, optimizer=optimizer, is_train=True, use_gae=False,
+                       is_discrete=self.is_discrete)
             w.start()
             self.worker_pool.append(w)
 

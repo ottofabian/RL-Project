@@ -4,7 +4,6 @@ from multiprocessing import Value
 from threading import Thread
 
 import gym
-import numpy as np
 import quanser_robots
 import quanser_robots.cartpole
 import quanser_robots.cartpole.cartpole
@@ -118,7 +117,7 @@ class Worker(Thread):
         model.train()
 
         state = self.env.reset()
-        state = torch.tensor(state)
+        state = torch.Tensor(state)
         done = True
 
         t = 0
@@ -143,29 +142,32 @@ class Worker(Thread):
                     prob = F.softmax(logit, dim=-1)
                     log_prob = F.log_softmax(logit, dim=-1)
 
-                else:
-                    value, mu, sigma = model(state.unsqueeze(0))
-                    prob = torch.distributions.Normal(mu.view(1, ).data, sigma.view(1, ).data)
-                    log_prob = torch.distributions.LogNormal(mu.view(1, ).data, sigma.view(1, ).data)
-
-                # compute entropy for loss
-                if self.is_discrete:
+                    # compute entropy for loss regularization
                     entropy = -(log_prob * prob).sum(1, keepdim=True)
-                else:
-                    entropy = 0.5 + 0.5 * np.log(2 * np.pi) + torch.log(prob.scale)
 
-                entropies.append(entropy)
-
-                # if prob.min() < 0:
-                #     print(prob.min())
-
-                # choose action based on prop dist
-                if self.is_discrete:
+                    # choose action based on prob dist
                     action = prob.multinomial(num_samples=1).detach()
                     log_prob = log_prob.gather(1, action)
+
                 else:
+                    # forward pass
+                    value, mu, sigma = model(state.unsqueeze(0))
+
+                    # prop dist over actions
+                    prob = torch.distributions.Normal(mu.view(-1, ).detach(), sigma.view(-1, ).detach())
+                    # log_prob = torch.distributions.LogNormal(mu.view(-1, ).detach(), sigma.view(-1, ).detach())
+
+                    # entropy for loss regularization
+                    entropy = prob.entropy()
+
                     action = prob.sample(self.env.action_space.shape)
-                    log_prob = log_prob.sample()
+                    # avoid sampling outside the allowed range of action_space
+                    action = torch.Tensor(
+                        action.detach().numpy().clip(self.env.action_space.low, self.env.action_space.high))
+                    # log_prob = prob.log()
+                    log_prob = prob.log_prob(action)
+
+                entropies.append(entropy)
 
                 # make selected move
                 if isinstance(self.env.action_space, Discrete):
@@ -173,11 +175,10 @@ class Worker(Thread):
                 elif isinstance(self.env.action_space, Box):
                     action = action.numpy()[0]
 
-                if np.isnan(action):
-                    print(action)
-
                 state, reward, done, _ = self.env.step(action)
                 done = done or t >= self.t_max
+
+                # reward = max(min(reward, 1), -1)
 
                 with self.T.get_lock():
                     self.T.value += 1
@@ -186,10 +187,8 @@ class Worker(Thread):
                 if done:
                     t = 0
                     state = self.env.reset()
-                    # if not isinstance(state, np.ndarray):
-                    #     state = np.array(state)
 
-                state = torch.tensor(state)
+                state = torch.Tensor(state)
                 values.append(value)
                 log_probs.append(log_prob)
                 rewards.append(reward)
@@ -207,15 +206,12 @@ class Worker(Thread):
 
             values.append(R)
 
+            # compute loss and backprop
             self._compute_loss(R, rewards, values, log_probs, entropies)
-
-            # print("Check shared grads for worker {}".format(self.worker_id))
             sync_grads(model, self.global_model)
-
             self.optimizer.step()
 
-    def _compute_loss(self, R: torch.tensor, rewards: list, values: list, log_probs: list, entropies: list) -> None:
-        # print("Loss for Worker {}".format(self.worker_id))
+    def _compute_loss(self, R: torch.Tensor, rewards: list, values: list, log_probs: list, entropies: list) -> None:
         policy_loss = 0
         value_loss = 0
 
@@ -225,7 +221,7 @@ class Worker(Thread):
         for i in reversed(range(len(rewards))):
             R = rewards[i] + self.gamma * R
             advantage = R - values[i]
-            value_loss += 0.5 * advantage.pow(2)
+            value_loss += advantage.pow(2)
 
             if self.use_gae:
                 # Generalized Advantage Estimation
@@ -241,9 +237,8 @@ class Worker(Thread):
         # compute combined loss of policy_loss and value_loss
         # avoid overfitting on value loss by scaling it down
         combined_loss = policy_loss + self.value_loss_coef * value_loss
-        combined_loss.backward()
-        #(policy_loss + self.value_loss_coef * value_loss).backward()
-        #torch.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad_norm)
+        combined_loss.mean().backward()
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad_norm)
 
     def _test(self):
         """
@@ -260,7 +255,7 @@ class Worker(Thread):
         model.eval()
 
         state = self.env.reset()
-        state = torch.tensor(state)
+        state = torch.Tensor(state)
         reward_sum = 0
         done = True
 
@@ -283,7 +278,7 @@ class Worker(Thread):
 
                 else:
                     # select mean of normal dist as action --> Expectation
-                    _, mu, sigma = model(state.unsqueeze(0))
+                    _, mu, _ = model(state.unsqueeze(0))
                     action = mu
 
             if isinstance(self.env.action_space, Discrete):
@@ -305,4 +300,4 @@ class Worker(Thread):
                 # delay _test run for 10s to give the network some time to train
                 time.sleep(10)
 
-            state = torch.tensor(state)
+            state = torch.Tensor(state)
