@@ -173,6 +173,9 @@ class Worker(Thread):
                 elif isinstance(self.env.action_space, Box):
                     action = action.numpy()[0]
 
+                if np.isnan(action):
+                    print(action)
+
                 state, reward, done, _ = self.env.step(action)
                 done = done or t >= self.t_max
 

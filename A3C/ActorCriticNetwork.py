@@ -70,6 +70,8 @@ class ActorCriticNetwork(torch.nn.Module):
         if self.is_discrete:
             return self.critic_linear(x), self.actor_linear(x)
         else:
-            mu = 24 * torch.tanh(self.mu(x))
+            # assuming action space is centered at 0
+            scale = torch.Tensor(self.action_space.high)
+            mu = scale * torch.tanh(self.mu(x))
             sigma = F.softplus(self.sigma(x)) + 1e-5
             return self.critic_linear(x), mu, sigma

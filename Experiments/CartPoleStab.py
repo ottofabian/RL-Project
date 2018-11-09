@@ -26,6 +26,6 @@ from A3C.A3C import A3C
 # T=35006, reward=199.9990211725235, episode_len=200
 # T=50697, reward=199.99907058477402, episode_len=200
 
-a3c = A3C(n_worker=4, env_name='CartPole-v0', lr=1e-3, is_discrete=True)
-#a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-3, is_discrete=False)
+# a3c = A3C(n_worker=4, env_name='CartPole-v0', lr=1e-3, is_discrete=True)
+a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-3, is_discrete=False)
 a3c.run()

@@ -46,7 +46,6 @@ class A3C(object):
         global_model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
         global_model.share_memory()
 
-        # TODO
         optimizer = SharedRMSProp(global_model.parameters(), lr=self.lr)
         optimizer.share_memory()
 
@@ -54,7 +53,7 @@ class A3C(object):
         #w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T, seed=self.seed,
         #           lr=self.lr, t_max=200, optimizer=None, is_train=False, is_discrete=self.is_discrete)
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T,
-                   seed=self.seed, lr=self.lr, n_steps=0, t_max=200, gamma=.99, tau=1, beta=.01,
+                   seed=self.seed, lr=self.lr, n_steps=0, t_max=100000, gamma=.99, tau=1, beta=.01,
                    value_loss_coef=.5, optimizer=None, is_train=False, is_discrete=self.is_discrete)
         w.start()
         self.worker_pool.append(w)
@@ -63,7 +62,7 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, T=self.T,
-                       seed=self.seed, lr=self.lr, n_steps=20, t_max=1000, gamma=.99, tau=1, beta=.01,
+                       seed=self.seed, lr=self.lr, n_steps=20, t_max=100000, gamma=.99, tau=1, beta=.01,
                        value_loss_coef=.5, optimizer=None, is_train=True, is_discrete=self.is_discrete)
             w.start()
             self.worker_pool.append(w)
