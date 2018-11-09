@@ -16,8 +16,15 @@ class PILCO(object):
         self.noise_var = None
 
         # env
-        self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
-        self.env = gym.make(self.env_name)
+        #self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
+
+        # check if the requested environment is a quanser robot env
+        if self.env_name in ['CartpoleStabShort-v0']:
+            self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
+        else:
+            # use the official gym env as default
+            self.env = gym.make(self.env_name)
+
         self.env.seed(self.seed)
 
         # dynamics model
@@ -27,14 +34,14 @@ class PILCO(object):
         self.states = []
         self.actions = []
 
-    def run(self, n_features, n_init):
+    def run(self, n_init):
         # sample dataset with random actions
         X = []
         y = []
         rewards = []
 
-        self.noise_var = np.random.normal(0, np.identity(
-            self.env.observation_space[0]))  # TODO learn noise variance by evidence maximization
+        self.noise_var = np.random.normal(0, np.ones(
+            self.env.observation_space.shape[0]))  # TODO learn noise variance by evidence maximization
         # self.noise_var = np.diag(np.std(X, axis=1))  # TODO Figure this out
 
         i = 0
@@ -43,14 +50,14 @@ class PILCO(object):
             done = False
 
             while not done or i < n_init:
-                action = self.env.sample()
-                state, reward, _, _ = self.env.step(action)
+                action = self.env.action_space.sample()
+                state, reward, done, _ = self.env.step(action)
 
                 # state-action pair as input
                 X.append(np.append(state_prev, action))
 
                 # delta with following state as output plus some noise
-                epsilon = np.random.normal(0, self.noise_var)
+                epsilon = np.random.normal(0, np.abs(self.noise_var))
                 y.append(state - state_prev + epsilon)
 
                 rewards.append(reward)
@@ -66,13 +73,15 @@ class PILCO(object):
         # init model params
 
         # dimension of state vector
-        D = self.env.observation_space[0]
+
+        print('self.env.observation_space.shape[0]:' + str(self.env.observation_space.shape[0]))
+        D = self.env.observation_space.shape[0]
         # dimension of action vector
         F = self.env.action_space
 
-        W = np.random.normal(0, np.identity(n_features), size=(D, n_features))
+        W = np.random.normal(0, np.identity(self.n_features), size=(D, self.n_features))
         sigma = np.random.normal(0, np.identity(X.shape[1]))
-        mu = np.random.normal(0, 1, n_features)
+        mu = np.random.normal(0, 1, self.n_features)
 
         # create controller/policy with those params
         policy = RBFController(W, sigma, mu)
@@ -95,6 +104,9 @@ class PILCO(object):
             np.append(X, X_test)
             np.append(y, y_test)
             np.append(rewards, reward_test)
+
+            # for debugging
+            break
 
     def learn_dynamics_model(self, X, y):
         self.mgp.fit(X, y)

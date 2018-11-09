@@ -14,15 +14,22 @@ class MGPR(GaussianProcessRegressor):
         super(MGPR, self).__init__(kernel, alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train,
                                    random_state)
         self.dim = dim
-        self.gp_container = [
-            GaussianProcessRegressor(kernel, alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train,
-                                     random_state) for _ in range(dim)]
+        #self.gp_container = [
+        #    GaussianProcessRegressor(kernel, alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train,
+        #                             random_state) for _ in range(dim)]
+
+        self.gp = GaussianProcessRegressor(kernel, alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train,
+                                     random_state)
+
 
     def fit(self, X, Y):
         assert (self.dim == Y.shape[1])
 
-        for i in range(self.dim):
-            self.gp_container[i].fit(X, Y[:, i])
+        #for i in range(self.dim):
+        #   self.gp_container[i].fit(X, Y[:, i])
+
+        self.gp.fit(X, Y)
+
 
     def predict(self, X, return_std=False, return_cov=False):
         Y = np.empty((X.shape[0], self.dim))
