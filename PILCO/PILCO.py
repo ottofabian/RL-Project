@@ -70,15 +70,23 @@ class PILCO(object):
             state_prev = self.env.reset()
             done = False
 
-            while not done or i < n_init:
+            while not done and i < n_init:
                 action = self.env.action_space.sample()
                 state, reward, done, _ = self.env.step(action)
+
+                state = np.array(state)
+                state_prev = np.array(state_prev)
 
                 # state-action pair as input
                 X.append(np.append(state_prev, action))
 
                 # delta with following state as output plus some noise
                 epsilon = np.random.normal(0, np.abs(self.noise_var))
+                print(action)
+
+                print(state)
+                print(state_prev)
+
                 y.append(state - state_prev + epsilon)
 
                 rewards.append(reward)
@@ -100,8 +108,8 @@ class PILCO(object):
         # dimension of action vector
         F = self.env.action_space
 
-        W = np.random.normal(0, np.identity(self.n_features), size=(D, self.n_features))
-        sigma = np.random.normal(0, np.identity(X.shape[1]))
+        W = np.random.normal(0, np.ones(self.n_features), size=(D, self.n_features))
+        sigma = np.random.normal(0, np.identity(self.state_dim))
         mu = np.random.normal(0, 1, self.n_features)
 
         # create controller/policy with above params
@@ -111,7 +119,7 @@ class PILCO(object):
             convergence = False
             self.learn_dynamics_model(X, y)
             # TODO model based policy search
-            self.gradient_based_policy_search()
+            self.gradient_based_policy_search(policy, X, y)
 
             while True:
                 self.rollout()
@@ -284,41 +292,77 @@ class PILCO(object):
         :param y: target vector containing deltas of states
         :return:
         """
-        self.l = np.var(X, axis=1)
-        self.sigma_f = np.var(y, axis=1)
-        self.sigma_eps = np.var(y / 10, axis=1)
+        self.l = np.var(X, axis=0)
+        self.sigma_f = np.var(y, axis=0)
+        self.sigma_eps = np.var(y / 10, axis=0)
 
     def gradient_based_policy_search(self, policy: MGPR, X, y):
         # TODO get the state x_t here
-        state = None
-        cov_state = None
+        mu_state = X.mean(axis=0)[:self.state_dim]
+        mu_state_tilde = X.mean(axis=0)
+
+        cov_state = X.std(axis=0)[:self.state_dim]
+        cov_state_tilde = X.std(axis=0)
 
         for t in range(self.T):
             # get dist over next action
-            p_u = policy.predict(state)
+            p_u = policy.predict(mu_state.reshape(1, -1))
             # squash prediction
             p_u = np.sin(p_u)
 
             # get dist over next successor state
-            p_xu = np.concatenate(state, p_u)
-            delta_mu, cov_delta = self.mgp.predict(p_xu, return_cov=True)
+            p_xu = np.hstack([mu_state, p_u])
+            delta_mu, cov_delta = self.mgp.predict(p_xu.reshape(1, -1), return_cov=True)
 
             # TODO
-            state_next = state + delta_mu
-            cov_state_next = cov_delta
+            mu_state_next = mu_state + delta_mu
 
-            betas = np.zeros((state.shape[0], -1))
+
+            cov_state_next = cov_state + cov_delta # # Cov of 2 joints
+            self.mgp.get_kernels(X)
+            betas = np.zeros((y.shape[1], len(X), y.shape[1])) #np.zeros((mu_state.shape[0], -1))
             q = []
 
             # TODO not sure if this is the state shape
-            for e in range(state.shape[0]):
-                # TODO: K is probably the eth kernel value
-                K = None
-                betas[e] = np.linalg.solve(K + self.sigma_eps[e] * np.identity(K.shape[0]), np.identity(K.shape[0])) * y
 
-                temp = cov_state * np.linalg.solve(self.l[e], np.identity(self.l[e]))
-                diff = X - mu_state
-                # q[e] = self.sigma_f[e] * np.abs(temp * np.identity(temp.shape[0])) ** .5 * TODO
+            # K is of shape: [state_dims x n_samples x n_samples]
+            K = self.mgp.get_kernels(X)
+
+            for e in range(y.shape[1]):
+                # TODO: K is probably the eth kernel value
+                # K = None
+
+                betas[e] = np.linalg.solve(K[e] + self.sigma_eps[e] * np.identity(K[e].shape[0]), np.identity(K[e].shape[0])) @ y
+
+                """
+                betas = np.vstack([solve(self.K[i], y[:, i]) for i in range(E)]).T
+
+                # Compute the predicted mean and IO covariance.
+                iL = np.stack([np.diag(exp(-X[i, :D])) for i in range(E)])
+                iN = np.matmul(inp, iL)
+                B = iL @ s @ iL + np.eye(D)
+                t = np.stack([solve(B[i].T, iN[i].T).T for i in range(E)])
+                q = exp(-np.sum(iN * t, 2) / 2)
+                qb = q * beta.T
+                tiL = np.matmul(t, iL)
+                c = exp(2 * X[:, D]) / sqrt(det(B))
+
+                M = np.sum(qb, 1) * c
+                V = (np.transpose(tiL, [0, 2, 1]) @ np.expand_dims(qb, 2)).reshape(
+                    E, D).T * c
+                k = 2 * X[:, D].reshape(E, 1) - np.sum(iN ** 2, 2) / 2
+                """
+
+                if isinstance(self.l[e], float):
+                    temp = cov_state_tilde / self.l[e]
+                else:
+                    temp = cov_state_tilde * np.linalg.solve(self.l[e], np.identity(self.l[e].shape))
+
+                diff = X - mu_state_tilde
+
+                # TODO: Finish with pseudo-algo on master thesis
+                #q[e] = self.sigma_f[e] * np.abs(temp + np.identity(temp.shape[0])) ** .5 * np.exp(-.5 (p_xu - ))
+
 
         return
 

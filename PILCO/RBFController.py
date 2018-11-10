@@ -10,10 +10,10 @@ class RBFController(object):
         self.mu = mu
 
     def phi(self, X):
-        phi = np.zeros(X.shape[0], self.mu.shape[0])
+        phi = np.zeros((self.mu.shape[0], X.shape[1]))
         for i in range(self.mu.shape[0]):
             d = X - self.mu[i]
-            phi[i] = np.exp(-.5 * d.T * self.sigma * d)
+            phi[i] = np.exp(-.5 * d @ self.sigma @ d.T)
         return phi
 
     def predict(self, X):
@@ -22,7 +22,7 @@ class RBFController(object):
         # for i in range(self.W.shape[0]):
         #     sum += self.W[i] * phi[i]
         # return sum
-        return np.sum(self.W * phi)
+        return np.sum(self.W @ phi)
 
     def update_params(self, W, sigma, mu):
         self.W = W

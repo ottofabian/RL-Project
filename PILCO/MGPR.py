@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
-
+from PILCO.Kernel_C import Kernel_C
 
 class MGPR(GaussianProcessRegressor):
     """
@@ -11,8 +11,11 @@ class MGPR(GaussianProcessRegressor):
     def __init__(self, dim, optimizer="fmin_l_bfgs_b", length_scale=1., sigma_f=1, sigma_eps=1, alpha=1e-10,
                  n_restarts_optimizer=0, normalize_y=False, copy_X_train=True, random_state=None):
 
-        kernel = sigma_f * RBF(length_scale=length_scale, length_scale_bounds=(1e-05, 100000.0)) \
-                 + WhiteKernel(noise_level=sigma_eps, noise_level_bounds=(1e-05, 100000.0))
+        kernel = RBF(length_scale=length_scale) #+ WhiteKernel() * sigma_eps
+        # TODO: Add WhiteKernel and sigma_f multiplication
+        #+ Kernel_C()
+        WhiteKernel()
+        #[WhiteKernel(noise_level=sigma_eps)] * 4 #, noise_level_bounds=(1e-05, 100000.0)) # * sigma_f #, length_scale_bounds=(1e-05, 100000.0))\
 
         super(MGPR, self).__init__(kernel, alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train,
                                    random_state)
@@ -36,11 +39,24 @@ class MGPR(GaussianProcessRegressor):
                 Y[:, i], tmp = self.gp_container[i].predict(X, return_std=return_std, return_cov=return_cov)
                 stat.append(tmp)
             else:
-                Y[:, i] = self.gp_container[i].predict(X, return_std=return_std, return_cov=return_cov)
+                res = self.gp_container[i].predict(X, return_std=return_std, return_cov=return_cov)
+                Y[:, i] = res
         if stat:
             return Y, stat
 
         return Y
+
+    def get_kernels(self, X):
+        """
+        Returns the gram matrix built out of all gaussian process containers.
+        """
+        gram_matrix = np.zeros((len(self.gp_container), len(X), len(X)))
+
+        # concatenate all individual gram matrices for each gaussian process
+        for i in range(len(self.gp_container)):
+            gram_matrix[i] = self.gp_container[i].kernel_(X) #.diag(X)
+
+        return gram_matrix
 
     def y_train_mean(self):
         means = []
