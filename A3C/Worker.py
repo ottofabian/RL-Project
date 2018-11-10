@@ -4,6 +4,7 @@ from multiprocessing import Value
 from threading import Thread
 
 import gym
+import numpy as np
 import quanser_robots
 import quanser_robots.cartpole
 import quanser_robots.cartpole.cartpole
@@ -155,16 +156,17 @@ class Worker(Thread):
 
                     # prop dist over actions
                     prob = torch.distributions.Normal(mu.view(-1, ).detach(), sigma.view(-1, ).detach())
-                    # log_prob = torch.distributions.LogNormal(mu.view(-1, ).detach(), sigma.view(-1, ).detach())
 
-                    # entropy for loss regularization
+                    # entropy for regularization
                     entropy = prob.entropy()
 
+                    # sample during training for exploration
                     action = prob.sample(self.env.action_space.shape)
+
                     # avoid sampling outside the allowed range of action_space
-                    action = torch.Tensor(
-                        action.detach().numpy().clip(self.env.action_space.low, self.env.action_space.high))
-                    # log_prob = prob.log()
+                    high = np.asscalar(self.env.action_space.high)
+                    low = np.asscalar(self.env.action_space.low)
+                    action = torch.clamp(torch.Tensor(action), low, high)
                     log_prob = prob.log_prob(action)
 
                 entropies.append(entropy)
@@ -177,8 +179,6 @@ class Worker(Thread):
 
                 state, reward, done, _ = self.env.step(action)
                 done = done or t >= self.t_max
-
-                # reward = max(min(reward, 1), -1)
 
                 with self.T.get_lock():
                     self.T.value += 1
@@ -238,7 +238,6 @@ class Worker(Thread):
         # avoid overfitting on value loss by scaling it down
         combined_loss = policy_loss + self.value_loss_coef * value_loss
         combined_loss.mean().backward()
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad_norm)
 
     def _test(self):
         """
@@ -263,6 +262,7 @@ class Worker(Thread):
         while True:
             self.env.render()
             t += 1
+
             # Get params from shared global model
             if done:
                 model.load_state_dict(self.global_model.state_dict())

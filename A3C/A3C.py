@@ -2,9 +2,6 @@ import logging
 from multiprocessing import Value
 
 import gym
-import quanser_robots
-import quanser_robots.cartpole
-import quanser_robots.cartpole.cartpole
 import torch
 
 from A3C.ActorCriticNetwork import ActorCriticNetwork
@@ -14,7 +11,8 @@ from A3C.Worker import Worker
 
 class A3C(object):
 
-    def __init__(self, n_worker: int, env_name: str, lr: float = 1e-4, is_discrete: bool = False) -> None:
+    def __init__(self, n_worker: int, env_name: str, lr: float = 1e-4, is_discrete: bool = False,
+                 seed: int = 123) -> None:
         """
 
         :param n_worker: Number of workers/threads to spawn which conduct the A3C algorithm.
@@ -25,7 +23,7 @@ class A3C(object):
                             This setting has effect on the network architecture as well as the loss function used.
                             For more detail see: p.12 - Asynchronous Methods for Deep Reinforcement Learning.pdf
         """
-        self.seed = 1234
+        self.seed = seed
         self.env_name = env_name
         self.lr = lr  # Paper sampled between 1e-4 to 1e-2
         self.is_discrete = is_discrete
@@ -41,8 +39,8 @@ class A3C(object):
 
     def run(self):
         torch.manual_seed(self.seed)
-        env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
-        # env = gym.make(self.env_name)
+        # env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
+        env = gym.make(self.env_name)
         global_model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
         global_model.share_memory()
 
@@ -53,8 +51,8 @@ class A3C(object):
         # w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T,
         #            seed=self.seed, lr=self.lr, t_max=200, optimizer=None, is_train=False, is_discrete=self.is_discrete)
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T,
-                   seed=self.seed, lr=self.lr, n_steps=0, t_max=100000, gamma=.09, tau=1, beta=.01,
-                   value_loss_coef=.5, optimizer=optimizer, is_train=False, use_gae=False, is_discrete=self.is_discrete)
+                   seed=self.seed, lr=self.lr, n_steps=0, t_max=100000, gamma=.99, tau=1, beta=.005,
+                   value_loss_coef=.5, optimizer=optimizer, is_train=False, use_gae=True, is_discrete=self.is_discrete)
         w.start()
         self.worker_pool.append(w)
 
@@ -62,8 +60,8 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, T=self.T,
-                       seed=self.seed, lr=self.lr, n_steps=5, t_max=100000, gamma=.09, tau=1, beta=.01,
-                       value_loss_coef=.5, optimizer=optimizer, is_train=True, use_gae=False,
+                       seed=self.seed, lr=self.lr, n_steps=5, t_max=100000, gamma=.99, tau=1, beta=.005,
+                       value_loss_coef=.5, optimizer=optimizer, is_train=True, use_gae=True,
                        is_discrete=self.is_discrete)
             w.start()
             self.worker_pool.append(w)
