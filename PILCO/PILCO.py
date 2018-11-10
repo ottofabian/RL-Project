@@ -8,33 +8,50 @@ from PILCO.RBFController import RBFController
 
 class PILCO(object):
 
-    def __init__(self, env_name, seed, n_features):
+    def __init__(self, env_name, seed, n_features, T):
+        """
+
+        :param env_name: gym env to work with
+        :param seed: random seed for reproduceability
+        :param n_features: Amount of features for RBF Controller
+        :param T: number of steps for trajectory rollout, also defined as horizon
+        """
+
+        # -----------------------------------------------------
         # general
         self.env_name = env_name
         self.seed = seed
         self.n_features = n_features
         self.noise_var = None
 
-        # env
-        #self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
-
+        # -----------------------------------------------------
+        # env setup
         # check if the requested environment is a quanser robot env
         if self.env_name in ['CartpoleStabShort-v0']:
             self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
         else:
             # use the official gym env as default
             self.env = gym.make(self.env_name)
+        self.env.seed(self.seed)
 
         # get the number of available action from the environment
         self.state_dim = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.shape[0]
 
-        self.env.seed(self.seed)
-
+        # -----------------------------------------------------
         # dynamics model
-        # TODO learn length scale by evidence maximization
-        self.mgp = MGPR(dim=self.env.observation_space.shape[0])
+        self.mgp = None
+        # TODO change to meaning full inits
+        self.l = None
+        self.sigma_f = None
+        self.sigma_eps = None
 
+        # -----------------------------------------------------
+        # policy search
+        self.T = T
+
+        # -----------------------------------------------------
+        # Container for collected experience
         self.states = []
         self.actions = []
 
@@ -87,13 +104,14 @@ class PILCO(object):
         sigma = np.random.normal(0, np.identity(X.shape[1]))
         mu = np.random.normal(0, 1, self.n_features)
 
-        # create controller/policy with those params
+        # create controller/policy with above params
         policy = RBFController(W, sigma, mu)
 
         while True:
             convergence = False
             self.learn_dynamics_model(X, y)
             # TODO model based policy search
+            self.gradient_based_policy_search()
 
             while True:
                 self.rollout()
@@ -114,6 +132,9 @@ class PILCO(object):
             break
 
     def learn_dynamics_model(self, X, y):
+        self.update_gp_hyperparams(X, y)
+        self.mgp = MGPR(dim=self.env.observation_space.shape[0], length_scale=self.l, sigma_f=self.sigma_f,
+                        sigma_eps=self.sigma_eps)
         self.mgp.fit(X, y)
 
     def analytic_approximate_policy_evaluation(self):
@@ -188,13 +209,13 @@ class PILCO(object):
         """
 
         # check for system constraint boundaries
-        #self.env.action_space.high
-        #self.env.action_space.low
+        high = np.asscalar(self.env.action_space.high)
+        low = np.asscalar(self.env.action_space.low)
 
         # For our gym-environments we don't need the ODE because we already get sufficient env-feedback
-        #idces_ode_solver = None
-        #idces_agugmenting_ode = None
-        #idces_dynamics_out = None
+        # idces_ode_solver = None
+        # idces_agugmenting_ode = None
+        # idces_dynamics_out = None
         # ...
 
         # variable
@@ -207,7 +228,21 @@ class PILCO(object):
         latent = np.zeros((episode_len + 1, self.n_features + self.state_dim))
 
         # run multiple rollouts along a trajectory for episode_len number of steps.
+
+        # inital state dist
+        p_x = None
+
         for i in range(episode_len):
+            # # dist over actions from policy
+            # p_u = policy.predict(p_x)
+            #
+            # # dist over state delta given current state and action dist
+            # p_x_u = p_x + p_u
+            # p_delta = self.mgp.predict(p_x_u)
+            #
+            # # get state dist for x_t+1
+            # # p_x = TODO
+
             raise NotImplementedError
 
         return x, targets_y, loss_l, latent
@@ -241,6 +276,51 @@ class PILCO(object):
             state_prev = state
 
         return X, y, reward
+
+    def update_gp_hyperparams(self, X, y):
+        """
+        Compute hyperparams for GPR
+        :param X: training vector containing values for [x,u]^T
+        :param y: target vector containing deltas of states
+        :return:
+        """
+        self.l = np.var(X, axis=1)
+        self.sigma_f = np.var(y, axis=1)
+        self.sigma_eps = np.var(y / 10, axis=1)
+
+    def gradient_based_policy_search(self, policy: MGPR, X, y):
+        # TODO get the state x_t here
+        state = None
+        cov_state = None
+
+        for t in range(self.T):
+            # get dist over next action
+            p_u = policy.predict(state)
+            # squash prediction
+            p_u = np.sin(p_u)
+
+            # get dist over next successor state
+            p_xu = np.concatenate(state, p_u)
+            delta_mu, cov_delta = self.mgp.predict(p_xu, return_cov=True)
+
+            # TODO
+            state_next = state + delta_mu
+            cov_state_next = cov_delta
+
+            betas = np.zeros((state.shape[0], -1))
+            q = []
+
+            # TODO not sure if this is the state shape
+            for e in range(state.shape[0]):
+                # TODO: K is probably the eth kernel value
+                K = None
+                betas[e] = np.linalg.solve(K + self.sigma_eps[e] * np.identity(K.shape[0]), np.identity(K.shape[0])) * y
+
+                temp = cov_state * np.linalg.solve(self.l[e], np.identity(self.l[e]))
+                diff = X - mu_state
+                # q[e] = self.sigma_f[e] * np.abs(temp * np.identity(temp.shape[0])) ** .5 * TODO
+
+        return
 
     # def compute_deltas(self, x: np.ndarray, sigma: np.ndarray) -> np.ndarray:
     #     """

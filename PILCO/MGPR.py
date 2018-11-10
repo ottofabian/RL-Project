@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 
 
 class MGPR(GaussianProcessRegressor):
@@ -8,8 +8,11 @@ class MGPR(GaussianProcessRegressor):
     Multivariate Gaussian Process Regression
     """
 
-    def __init__(self, dim, optimizer="fmin_l_bfgs_b", kernel=RBF(), alpha=1e-10, n_restarts_optimizer=0,
-                 normalize_y=False, copy_X_train=True, random_state=None):
+    def __init__(self, dim, optimizer="fmin_l_bfgs_b", length_scale=1., sigma_f=1, sigma_eps=1, alpha=1e-10,
+                 n_restarts_optimizer=0, normalize_y=False, copy_X_train=True, random_state=None):
+
+        kernel = sigma_f * RBF(length_scale=length_scale, length_scale_bounds=(1e-05, 100000.0)) \
+                 + WhiteKernel(noise_level=sigma_eps, noise_level_bounds=(1e-05, 100000.0))
 
         super(MGPR, self).__init__(kernel, alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train,
                                    random_state)
@@ -21,10 +24,8 @@ class MGPR(GaussianProcessRegressor):
                                      random_state) for _ in range(dim)]
 
     def fit(self, X, Y):
-        assert (self.dim == Y.shape[1])
-
         for i in range(self.dim):
-           self.gp_container[i].fit(X, Y[:, i])
+            self.gp_container[i].fit(X, Y[:, i])
 
     def predict(self, X, return_std=False, return_cov=False):
         Y = np.empty((X.shape[0], self.dim))
@@ -33,6 +34,7 @@ class MGPR(GaussianProcessRegressor):
         for i in range(self.dim):
             if return_cov or return_std:
                 Y[:, i], tmp = self.gp_container[i].predict(X, return_std=return_std, return_cov=return_cov)
+                stat.append(tmp)
             else:
                 Y[:, i] = self.gp_container[i].predict(X, return_std=return_std, return_cov=return_cov)
         if stat:
