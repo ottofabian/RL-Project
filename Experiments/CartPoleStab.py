@@ -33,5 +33,5 @@ seed = 123456
 # a3c = A3C(n_worker=4, env_name='Pendulum-v0', lr=1e-4, is_discrete=False, seed=seed)
 # a3c.run()
 
-pilco = PILCO(env_name='CartPole-v0', seed=seed, n_features=4)
+pilco = PILCO(env_name='Pendulum-v0', seed=seed, n_features=4, T=20)
 pilco.run(50)

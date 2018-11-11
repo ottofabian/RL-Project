@@ -1,9 +1,11 @@
 import gym
 import numpy as np
 import quanser_robots
+from numpy.linalg import solve
 
+from PILCO.Controller import Controller
+from PILCO.Controller.RBFController import RBFController
 from PILCO.MGPR import MGPR
-from PILCO.RBFController import RBFController
 
 
 class PILCO(object):
@@ -41,10 +43,13 @@ class PILCO(object):
         # -----------------------------------------------------
         # dynamics model
         self.mgp = None
+
+        # -----------------------------------------------------
+        # Hyperparameter to optimize
         # TODO change to meaning full inits
-        self.l = None
-        self.sigma_f = None
-        self.sigma_eps = None
+        self.l = np.random.normal(0, np.ones(self.state_dim))
+        self.var_f = 1
+        self.var_eps = 0.1  # target noise for prediction of GP and Policy
 
         # -----------------------------------------------------
         # policy search
@@ -56,14 +61,11 @@ class PILCO(object):
         self.actions = []
 
     def run(self, n_init):
-        # sample dataset with random actions
-        X = []
-        y = []
-        rewards = []
 
-        self.noise_var = np.random.normal(0, np.ones(
-            self.env.observation_space.shape[0]))  # TODO learn noise variance by evidence maximization
-        # self.noise_var = np.diag(np.std(X, axis=1))  # TODO Figure this out
+        # sample dataset with random actions
+        X = np.zeros((n_init, self.state_dim + self.n_actions))
+        y = np.zeros((n_init, self.state_dim))
+        rewards = np.zeros((n_init,))
 
         i = 0
         while i < n_init:
@@ -78,21 +80,16 @@ class PILCO(object):
                 state_prev = np.array(state_prev)
 
                 # state-action pair as input
-                X.append(np.append(state_prev, action))
+                X[i] = np.concatenate([state_prev, action])
 
-                # delta with following state as output plus some noise
-                epsilon = np.random.normal(0, np.abs(self.noise_var))
-                print(action)
+                # delta to following state as output plus some noise
+                y[i] = state - state_prev + np.random.multivariate_normal(np.ones(state.shape),
+                                                                          self.var_eps * np.identity(state.shape[0]))
 
-                print(state)
-                print(state_prev)
-
-                y.append(state - state_prev + epsilon)
-
-                rewards.append(reward)
-
+                rewards[i] = reward
                 state_prev = state
                 i += 1
+                self.update_hyperparams(X, y, i)
 
         # convert to numpy
         X = np.array(X)
@@ -102,18 +99,18 @@ class PILCO(object):
         # init model params
 
         # dimension of state vector
-
-        print('self.env.observation_space.shape[0]:' + str(self.env.observation_space.shape[0]))
-        D = self.env.observation_space.shape[0]
+        # D = self.env.observation_space.shape[0]
         # dimension of action vector
-        F = self.env.action_space
+        # F = self.env.action_space
+        # W = np.random.normal(0, np.ones(self.n_features), size=(D, self.n_features))
+        # sigma = np.random.normal(0, np.identity(self.state_dim))
+        # mu = np.random.normal(0, 1, self.n_features)
 
-        W = np.random.normal(0, np.ones(self.n_features), size=(D, self.n_features))
-        sigma = np.random.normal(0, np.identity(self.state_dim))
-        mu = np.random.normal(0, 1, self.n_features)
-
-        # create controller/policy with above params
-        policy = RBFController(W, sigma, mu)
+        # create controller/policy
+        # policy_sigma = np.random.normal(0, self.state_dim)
+        # sigma = self.var_eps??
+        policy = RBFController(X[:, :self.state_dim], np.array(1))
+        policy.update_params(X[:, :self.state_dim])
 
         while True:
             convergence = False
@@ -122,7 +119,7 @@ class PILCO(object):
             self.gradient_based_policy_search(policy, X, y)
 
             while True:
-                self.rollout()
+                # self.rollout()
                 self.analytic_approximate_policy_evaluation()
                 self.policy_improvement()
                 W, sigma, mu = self.update_params(W, sigma, mu)
@@ -140,9 +137,9 @@ class PILCO(object):
             break
 
     def learn_dynamics_model(self, X, y):
-        self.update_gp_hyperparams(X, y)
-        self.mgp = MGPR(dim=self.env.observation_space.shape[0], length_scale=self.l, sigma_f=self.sigma_f,
-                        sigma_eps=self.sigma_eps)
+        self.update_hyperparams(X, y)
+        self.mgp = MGPR(dim=self.env.observation_space.shape[0], length_scale=self.l, sigma_f=self.var_f,
+                        sigma_eps=self.var_eps)
         self.mgp.fit(X, y)
 
     def analytic_approximate_policy_evaluation(self):
@@ -285,84 +282,104 @@ class PILCO(object):
 
         return X, y, reward
 
-    def update_gp_hyperparams(self, X, y):
+    def update_hyperparams(self, X, y, i=None):
         """
         Compute hyperparams for GPR
         :param X: training vector containing values for [x,u]^T
         :param y: target vector containing deltas of states
         :return:
         """
-        self.l = np.var(X, axis=0)
-        self.sigma_f = np.var(y, axis=0)
-        self.sigma_eps = np.var(y / 10, axis=0)
+        self.l = np.var(X[:i, :], axis=0)
+        self.var_f = np.var(y[:i, :])
+        self.var_eps = np.var(y[:i, :] / 10)
 
-    def gradient_based_policy_search(self, policy: MGPR, X, y):
+    def gradient_based_policy_search(self, policy: Controller, X, y):
         # TODO get the state x_t here
-        mu_state = X.mean(axis=0)[:self.state_dim]
-        mu_state_tilde = X.mean(axis=0)
+        state_mu = X[:, :self.state_dim].mean(axis=0)
+        state_tilde_mu = X.mean(axis=0)  # TODO: section 3-3 in Master thesis
 
-        cov_state = X.std(axis=0)[:self.state_dim]
-        cov_state_tilde = X.std(axis=0)
+        state_cov = X[:, :self.state_dim].std(axis=0)
+        state_tilde_cov = np.cov(X, rowvar=False)  # TODO: section 3-3 in Master thesis
 
         for t in range(self.T):
-            # get dist over next action
-            p_u = policy.predict(mu_state.reshape(1, -1))
+            # get mean over next action
+            # var is 0 for RBF Controller
+            p_u = policy.predict(state_mu.reshape(1, -1))[0]
+
             # squash prediction
             p_u = np.sin(p_u)
 
-            # get dist over next successor state
-            p_xu = np.hstack([mu_state, p_u])
-            delta_mu, cov_delta = self.mgp.predict(p_xu.reshape(1, -1), return_cov=True)
+            # get dist over successor state
+            p_xu = np.concatenate([state_mu, p_u])
+            delta_mu, delta_cov = self.mgp.predict(p_xu.reshape(1, -1), return_cov=True)
+            delta_mu = delta_mu[0]
+            # compute mean and cov of successor state dist
 
-            # TODO
-            mu_state_next = mu_state + delta_mu
+            # # compute precision matrix and different inv
+            precision = np.diag(self.l)
+            # state_tilde_cov_inv = solve(state_tilde_cov, np.identity(len(state_tilde_cov)))
+            # precision_inv = solve(precision, np.identity(len(precision)))
+            # precision_absolute_inv = solve(np.abs(precision), np.identity(len(precision)))
+            #
+            # exp = -(self.state_dim + self.n_actions) * .5
+            #
+            # c1_inv = (1 / self.var_f) * (2 * np.pi) ** exp * precision_absolute_inv ** .5
+            #
+            # const = (2 * np.pi) ** exp
+            # # diff = (X - state_tilde_mu)
+            # inv = solve(precision + state_tilde_cov, np.identity(len(precision)))
+            # c2_inv = np.array([const * np.exp(-.5 * (x - state_tilde_mu).T @ inv @ (x - state_tilde_mu)) for x in X])
+            #
+            # omega = solve(precision_inv + state_tilde_cov_inv, np.identity(len(precision_inv)))
+            # w = (X @ precision_inv.T + state_tilde_cov_inv @ state_tilde_mu) @ omega
+            #
+            # q = np.array([np.linalg.inv(c1_inv) * c for c in c2_inv])
+            # beta = delta_mu @ np.linalg.inv(q)
+            #
+            # state_tilde_delta_mu = np.sum((1 / c1_inv) * c2_inv) * beta * w
 
+            betas = self.mgp.get_alphas()
+            qs = np.array([betas[i] / mu for i, mu in enumerate(delta_mu)])
 
-            cov_state_next = cov_state + cov_delta # # Cov of 2 joints
-            self.mgp.get_kernels(X)
-            betas = np.zeros((y.shape[1], len(X), y.shape[1])) #np.zeros((mu_state.shape[0], -1))
-            q = []
+            matrices = state_tilde_cov @ solve(state_tilde_cov + precision, np.identity(state_tilde_cov.shape[0])) @ \
+                       (X - state_tilde_mu).T
 
-            # TODO not sure if this is the state shape
+            cross_cov_state_tilde = np.array([np.sum(betas[i] * qs[i] * matrices, axis=1) for i in range(len(betas))])
+            cross_cov_state = cross_cov_state_tilde[:, :self.state_dim]
 
-            # K is of shape: [state_dims x n_samples x n_samples]
-            K = self.mgp.get_kernels(X)
+            state_next_mu = state_mu + delta_mu
+            state_next_cov = state_cov + delta_cov + cross_cov_state + cross_cov_state
 
-            for e in range(y.shape[1]):
-                # TODO: K is probably the eth kernel value
-                # K = None
+            state_cov = state_next_cov
+            state_mu = state_next_mu
 
-                betas[e] = np.linalg.solve(K[e] + self.sigma_eps[e] * np.identity(K[e].shape[0]), np.identity(K[e].shape[0])) @ y
+            # betas = np.zeros((y.shape[1], len(X), y.shape[1]))  # np.zeros((state_mu.shape[0], -1))
+            # q = []
+            #
+            # # TODO not sure if this is the state shape
+            #
+            # # K is of shape: [state_dims x n_samples x n_samples]
+            # K = self.mgp.get_kernels(X)
 
-                """
-                betas = np.vstack([solve(self.K[i], y[:, i]) for i in range(E)]).T
-
-                # Compute the predicted mean and IO covariance.
-                iL = np.stack([np.diag(exp(-X[i, :D])) for i in range(E)])
-                iN = np.matmul(inp, iL)
-                B = iL @ s @ iL + np.eye(D)
-                t = np.stack([solve(B[i].T, iN[i].T).T for i in range(E)])
-                q = exp(-np.sum(iN * t, 2) / 2)
-                qb = q * beta.T
-                tiL = np.matmul(t, iL)
-                c = exp(2 * X[:, D]) / sqrt(det(B))
-
-                M = np.sum(qb, 1) * c
-                V = (np.transpose(tiL, [0, 2, 1]) @ np.expand_dims(qb, 2)).reshape(
-                    E, D).T * c
-                k = 2 * X[:, D].reshape(E, 1) - np.sum(iN ** 2, 2) / 2
-                """
-
-                if isinstance(self.l[e], float):
-                    temp = cov_state_tilde / self.l[e]
-                else:
-                    temp = cov_state_tilde * np.linalg.solve(self.l[e], np.identity(self.l[e].shape))
-
-                diff = X - mu_state_tilde
-
-                # TODO: Finish with pseudo-algo on master thesis
-                #q[e] = self.sigma_f[e] * np.abs(temp + np.identity(temp.shape[0])) ** .5 * np.exp(-.5 (p_xu - ))
-
+            # ------------------------------------------------
+            # This should be the output of the GP model
+            # ------------------------------------------------
+            # for e in range(y.shape[1]):
+            #     # TODO: K is probably the eth kernel value
+            #     # K = None
+            #
+            #     betas[e] = np.linalg.solve(K[e] + self.sigma_eps[e] * np.identity(K[e].shape[0]),
+            #                                np.identity(K[e].shape[0])) @ y
+            #
+            #     if isinstance(self.l[e], float):
+            #         temp = state_tilde_cov / self.l[e]
+            #     else:
+            #         temp = state_tilde_cov * np.linalg.solve(self.l[e], np.identity(self.l[e].shape))
+            #
+            #     diff = X - state_tilde_mu
+            #
+            #     # TODO: Finish with pseudo-algo on master thesis
+            #     # q[e] = self.sigma_f[e] * np.abs(temp + np.identity(temp.shape[0])) ** .5 * np.exp(-.5 (p_xu - ))
 
         return
 

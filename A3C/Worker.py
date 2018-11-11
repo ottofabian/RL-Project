@@ -37,7 +37,7 @@ class Worker(Thread):
                  lr: float = 1e-4, n_steps: int = 0, t_max: int = 100000, gamma: float = .99,
                  tau: float = 1, beta: float = .01, value_loss_coef: float = .5,
                  optimizer: Optimizer = None, is_train: bool = True, use_gae: bool = True,
-                 is_discrete: bool = False) -> None:
+                 is_discrete: bool = False, lock=None) -> None:
         """
         Initialize Worker thread for A3C algorithm
         :param use_gae: use Generalize Advantage Estimate
@@ -88,6 +88,7 @@ class Worker(Thread):
         self.global_model = global_model
         self.worker_id = worker_id
         self.T = T
+        self.lock = lock
 
         # logging instance
         self.logger = logging.getLogger(__name__)
@@ -208,7 +209,11 @@ class Worker(Thread):
 
             # compute loss and backprop
             self._compute_loss(R, rewards, values, log_probs, entropies)
+
+            self.lock.acquire()
             sync_grads(model, self.global_model)
+            self.lock.release()
+
             self.optimizer.step()
 
     def _compute_loss(self, R: torch.Tensor, rewards: list, values: list, log_probs: list, entropies: list) -> None:

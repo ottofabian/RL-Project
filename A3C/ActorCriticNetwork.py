@@ -8,7 +8,7 @@ from gym.spaces import Discrete
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        nn.init.xavier_normal_(m.weight.data)
+        nn.init.uniform_(m.weight.data, 0, .1)
         m.bias.data.fill_(0)
 
 

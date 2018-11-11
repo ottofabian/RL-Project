@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
-from PILCO.Kernel_C import Kernel_C
+
 
 class MGPR(GaussianProcessRegressor):
     """
@@ -42,7 +42,7 @@ class MGPR(GaussianProcessRegressor):
                 res = self.gp_container[i].predict(X, return_std=return_std, return_cov=return_cov)
                 Y[:, i] = res
         if stat:
-            return Y, stat
+            return Y, np.array(stat)
 
         return Y
 
@@ -75,3 +75,6 @@ class MGPR(GaussianProcessRegressor):
         for i in range(self.dim):
             lml.append(self.gp_container[i].log_marginal_likelihood(theta, eval_gradient))
         return lml
+
+    def get_alphas(self):
+        return np.array([c.alpha_ for c in self.gp_container])
