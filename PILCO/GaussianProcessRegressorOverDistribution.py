@@ -9,12 +9,11 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
     Multivariate Gaussian Process Regression
     """
 
-    def __init__(self, X, y, length_scales, optimizer="fmin_l_bfgs_b", sigma_f=1, sigma_eps=.01, alpha=1e-10,
-                 n_restarts_optimizer=0, normalize_y=False, copy_X_train=True, random_state=None):
+    def __init__(self, length_scales, optimizer="fmin_l_bfgs_b", sigma_f=1, sigma_eps=1e-6, alpha=1e-10,
+                 n_restarts_optimizer=0, normalize_y=False, copy_X_train=True, random_state=None, is_fixed=False):
         """
 
         :param optimizer:
-        :param length_scales:
         :param sigma_f:
         :param sigma_eps:
         :param alpha:
@@ -24,21 +23,25 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         :param random_state:
         """
 
-        ridge = 1e-6
-        # TODO: Change the length scales to a good value
-        length_scales = np.ones(len(length_scales))
+        # TODO: Change the length scales to a good initial value
+        self.length_scales = length_scales
 
         # TODO: Check if WhiteKernel is used correctly
-        kernel = ConstantKernel(sigma_f) * RBF(length_scale=length_scales) + WhiteKernel(ridge)
+        if is_fixed:
+            kernel = ConstantKernel(sigma_f, constant_value_bounds=(sigma_f, sigma_f)) * RBF(
+                length_scale=length_scales) + WhiteKernel(sigma_eps, noise_level_bounds=(sigma_eps, sigma_eps))
+        else:
+            kernel = ConstantKernel(sigma_f) * RBF(length_scale=length_scales) + WhiteKernel(sigma_eps)
 
         super(GaussianProcessRegressorOverDistribution, self).__init__(kernel, alpha, optimizer, n_restarts_optimizer,
                                                                        normalize_y, copy_X_train,
                                                                        random_state)
-        self.X = X
-        self.y = y
+        self.X = None
+        self.y = None
         self.sigma_eps = sigma_eps
         self.length_scales = length_scales
         self.sigma_f = sigma_f
+        self.is_fixed = is_fixed
 
         self.betas = None
         self.K_inv = None
@@ -46,6 +49,8 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
 
     def fit(self, X, y):
         super(GaussianProcessRegressorOverDistribution, self).fit(X, y)
+        self.X = X
+        self.y = y
 
         # retrieve optimized hyperparams
         self.sigma_eps = np.exp(self.kernel_.theta[-1])
@@ -75,28 +80,16 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         # self.K_inv = solve_triangular(L, np.identity(self.X.shape[0]))
 
         # self.betas = solve_triangular(L, self.y)[:, 0]
-        self.K_inv = solve(K + noise, np.identity(K.shape[0]))
+
+        if self.is_fixed:
+            # this is required for the RBF controller
+            self.K_inv = np.zeros(K.shape)
+        else:
+            self.K_inv = solve(K + noise, np.identity(K.shape[0]))
+
         self.betas = K @ self.y
 
         return self.compute_mu(mu, sigma)
-
-    def predict_given_factorizations(self, mu, sigma):
-        """
-        Approximate GP regression for uncertain inputs x~N(mu, sigma) via moment matching
-
-        IN: mean (m) (row vector) and (s) variance of the state
-        OUT: mean (M) (row vector), variance (S) of the action
-             and inv(s)*input-ouputcovariance
-
-        :param mu: mean of joint dist
-        :param sigma: covar of joint dist
-        :param K_inv: inverse of gram-matrix
-        :param beta: beta weights
-        """
-        n_out = 1
-
-        # sigma = np.tile(sigma[None, None, :, :], [n_out, n_out, 1, 1])
-        # diff = np.tile(self.centralized_input(mu)[None, :, :], [n_out, 1, 1])
 
     def compute_mu(self, mu, sigma):
         """

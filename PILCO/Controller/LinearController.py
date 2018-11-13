@@ -9,7 +9,7 @@ class LinearController(Controller):
     def __init__(self, W):
         self.W = W
 
-    def predict(self, X):
+    def choose_action(self, X):
         # TODO Check axis dim
         return np.sum(self.W @ X, axis=1)
 

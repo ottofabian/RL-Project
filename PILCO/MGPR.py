@@ -10,14 +10,12 @@ class MGPR(GaussianProcessRegressor):
     Multivariate Gaussian Process Regression
     """
 
-    def __init__(self, X, y, length_scales, optimizer="fmin_l_bfgs_b", sigma_f=1, sigma_eps=1, alpha=1e-10,
-                 n_restarts_optimizer=0, normalize_y=False, copy_X_train=True, random_state=None):
+    def __init__(self, length_scales, n_targets, optimizer="fmin_l_bfgs_b", sigma_f=1, sigma_eps=1, alpha=1e-10,
+                 n_restarts_optimizer=0, normalize_y=False, copy_X_train=True, random_state=None, is_fixed=False):
 
         """
 
-        :param dim: number of GPs to use, should be equaivalent to the number of
         :param optimizer:
-        :param length_scales:
         :param sigma_f:
         :param sigma_eps:
         :param alpha:
@@ -28,17 +26,14 @@ class MGPR(GaussianProcessRegressor):
         """
 
         super(MGPR, self).__init__(alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train, random_state)
-        self.dim = y.shape[1]
-        self.length_scales = length_scales
         self.X = None
-        self.y = None
+        self.n_targets = n_targets
         # For a D-dimensional state space, we use D separate GPs, one for each state dimension.
         # - Efficient Reinforcement Learning using Gaussian Processes, Marc Peter Deisenroth
         self.gp_container = [
-            GaussianProcessRegressorOverDistribution(X=X, y=y[:, i], sigma_eps=sigma_eps, sigma_f=sigma_f,
-                                                     length_scales=length_scales,
-                                                     alpha=alpha, optimizer=optimizer,
-                                                     random_state=random_state) for i in range(self.dim)]
+            GaussianProcessRegressorOverDistribution(length_scales=length_scales, sigma_eps=sigma_eps, sigma_f=sigma_f,
+                                                     alpha=alpha, optimizer=optimizer, random_state=random_state,
+                                                     is_fixed=is_fixed) for _ in range(self.n_targets)]
 
     def fit(self, X, y):
         """
@@ -48,15 +43,14 @@ class MGPR(GaussianProcessRegressor):
         :return:
         """
         self.X = X
-        self.y = y
-        for i in range(self.dim):
+        for i in range(self.n_targets):
             self.gp_container[i].fit(X, y[:, i])
 
     def predict(self, X, return_std=False, return_cov=False):
-        y = np.empty((X.shape[0], self.dim))
+        y = np.empty((X.shape[0], self.n_targets))
         stat = []
 
-        for i in range(self.dim):
+        for i in range(self.n_targets):
             if return_cov or return_std:
                 y[:, i], tmp = self.gp_container[i].predict(X, return_std=return_std, return_cov=return_cov)
                 stat.append(tmp)
@@ -80,12 +74,12 @@ class MGPR(GaussianProcessRegressor):
         mu = np.zeros((mu.shape[0] + 1,))
         sigma = np.identity((sigma.shape[0] + 1))
 
-        mu_out = np.zeros((self.y.shape[1],))
-        sigma_out = np.zeros((self.y.shape[1], self.y.shape[1]))
-        input_output_cov = np.zeros((self.X.shape[1], self.y.shape[1]))
+        mu_out = np.zeros((self.n_targets,))
+        sigma_out = np.zeros((self.n_targets, self.n_targets))
+        input_output_cov = np.zeros((self.X.shape[1], self.n_targets))
 
         # get the independet mus from the gps
-        for i in range(self.dim):
+        for i in range(self.n_targets):
             mu_out[i] = self.gp_container[i].predict_from_dist(mu, sigma)
 
         # The cov or delta x is not diagonal, therefor it is necessary to
@@ -98,11 +92,11 @@ class MGPR(GaussianProcessRegressor):
         # compute zeta before hand, it does not change
         zeta = (self.X - mu).T
 
-        for i in range(self.dim):
+        for i in range(self.n_targets):
             beta_a = self.gp_container[i].betas
             input_output_cov[i] = self.compute_input_output_cov(i, beta_a, sigma, zeta)
 
-            for j in range(self.dim):
+            for j in range(self.n_targets):
 
                 Q = self.compute_cross_cov(i, j, zeta, sigma)
                 beta_b = self.gp_container[j].betas
@@ -162,21 +156,24 @@ class MGPR(GaussianProcessRegressor):
 
     def y_train_mean(self):
         means = []
-        for i in range(self.dim):
+        for i in range(self.n_targets):
             means.append(self.gp_container[i].y_train_mean())
         return means
 
     def sample_y(self, X, n_samples=1, random_state=0):
         samples = []
-        for i in range(self.dim):
+        for i in range(self.n_targets):
             samples.append(self.gp_container[i].sample_y(X, n_samples, random_state))
         return samples
 
     def log_marginal_likelihood(self, theta=None, eval_gradient=False):
         lml = []
-        for i in range(self.dim):
+        for i in range(self.n_targets):
             lml.append(self.gp_container[i].log_marginal_likelihood(theta, eval_gradient))
         return lml
 
-    def get_betas(self):
-        return np.array([c.betas for c in self.gp_container])
+    def get_sigma_fs(self):
+        return np.array([c.sigma_f for c in self.gp_container])
+
+    def get_sigma_eps(self):
+        return np.array([c.sigma_eps for c in self.gp_container])

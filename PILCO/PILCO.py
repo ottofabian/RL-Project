@@ -104,7 +104,6 @@ class PILCO(object):
                 rewards[i] = reward
                 state_prev = state
                 i += 1
-                self.update_hyperparams(X, y, i)
 
         # convert to numpy
         X = np.array(X)
@@ -125,8 +124,10 @@ class PILCO(object):
         # policy_sigma = np.random.normal(0, self.state_dim)
         # sigma = self.var_eps??
 
+        self.init_hyperparams(X, y, i)
+
         # TODO change the ls, they are different to the ones from the gp and should be optimized
-        policy = RBFController(X[:, :self.state_dim], self.var_eps, self.l[:self.state_dim])
+        policy = RBFController(self.l, n_actions=self.n_actions)
         policy.update_params(X[:, :self.state_dim])
 
         while True:
@@ -135,19 +136,18 @@ class PILCO(object):
             # We probably have to replace the sklearn GP with custom GP
             # to incorporate the uncertainty from p(x,u) into p(delta_x)
             self.learn_dynamics_model(X, y)
-            tau_mus, tau_covs = self.rollout(policy, X)
+            tau_mus, tau_covs = self.rollout(policy)
 
             while True:
                 # TODO: Evaluation works only if cost function is known. Employ GP to to represent cost function.
                 # PHD Thesis, page 47, 3.5.4
                 self.evaluate_policy()
                 self.policy_improvement()
-                W, sigma, mu = self.update_params(W, sigma, mu)
 
                 if convergence:
                     break
 
-            policy.update_params(W, sigma, mu)
+            policy.update_params()
             X_test, y_test, reward_test = self.execute_test_run(policy)
             np.append(X, X_test)
             np.append(y, y_test)
@@ -157,8 +157,10 @@ class PILCO(object):
             break
 
     def learn_dynamics_model(self, X, y):
-        self.update_hyperparams(X, y)
-        self.dynamics_model = MGPR(X=X, y=y, length_scales=self.l, sigma_f=self.var_f, sigma_eps=self.var_eps)
+        # TODO do we only change params at the beginning?
+        # self.init_hyperparams(X, y)
+        self.dynamics_model = MGPR(length_scales=self.l, n_targets=y.shape[1], sigma_f=self.var_f,
+                                   sigma_eps=self.var_eps)
         self.dynamics_model.fit(X, y)
 
     def evaluate_policy(self):
@@ -214,11 +216,6 @@ class PILCO(object):
         minimize()
         raise NotImplementedError
 
-    def update_params(self, W, sigma, mu):
-        # use CG or L-BFGS for updates
-        # TODO
-        return W, sigma, mu
-
     def execute_test_run(self, policy):
         X = []
         y = []
@@ -229,7 +226,7 @@ class PILCO(object):
 
         while not done:
             # TODO
-            action = policy.predict(state_prev)
+            action = policy.choose_action(state_prev)
             state, reward, done, _ = self.env.step(action)
 
             # create history and create new training instance
@@ -241,7 +238,7 @@ class PILCO(object):
 
         return X, y, reward
 
-    def update_hyperparams(self, X, y, i=None):
+    def init_hyperparams(self, X, y, i=None):
         """
         Compute hyperparams for GPR
         :param X: training vector containing values for [x,u]^T
@@ -252,18 +249,20 @@ class PILCO(object):
         self.var_f = np.var(y[:i, :])
         self.var_eps = np.var(y[:i, :] / 10)
 
-    def rollout(self, policy: Controller, X):
+    def rollout(self, policy: Controller):
 
-        # TODO get the mu of initial state x_t here
-        # state_mu = X[:, :self.state_dim].mean(axis=0)
+        # TODO select good initial state dist
+        # Currently this is taken from the CartPole Problem, PHD
         state_mu = np.zeros((self.state_dim,))
-        state_tilde_mu = X.mean(axis=0)  # TODO: section 3-3 in Master thesis
+        state_cov = 1e-2 * np.identity(self.state_dim)
 
-        # TODO get the cov of initial state x_t here
+        # --------------------------------------------------------
+        # Alternatives:
+        # state_mu = X[:, :self.state_dim].mean(axis=0)
+
         # state_cov = X[:, :self.state_dim].std(axis=0)
         # state_cov = np.cov(X[:, :self.state_dim], rowvar=False
-        state_cov = np.zeros((self.state_dim, self.state_dim))
-        state_tilde_cov = np.cov(X, rowvar=False)  # TODO: section 3-3 in Master thesis
+        # --------------------------------------------------------
 
         # container
         trajectory_mu = np.zeros((self.T + 1, state_mu.shape[0]))
@@ -273,11 +272,10 @@ class PILCO(object):
         trajectory_cov[0] = state_cov
 
         for t in range(1, self.T + 1):
-            # get mean over next action
+            # get mean and covar over next action
             # TODO: Make this viable for x~N(mu, sigma)
             # PHD, page 44, Nonlinear Model: RBF Network
-            # This is only correct for the point case, but not a dist
-            action_mu, action_cov = policy.predict(state_mu.reshape(1, -1))[0]
+            action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov)
 
             # ------------------------------------------------
             # TODO: p(u)' is squashed distribution over p(u), see PHD thesis page 46, 2a)+b) and Section 2.3.2
@@ -295,7 +293,7 @@ class PILCO(object):
 
             # delta_mu, delta_cov = self.dynamics_model.predict_from_dist(state_action_mu, state_action_cov)
             # TODO: THIS IS JUST FOR TESTING, USE THE LINE ABOVE IN FINAL CODE
-            delta_mu, delta_cov, input_output_cov = self.dynamics_model.predict_from_dist(state_mu, state_cov)
+            delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_mu, state_cov)
 
             # compute mean and cov of successor state dist
             # # compute precision matrix and different inv
@@ -331,7 +329,7 @@ class PILCO(object):
             # cross_cov_state = cross_cov_state_tilde[:, :self.state_dim]
 
             state_next_mu = state_mu + delta_mu
-            state_next_cov = state_cov + delta_cov + input_output_cov + input_output_cov.T
+            state_next_cov = state_cov + delta_cov + delta_input_output_cov + delta_input_output_cov.T
 
             trajectory_mu[t] = state_next_mu
             trajectory_cov[t] = state_next_cov
@@ -465,11 +463,11 @@ class PILCO(object):
     #
     #     for i in range(episode_len):
     #         # # dist over actions from policy
-    #         # p_u = policy.predict(p_x)
+    #         # p_u = policy.choose_action(p_x)
     #         #
     #         # # dist over state delta given current state and action dist
     #         # p_x_u = p_x + p_u
-    #         # p_delta = self.mgp.predict(p_x_u)
+    #         # p_delta = self.mgp.choose_action(p_x_u)
     #         #
     #         # # get state dist for x_t+1
     #         # # p_x = TODO
@@ -493,3 +491,34 @@ class PILCO(object):
         joint_cov = np.hstack((top, bottom))
 
         return joint_mu, joint_cov
+
+    def squash_action_dist(self, mu, sigma):
+        """
+        Rescales and squashes the distribution with sin
+        :param mu:
+        :param sigma:
+        :return:
+        """
+        # TODO This is probably shit.
+        mu_squashed = np.zeros(mu.shape)
+        sigma_squashed = np.zeros(sigma.shape)
+        cross_cov_squashed = np.zeros(mu.shape[0], mu.shape[0])
+
+        bound = self.env.action_space.high
+        for i in range(mu.shape[1]):
+            # comoute mean of squashed dist
+            mu_squashed[i] = bound * np.exp(-(sigma[i] / 2)) @ np.sin(mu[i])
+
+            # compute sigma of squashed dist
+            # TODO: Finish and test this
+            lq = -(np.diag(sigma)[:, None] + np.diag_part(sigma)[None, :]) / 2
+            q = np.exp(lq)
+            sigma_squashed[i] = (np.exp(lq + sigma) - q) * np.cos(mu.T - mu) - (np.exp(lq - sigma) - q) * np.cos(
+                mu.T + mu)
+            sigma_squashed[i] = bound * bound.T * sigma_squashed[i] / 2
+
+            # compute cross-cov of squashed dist
+            # TODO: Finish and test this
+            cross_cov_squashed[i] = bound * np.diag(np.exp(-np.diag_part(sigma) / 2) * np.cos(mu)) @ sigma_squashed
+
+        return mu_squashed, sigma_squashed, cross_cov_squashed.reshape(mu.shape[1], mu.shape[1])

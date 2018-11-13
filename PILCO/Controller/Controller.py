@@ -4,7 +4,7 @@ from abc import abstractmethod, ABC
 class Controller(ABC):
 
     @abstractmethod
-    def predict(self, X):
+    def choose_action(self, mu, sigma):
         pass
 
     @abstractmethod
