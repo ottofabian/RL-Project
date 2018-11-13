@@ -1,7 +1,6 @@
 import gym
 import numpy as np
 import quanser_robots
-from numpy.linalg import solve
 from scipy.optimize import minimize
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
@@ -159,8 +158,7 @@ class PILCO(object):
 
     def learn_dynamics_model(self, X, y):
         self.update_hyperparams(X, y)
-        self.dynamics_model = MGPR(dim=self.env.observation_space.shape[0], length_scale=self.l, sigma_f=self.var_f,
-                                   sigma_eps=self.var_eps)
+        self.dynamics_model = MGPR(X=X, y=y, length_scales=self.l, sigma_f=self.var_f, sigma_eps=self.var_eps)
         self.dynamics_model.fit(X, y)
 
     def evaluate_policy(self):
@@ -279,20 +277,25 @@ class PILCO(object):
             # TODO: Make this viable for x~N(mu, sigma)
             # PHD, page 44, Nonlinear Model: RBF Network
             # This is only correct for the point case, but not a dist
-            prediction_mu = policy.predict(state_mu.reshape(1, -1))[0]
+            action_mu, action_cov = policy.predict(state_mu.reshape(1, -1))[0]
 
             # ------------------------------------------------
-            # TODO: This might be wrong, see PHD thesis page 46, 2a)+b) and Section 2.3.2
-            # Needs to be
-            # squash and scale prediction
-            prediction_mu = self.env.action_space.high * np.sin(prediction_mu)
+            # TODO: p(u)' is squashed distribution over p(u), see PHD thesis page 46, 2a)+b) and Section 2.3.2
+            # Squash and scale prediction
+            # See Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
+            # action_mu = self.env.action_space.high * np.exp(-(action_cov / 2)) @ np.sin(action_mu)
+            # TODO: How to calculate covar????
+            # action_cov = None
 
+            # TODO: compute dist over successor state aka p(x,u)
             # get dist over successor state
-            p_xu = np.concatenate([state_mu, prediction_mu])
+            # p_xu = np.concatenate([state_mu, action_mu])
+            # state_action_mu, state_action_cov = self.get_joint_dist(state_mu, state_cov, action_mu, action_cov)
             # ------------------------------------------------
 
-            delta_mu, delta_cov = self.dynamics_model.predict(p_xu.reshape(1, -1), return_cov=True)
-            delta_mu = delta_mu[0]
+            # delta_mu, delta_cov = self.dynamics_model.predict_from_dist(state_action_mu, state_action_cov)
+            # TODO: THIS IS JUST FOR TESTING, USE THE LINE ABOVE IN FINAL CODE
+            delta_mu, delta_cov, input_output_cov = self.dynamics_model.predict_from_dist(state_mu, state_cov)
 
             # compute mean and cov of successor state dist
             # # compute precision matrix and different inv
@@ -318,17 +321,17 @@ class PILCO(object):
             #
             # state_tilde_delta_mu = np.sum((1 / c1_inv) * c2_inv) * beta * w
 
-            betas = self.dynamics_model.get_alphas()
-            qs = np.array([betas[i] / mu for i, mu in enumerate(delta_mu)])
-
-            matrices = state_tilde_cov @ solve(state_tilde_cov + precision, np.identity(state_tilde_cov.shape[0])) @ (
-                    X - state_tilde_mu).T
-
-            cross_cov_state_tilde = np.array([np.sum(betas[i] * qs[i] * matrices, axis=1) for i in range(len(betas))])
-            cross_cov_state = cross_cov_state_tilde[:, :self.state_dim]
+            # betas = self.dynamics_model.get_betas()
+            # qs = np.array([betas[i] / mu for i, mu in enumerate(delta_mu)])
+            #
+            # matrices = state_tilde_cov @ solve(state_tilde_cov + precision, np.identity(state_tilde_cov.shape[0])) @ (
+            #         X - state_tilde_mu).T
+            #
+            # cross_cov_state_tilde = np.array([np.sum(betas[i] * qs[i] * matrices, axis=1) for i in range(len(betas))])
+            # cross_cov_state = cross_cov_state_tilde[:, :self.state_dim]
 
             state_next_mu = state_mu + delta_mu
-            state_next_cov = state_cov + delta_cov + cross_cov_state + cross_cov_state
+            state_next_cov = state_cov + delta_cov + input_output_cov + input_output_cov.T
 
             trajectory_mu[t] = state_next_mu
             trajectory_cov[t] = state_next_cov
@@ -474,3 +477,19 @@ class PILCO(object):
     #         raise NotImplementedError
     #
     #     return x, targets_y, loss_l, latent
+    def get_joint_dist(self, state_mu, state_cov, action_mu, action_cov):
+        # TODO: Implement
+        # This should return the joint dist of state and action
+
+        # compute partial Gaussian as in Master Thesis, page 23
+        joint_mu = np.concatenate([state_mu, action_mu])
+        state_action_cov = None
+
+        # Has shape
+        # Σxt Σxt,ut
+        # (Σxt,ut).T Σut
+        top = np.vstack((state_cov, state_action_cov))
+        bottom = np.vstack((state_action_cov.T, action_cov))
+        joint_cov = np.hstack((top, bottom))
+
+        return joint_mu, joint_cov

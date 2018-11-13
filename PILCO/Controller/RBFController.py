@@ -43,10 +43,10 @@ class RBFController(Controller):
         :param x: point(s) to predict
         :return:
         """
-        # TODO: add weight parameter beta
+        # TODO: Return mean and covar of action dist
         # beta should have size of n_samples ?????
         # return self.beta.T @ self.kernel(self.X, x)
-        return self.beta.T @ self.kernel(self.X, x)
+        return self.beta.T @ self.kernel(self.X, x), 123
 
     def update_params(self, X):
         self.X = X
