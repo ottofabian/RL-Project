@@ -20,14 +20,14 @@ class ActorCriticNetwork(torch.nn.Module):
         self.action_space = action_space
 
         # network architecture specification
-        fc1_out = 100
-        fc2_out = 200
+        fc1_out = 300
+        # fc2_out = 200
         # fc_tower_out defines the number of units after the tower forward pass
-        fc_tower_out = fc1_out
+        # fc_tower_out = fc1_out
 
         self.fc1 = nn.Linear(n_inputs, fc1_out)
         # self.dropout1 = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(n_inputs, fc2_out)
+        # self.fc2 = nn.Linear(n_inputs, fc2_out)
         # self.dropout2 = nn.Dropout(0.5)
 
         # Define the two heads of the network
@@ -43,12 +43,12 @@ class ActorCriticNetwork(torch.nn.Module):
 
         if self.is_discrete:
             # in the dicrete case it has
-            self.actor_linear = nn.Linear(fc2_out, n_outputs)
+            self.actor_linear = nn.Linear(fc1_out, n_outputs)
         else:
             # in the continuous case it has one output for the mu and one for the sigma variable
             # later the workers can sample from a normal distribution
-            self.mu = nn.Linear(fc2_out, n_outputs)
-            self.sigma = nn.Linear(fc2_out, n_outputs)
+            self.mu = nn.Linear(fc1_out, n_outputs)
+            self.sigma = nn.Linear(fc1_out, n_outputs)
 
         # initialize the weights using Xavier initialization
         self.apply(init_weights)
@@ -63,16 +63,16 @@ class ActorCriticNetwork(torch.nn.Module):
                  In the continuous case: value, mu, sigma
         """
         inputs = inputs.float()
-        critic_nn = F.relu(self.fc1(inputs))
+        x = self.fc1(inputs)
+        x = F.relu6(x)
         # critic_nn = self.dropout1(critic_nn)
-        actor_nn = F.relu(self.fc2(inputs))
+        # actor_nn = F.relu(self.fc2(inputs))
         # actor_nn = self.dropout2(actor_nn)
 
         if self.is_discrete:
-            return self.critic_linear(critic_nn), self.actor_linear(actor_nn)
+            return self.critic_linear(x), self.actor_linear(x)
         else:
-            # assuming action space is centered at 0
-            scale = torch.Tensor(self.action_space.high)
-            mu = scale * torch.tanh(self.mu(actor_nn))
-            sigma = F.softplus(self.sigma(actor_nn)) + 1e-5
-            return self.critic_linear(critic_nn), mu, sigma
+            mu = torch.tanh(self.mu(x))
+            # print("Mu scaled:", mu.data)
+            sigma = F.softplus(self.sigma(x)) + 1e-5
+            return self.critic_linear(x), mu, sigma

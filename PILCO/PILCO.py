@@ -127,7 +127,14 @@ class PILCO(object):
         self.init_hyperparams(X, y, i)
 
         # TODO change the ls, they are different to the ones from the gp and should be optimized
-        policy = RBFController(self.l, n_actions=self.n_actions)
+        policy = RBFController(self.l[:self.state_dim], n_actions=self.n_actions)
+        # sample some n_features random centers for RBF
+
+        # TODO: These are the parameters, which need to be optimized
+        policy_X = np.random.rand(self.n_features, self.state_dim)
+        policy_y = np.random.rand(self.n_features, self.n_actions)
+
+        policy.fit(policy_X, policy_y)
         policy.update_params(X[:, :self.state_dim])
 
         while True:
@@ -289,6 +296,14 @@ class PILCO(object):
             # get dist over successor state
             # p_xu = np.concatenate([state_mu, action_mu])
             # state_action_mu, state_action_cov = self.get_joint_dist(state_mu, state_cov, action_mu, action_cov)
+
+            m_u, s_u, c_xu = self.controller.compute_action(m_x, s_x)
+
+            m = tf.concat([m_x, m_u], axis=1)
+            s1 = tf.concat([s_x, s_x @ c_xu], axis=1)
+            s2 = tf.concat([tf.transpose(s_x @ c_xu), s_u], axis=1)
+            s = tf.concat([s1, s2], axis=0)
+
             # ------------------------------------------------
 
             # delta_mu, delta_cov = self.dynamics_model.predict_from_dist(state_action_mu, state_action_cov)
@@ -499,26 +514,14 @@ class PILCO(object):
         :param sigma:
         :return:
         """
-        # TODO This is probably shit.
-        mu_squashed = np.zeros(mu.shape)
-        sigma_squashed = np.zeros(sigma.shape)
-        cross_cov_squashed = np.zeros(mu.shape[0], mu.shape[0])
-
         bound = self.env.action_space.high
-        for i in range(mu.shape[1]):
-            # comoute mean of squashed dist
-            mu_squashed[i] = bound * np.exp(-(sigma[i] / 2)) @ np.sin(mu[i])
 
-            # compute sigma of squashed dist
-            # TODO: Finish and test this
-            lq = -(np.diag(sigma)[:, None] + np.diag_part(sigma)[None, :]) / 2
-            q = np.exp(lq)
-            sigma_squashed[i] = (np.exp(lq + sigma) - q) * np.cos(mu.T - mu) - (np.exp(lq - sigma) - q) * np.cos(
-                mu.T + mu)
-            sigma_squashed[i] = bound * bound.T * sigma_squashed[i] / 2
+        # compute mean of squashed dist
+        mu_squashed = bound * np.exp(-(sigma / 2)) @ np.sin(mu)
+        # E[sin(x)^2] - E[sin(x)]^2
+        sigma_squashed = bound ** 2 * .5 * (1 - np.exp(-2 * sigma) @ np.cos(2 * mu)) - mu_squashed ** 2
 
-            # compute cross-cov of squashed dist
-            # TODO: Finish and test this
-            cross_cov_squashed[i] = bound * np.diag(np.exp(-np.diag_part(sigma) / 2) * np.cos(mu)) @ sigma_squashed
+        # compute cross-cov between input and squashed output
+        cross_cov_squashed = bound * np.diag(np.exp(-np.diag_part(sigma) / 2) * np.cos(mu)) @ sigma_squashed
 
         return mu_squashed, sigma_squashed, cross_cov_squashed.reshape(mu.shape[1], mu.shape[1])

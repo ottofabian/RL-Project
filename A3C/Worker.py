@@ -154,6 +154,12 @@ class Worker(Thread):
                 else:
                     # forward pass
                     value, mu, sigma = model(state.unsqueeze(0))
+                    # print("Training worker {} -- mu: {} -- sigma: {}".format(self.worker_id, mu, sigma))
+
+                    # assuming action space is in -high/high
+                    high = np.asscalar(self.env.action_space.high)
+                    low = np.asscalar(self.env.action_space.low)
+                    mu = high * mu
 
                     # prop dist over actions
                     prob = torch.distributions.Normal(mu.view(-1, ).detach(), sigma.view(-1, ).detach())
@@ -165,9 +171,8 @@ class Worker(Thread):
                     action = prob.sample(self.env.action_space.shape)
 
                     # avoid sampling outside the allowed range of action_space
-                    high = np.asscalar(self.env.action_space.high)
-                    low = np.asscalar(self.env.action_space.low)
-                    action = torch.clamp(torch.Tensor(action), low, high)
+                    action = np.clip(action, low, high)
+                    # print("Training worker {} action: {}".format(self.worker_id, action))
                     log_prob = prob.log_prob(action)
 
                 entropies.append(entropy)
@@ -284,6 +289,7 @@ class Worker(Thread):
                 else:
                     # select mean of normal dist as action --> Expectation
                     _, mu, _ = model(state.unsqueeze(0))
+                    # print(mu)
                     action = mu
 
             if isinstance(self.env.action_space, Discrete):

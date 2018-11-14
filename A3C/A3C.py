@@ -53,7 +53,7 @@ class A3C(object):
         #            seed=self.seed, lr=self.lr, t_max=200, optimizer=None, is_train=False, is_discrete=self.is_discrete)
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T,
                    seed=self.seed, lr=self.lr, n_steps=0, t_max=100000, gamma=.9, tau=1, beta=.005,
-                   value_loss_coef=.5, optimizer=optimizer, is_train=False, use_gae=True, is_discrete=self.is_discrete,
+                   value_loss_coef=.75, optimizer=optimizer, is_train=False, use_gae=True, is_discrete=self.is_discrete,
                    lock=self.lock)
         w.start()
         self.worker_pool.append(w)
@@ -62,7 +62,7 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, T=self.T,
-                       seed=self.seed, lr=self.lr, n_steps=20, t_max=100000, gamma=.9, tau=1, beta=.0001,
+                       seed=self.seed, lr=self.lr, n_steps=10, t_max=100000, gamma=.9, tau=.75, beta=.01,
                        value_loss_coef=.5, optimizer=optimizer, is_train=True, use_gae=True,
                        is_discrete=self.is_discrete, lock=self.lock)
             w.start()
