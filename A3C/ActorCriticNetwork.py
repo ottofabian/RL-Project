@@ -64,8 +64,8 @@ class ActorCriticNetwork(torch.nn.Module):
         """
         inputs = inputs.float()
         x = self.fc1(inputs)
-        #x = F.relu6(x)
-        x = F.sigmoid(x)
+        x = F.relu6(x)
+        #x = F.sigmoid(x)
         # critic_nn = self.dropout1(critic_nn)
         # actor_nn = F.relu(self.fc2(inputs))
         # actor_nn = self.dropout2(actor_nn)

@@ -5,7 +5,8 @@ import gym
 import torch
 
 from A3C.ActorCriticNetwork import ActorCriticNetwork
-from A3C.SharedRMSProp import SharedRMSProp
+from A3C.Optimizers.SharedRMSProp import SharedRMSProp
+from A3C.Optimizers.SharedAdam import SharedAdam
 from A3C.Worker import Worker
 
 
@@ -46,6 +47,7 @@ class A3C(object):
         global_model.share_memory()
 
         optimizer = SharedRMSProp(global_model.parameters(), lr=self.lr)
+        #optimizer = SharedAdam(global_model.parameters())
         optimizer.share_memory()
 
         # start the test worker which is visualized to see how the current progress is

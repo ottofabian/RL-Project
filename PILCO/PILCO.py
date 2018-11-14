@@ -12,13 +12,15 @@ from PILCO.MGPR import MGPR
 
 class PILCO(object):
 
-    def __init__(self, env_name, seed, n_features, T):
+    def __init__(self, env_name, seed, n_features, T, cost_function):
         """
 
         :param env_name: gym env to work with
         :param seed: random seed for reproduceability
         :param n_features: Amount of features for RBF Controller
         :param T: number of steps for trajectory rollout, also defined as horizon
+        :param cost_function: Function handle which defines the cost for the given environment.
+                              This function is used for policy optimization.
         """
 
         # -----------------------------------------------------
@@ -72,6 +74,8 @@ class PILCO(object):
         # Container for collected experience
         self.states = []
         self.actions = []
+
+        self.cost_function = cost_function
 
     def run(self, n_init):
 
@@ -221,6 +225,12 @@ class PILCO(object):
         # ---------------------------------
 
         minimize()
+        # minimise cost given policy
+        print('\toptimising policy')
+        args = (m, target_point, pbot.x, vx0)
+
+        res = minimize(cost, fi, args, method='bfgs', jac=False)
+
         raise NotImplementedError
 
     def execute_test_run(self, policy):
