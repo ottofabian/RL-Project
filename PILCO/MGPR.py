@@ -27,6 +27,7 @@ class MGPR(GaussianProcessRegressor):
 
         super(MGPR, self).__init__(alpha, optimizer, n_restarts_optimizer, normalize_y, copy_X_train, random_state)
         self.X = None
+        self.y = None
         self.n_targets = n_targets
         # For a D-dimensional state space, we use D separate GPs, one for each state dimension.
         # - Efficient Reinforcement Learning using Gaussian Processes, Marc Peter Deisenroth
@@ -70,9 +71,6 @@ class MGPR(GaussianProcessRegressor):
         :param sigma: n_targets x (n_state + n_actions) x (n_state + n_actions)
         :return: mu, sigma for each target
         """
-        # TODO: Change this when mu and sigma are correctly presented, currently action is missing
-        mu = np.zeros((mu.shape[0],))
-        sigma = np.identity((sigma.shape[0]))
 
         mu_out = np.zeros((self.n_targets,))
         sigma_out = np.zeros((self.n_targets, self.n_targets))
@@ -123,7 +121,7 @@ class MGPR(GaussianProcessRegressor):
         # compute z
         z = precision_a_inv @ zeta + precision_b_inv @ zeta
 
-        # compute n using matrix inversion lemma, Appendix A.4 PHD
+        # compute n using matrix inversion lemma, Appendix A.4 Deisenroth (2010)
         right = (zeta.T @ precision_a_inv @ zeta +
                  zeta.T @ precision_b_inv @ zeta -
                  z.T @ R_inv @ sigma @ z) / 2
@@ -139,6 +137,7 @@ class MGPR(GaussianProcessRegressor):
     def compute_input_output_cov(self, i, beta, sigma, zeta):
 
         precision = np.diag(self.gp_container[i].length_scales)
+        # print(precision, sigma)
         sigma_plus_precision_inv = solve(sigma @ precision, np.identity(sigma.shape[0]))
         return np.sum(beta @ self.gp_container[i].qs * sigma @ sigma_plus_precision_inv @ zeta, axis=1)
 

@@ -13,5 +13,5 @@ class LinearController(Controller):
         # TODO Check axis dim
         return np.sum(self.W @ X, axis=1)
 
-    def update_params(self, W):
+    def optimize_params(self, W):
         self.W = W

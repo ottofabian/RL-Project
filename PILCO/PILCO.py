@@ -1,3 +1,5 @@
+import copy
+
 import gym
 import numpy as np
 import quanser_robots
@@ -12,9 +14,11 @@ from PILCO.MGPR import MGPR
 
 class PILCO(object):
 
-    def __init__(self, env_name, seed, n_features, T, cost_function):
+    def __init__(self, env_name: str, seed: int, n_features: int, T: int, cost_function: callable,
+                 n_training_samples: int):
         """
 
+        :type n_training_samples: object
         :param env_name: gym env to work with
         :param seed: random seed for reproduceability
         :param n_features: Amount of features for RBF Controller
@@ -43,6 +47,11 @@ class PILCO(object):
         # get the number of available action from the environment
         self.state_dim = self.env.observation_space.shape[0]
         self.n_actions = self.env.action_space.shape[0]
+
+        # -----------------------------------------------------
+        # training params
+        self.cost_function = cost_function
+        self.n_training_samples = n_training_samples
 
         # -----------------------------------------------------
         # dynamics model
@@ -75,11 +84,9 @@ class PILCO(object):
         self.states = []
         self.actions = []
 
-        self.cost_function = cost_function
-
     def run(self, n_init):
 
-        # TODO maybe change the structure to PHD, page 36
+        # TODO maybe change the structure to Deisenroth (2010), page 36
 
         # sample dataset with random actions
         X = np.zeros((n_init, self.state_dim + self.n_actions))
@@ -135,37 +142,22 @@ class PILCO(object):
         # sample some n_features random centers for RBF
 
         # TODO: These are the parameters, which need to be optimized
+        # mu_policy = np.zeros((self.n_features,))
+        # cov_policy =
         policy_X = np.random.rand(self.n_features, self.state_dim)
         policy_y = np.random.rand(self.n_features, self.n_actions)
 
         policy.fit(policy_X, policy_y)
-        # policy.update_params(X[:, :self.state_dim])
 
         while True:
-            convergence = False
-            # TODO:
-            # We probably have to replace the sklearn GP with custom GP
-            # to incorporate the uncertainty from p(x,u) into p(delta_x)
             self.learn_dynamics_model(X, y)
-            tau_mus, tau_covs = self.rollout(policy)
+            # Deisenroth (2010), page 47, 3.5.4
+            self.policy_improvement(policy)
 
-            while True:
-                # TODO: Evaluation works only if cost function is known. Employ GP to to represent cost function.
-                # PHD Thesis, page 47, 3.5.4
-                self.evaluate_policy()
-                self.policy_improvement()
-
-                if convergence:
-                    break
-
-            policy.update_params()
             X_test, y_test, reward_test = self.execute_test_run(policy)
             np.append(X, X_test)
             np.append(y, y_test)
             np.append(rewards, reward_test)
-
-            # for debugging
-            break
 
     def learn_dynamics_model(self, X, y):
         # TODO do we only change params at the beginning?
@@ -174,64 +166,28 @@ class PILCO(object):
                                    sigma_eps=self.var_eps)
         self.dynamics_model.fit(X, y)
 
-    def evaluate_policy(self):
-        # TODO
-        # Compute mean and covar of policy/control dist
-        # Compute cross covar[x-1, u-1]
-        # approx state control dist p(\tildex-1) = p(x-1, u-1) = N(x\tilde-1|mu-1,sigma-1)
-        #
+    def optimize_policy(self, x, *args):
+        p = args
+        policy = copy.deepcopy(p)[0]
+        if isinstance(policy, RBFController):
+            split = self.state_dim * self.n_features
+            # X = x[:split].reshape(self.n_features, self.state_dim)
+            # y = x[split:].reshape(self.n_features, self.n_actions)
 
-        raise NotImplementedError
+            X = np.array([np.linspace(-.01, .01, num=self.n_features) for _ in range(self.state_dim)]).T
+            y = x.reshape(self.n_features, self.n_actions)
+        else:
+            raise NotImplementedError("For this policy no optimization is implemented.")
 
-    def policy_improvement(self):
-        # TODO: optimize hyperparams theta of policy
-        # requires function to be optimized as well as optional gradient
-        # args = (2, 3, 7, 8, 9, 10)  # parameter values
-        #
-        # def f(x, *args):
-        #     u, v = x
-        #     a, b, c, d, e, f = args
-        #     return a * u ** 2 + b * u * v + c * v ** 2 + d * u + e * v + f
-        #
-        # def gradf(x, *args):
-        #     u, v = x
-        #     a, b, c, d, e, f = args
-        #     gu = 2 * a * u + b * v + d  # u-component of the gradient
-        #     gv = b * u + 2 * c * v + e  # v-component of the gradient
-        #     return np.asarray((gu, gv))
-        #
-        # x0 = np.asarray((0, 0))  # Initial guess.
+        policy.fit(X, y)
+        return self.rollout(policy)
 
-        # https: // docs.scipy.org / doc / scipy / reference / generated / scipy.optimize.fmin_cg.html  # scipy-optimize-fmin-cg
-        # ---------------------------------
-        # Example 2: solve the same problem using the minimize function. (This myopts dictionary shows all of the
-        # available options, although in practice only non-default values would be needed.
-        # The returned value will be a dictionary.)
-        # >>> opts = {'maxiter' : None,    # default value.
-        # ...         'disp' : True,    # non-default value.
-        # ...         'gtol' : 1e-5,    # default value.
-        # ...         'norm' : np.inf,  # default value.
-        # ...         'eps' : 1.4901161193847656e-08}  # default value.
-        # >>> res2 = optimize.minimize(f, x0, jac=gradf, args=args,
-        # ...                          method='CG', options=opts)
-        # Optimization terminated successfully.
-        #         Current function value: 1.617021
-        #         Iterations: 4
-        #         Function evaluations: 8
-        #         Gradient evaluations: 8
-        # >>> res2.x  # minimum found
-        # array([-1.80851064, -0.25531915])
-
-        # ---------------------------------
-
-        minimize()
+    def policy_improvement(self, policy):
         # minimise cost given policy
-        print('\toptimising policy')
-        args = (m, target_point, pbot.x, vx0)
-
-        res = minimize(cost, fi, args, method='bfgs', jac=False)
-
-        raise NotImplementedError
+        args = (policy,)
+        x0 = policy.get_hyperparams()[self.state_dim * self.n_features:]
+        res = minimize(self.optimize_policy, x0, args, method='L-BFGS-B', jac=False)
+        policy.fit(res)
 
     def execute_test_run(self, policy):
         X = []
@@ -242,7 +198,6 @@ class PILCO(object):
         done = False
 
         while not done:
-            # TODO
             action = policy.choose_action(state_prev)
             state, reward, done, _ = self.env.step(action)
 
@@ -253,7 +208,7 @@ class PILCO(object):
 
             state_prev = state
 
-        return X, y, reward
+        return X, y, rewards
 
     def init_hyperparams(self, X, y, i=None):
         """
@@ -269,9 +224,10 @@ class PILCO(object):
     def rollout(self, policy: Controller):
 
         # TODO select good initial state dist
-        # Currently this is taken from the CartPole Problem, PHD
+        # Currently this is taken from the CartPole Problem, Deisenroth (2010)
         state_mu = np.zeros((self.state_dim,))
         state_cov = 1e-2 * np.identity(self.state_dim)
+        reward = 0
 
         # --------------------------------------------------------
         # Alternatives:
@@ -282,33 +238,48 @@ class PILCO(object):
         # --------------------------------------------------------
 
         # container
-        trajectory_mu = np.zeros((self.T + 1, state_mu.shape[0]))
-        trajectory_cov = np.zeros((self.T + 1, state_cov.shape[0], state_cov.shape[1]))
+        # TODO: Is this needed??
+        # trajectory_mu = np.zeros((self.T + 1, state_mu.shape[0]))
+        # trajectory_cov = np.zeros((self.T + 1, state_cov.shape[0], state_cov.shape[1]))
+        # trajectory_mu[0] = state_mu
+        # trajectory_cov[0] = state_cov
 
-        trajectory_mu[0] = state_mu
-        trajectory_cov[0] = state_cov
+        for t in range(0, self.T):
+            print(t)
 
-        for t in range(1, self.T + 1):
+            # ------------------------------------------------
             # get mean and covar over next action
-            # PHD, page 44, Nonlinear Model: RBF Network
+            # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
             action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov)
 
             action_squashed_mu, action_squashed_cov, action_squashed_input_output_cov = self.squash_action_dist(
                 action_mu, action_cov, action_input_output_cov)
 
+            # ------------------------------------------------
+            # sample for reward
+            action = np.random.multivariate_normal(action_squashed_mu, action_squashed_cov,
+                                                   size=self.n_training_samples)
+            action = np.clip(action, self.env.action_space.low, self.env.action_space.high)
+
+            sampled_state = np.random.multivariate_normal(state_mu, state_cov, size=self.n_training_samples)
+            reward += np.mean([self.cost_function(s, action[i]) for i, s in enumerate(sampled_state)])
+
+            # ------------------------------------------------
             # get joint dist over successor state p(x,u)
             state_action_mu, state_action_cov = self.get_joint_dist(state_mu, state_cov, action_squashed_mu,
                                                                     action_squashed_cov,
                                                                     action_squashed_input_output_cov)
 
             # ------------------------------------------------
-
+            # compute new state dist
             delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
                                                                                                 state_action_cov)
+            # Cov(state, delta) is subset of Cov((state, action), delta)
+            state_input_output_cov = delta_input_output_cov[:, :self.state_dim]
 
             # compute mean and cov of successor state dist
             # # compute precision matrix and different inv
-            precision = np.diag(self.l)
+            # precision = np.diag(self.l)
             # state_tilde_cov_inv = solve(state_tilde_cov, np.identity(len(state_tilde_cov)))
             # precision_inv = solve(precision, np.identity(len(precision)))
             # precision_absolute_inv = solve(np.abs(precision), np.identity(len(precision)))
@@ -340,132 +311,15 @@ class PILCO(object):
             # cross_cov_state = cross_cov_state_tilde[:, :self.state_dim]
 
             state_next_mu = state_mu + delta_mu
-            state_next_cov = state_cov + delta_cov + delta_input_output_cov + delta_input_output_cov.T
+            state_next_cov = state_cov + delta_cov + state_input_output_cov + state_input_output_cov.T
 
-            trajectory_mu[t] = state_next_mu
-            trajectory_cov[t] = state_next_cov
+            # trajectory_mu[t] = state_next_mu
+            # trajectory_cov[t] = state_next_cov
 
             state_cov = state_next_cov
             state_mu = state_next_mu
 
-        return trajectory_mu, trajectory_cov
-
-    # def compute_deltas(self, x: np.ndarray, sigma: np.ndarray) -> np.ndarray:
-    #     """
-    #     Returns the deltas between the states plus some noise
-    #     :param x: sequence of recorded states
-    #     :param sigma: diagonal matrix containing the std for each state index
-    #     """
-    #     deltas = []
-    #
-    #     for i, x1 in enumerate(x):
-    #         epsilon = np.random.normal(0, sigma)
-    #         if i == 0:
-    #             deltas.append(x1 + epsilon)
-    #         deltas.append(x1 - x[i - 1] + epsilon)
-    #
-    #     return deltas
-
-    # def rollout(self, start, policy, episode_len, plant, cost):
-    #     """
-    #     # from: pilco-matlab - https://github.com/ICL-SML/pilco-matlab
-    #
-    #     Run multiple rollouts on a trajectory until you reach a terminal state.
-    #
-    #     % 1. Generate trajectory rollout given the current policy
-    #
-    #     if isfield(plant,'constraint'), HH = maxH; else HH = H; end
-    #
-    #     # 1. Generate a trajectory rollout by applying the current policy to the system
-    #     #  The initial state is sampled from p(x0 ) = N (mu0, S0)
-    #     [xx, yy, realCost{j+J}, latent{j}] = ...
-    #       rollout(gaussian(mu0, S0), policy, HH, plant, cost);
-    #
-    #
-    #     disp(xx);                           % display states of observed trajectory
-    #
-    #     x = [x; xx]; y = [y; yy];                            % augment training set
-    #
-    #     if plotting.verbosity > 0
-    #       if ~ishandle(3); figure(3); else set(0,'CurrentFigure',3); end
-    #       hold on; plot(1:length(realCost{J+j}),realCost{J+j},'r'); drawnow;
-    #     end
-    #
-    #
-    #     function [x y L latent] = rollout(start, policy, H, plant, cost)
-    #     %% Code
-    #     % augi indicies for variables augmented to the ode variables
-    #
-    #     if isfield(plant,'augment'), augi = plant.augi;             % sort out indices!
-    #     else plant.augment = inline('[]'); augi = []; end
-    #
-    #     if isfield(plant,'subplant'), subi = plant.subi;
-    #     else plant.subplant = inline('[]',1); subi = []; end
-    #
-    #     odei = plant.odei; poli = plant.poli; dyno = plant.dyno; angi = plant.angi;
-    #     simi = sort([odei subi]);
-    #     nX = length(simi)+length(augi); nU = length(policy.maxU); nA = length(angi);
-    #
-    #     state(simi) = start; state(augi) = plant.augment(state);      % initializations
-    #     x = zeros(H+1, nX+2*nA);
-    #     x(1,simi) = start' + randn(size(simi))*chol(plant.noise);
-    #     x(1,augi) = plant.augment(x(1,:));
-    #     u = zeros(H, nU); latent = zeros(H+1, size(state,2)+nU);
-    #     y = zeros(H, nX); L = zeros(1, H); next = zeros(1,length(simi));
-    #
-    #     for i = 1:H % --------------------------------------------- generate trajectory
-    #       s = x(i,dyno)'; sa = gTrig(s, zeros(length(s)), angi); s = [s; sa];
-    #       x(i,end-2*nA+1:end) = s(end-2*nA+1:end);
-    #
-    #       % 1. Apply policy ... or random actions --------------------------------------
-    #       if isfield(policy, 'fcn')
-    #         u(i,:) = policy.fcn(policy,s(poli),zeros(length(poli)));
-    #       else
-    #         u(i,:) = policy.maxU.*(2*rand(1,nU)-1);
-    #       end
-    #       latent(i,:) = [state u(i,:)];                                  % latent state
-    #
-    #     :return:
-    #     """
-    #
-    #     # check for system constraint boundaries
-    #     high = np.asscalar(self.env.action_space.high)
-    #     low = np.asscalar(self.env.action_space.low)
-    #
-    #     # For our gym-environments we don't need the ODE because we already get sufficient env-feedback
-    #     # idces_ode_solver = None
-    #     # idces_agugmenting_ode = None
-    #     # idces_dynamics_out = None
-    #     # ...
-    #
-    #     # variable
-    #     x = np.zeros([episode_len + 1, self.state_dim + 2 * self.n_actions])
-    #     # x[0, odei] = multivariate_normal(start, plant.noise)
-    #
-    #     actions_u = np.zeros((episode_len, self.n_actions))
-    #     targets_y = np.zeros((episode_len, self.state_dim))
-    #     loss_l = np.zeros(episode_len)
-    #     latent = np.zeros((episode_len + 1, self.n_features + self.state_dim))
-    #
-    #     # run multiple rollouts along a trajectory for episode_len number of steps.
-    #
-    #     # inital state dist
-    #     p_x = None
-    #
-    #     for i in range(episode_len):
-    #         # # dist over actions from policy
-    #         # p_u = policy.choose_action(p_x)
-    #         #
-    #         # # dist over state delta given current state and action dist
-    #         # p_x_u = p_x + p_u
-    #         # p_delta = self.mgp.choose_action(p_x_u)
-    #         #
-    #         # # get state dist for x_t+1
-    #         # # p_x = TODO
-    #
-    #         raise NotImplementedError
-    #
-    #     return x, targets_y, loss_l, latent
+        return reward
 
     def get_joint_dist(self, state_mu, state_cov, action_mu, action_cov, input_output_cov):
         """
@@ -502,7 +356,7 @@ class PILCO(object):
         # mu, sigma = np.array([.01, .5]), np.random.normal(size=(2, 2))
 
         # p(u)' is squashed distribution over p(u) scaled by action space values,
-        #  see PHD thesis page 46, 2a)+b) and Section 2.3.2
+        # see Deisenroth (2010), page 46, 2a)+b) and Section 2.3.2
         bound = self.env.action_space.high
 
         # compute mean of squashed dist

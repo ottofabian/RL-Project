@@ -8,5 +8,9 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def update_params(self, *args):
+    def optimize_params(self, *args):
+        pass
+
+    @abstractmethod
+    def get_hyperparams(self):
         pass
