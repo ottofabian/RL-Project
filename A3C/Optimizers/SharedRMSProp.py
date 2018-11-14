@@ -22,8 +22,6 @@ class SharedRMSProp(optim.Optimizer):
                 state['square_avg'] = torch.zeros_like(p.data)
                 state['momentum_buffer'] = torch.zeros_like(p.data)
 
-        self.share_memory()
-
     def share_memory(self):
         for group in self.param_groups:
             for p in group['params']:

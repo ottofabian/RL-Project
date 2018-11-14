@@ -72,7 +72,7 @@ class Worker(Thread):
         # training params
         self.n_steps = n_steps
         self.tau = tau
-        self.gamma = gamma
+        self.discount = gamma
         self.beta = beta
         self.value_loss_coef = value_loss_coef
         self.use_gae = use_gae
@@ -103,7 +103,7 @@ class Worker(Thread):
         """
         Start worker in training mode, i.e.training the shared model with backprop
         loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
-        :return: None
+        :return: self
         """
         # ensure different seed for each worker thread
         torch.manual_seed(self.seed + self.worker_id)
@@ -120,7 +120,6 @@ class Worker(Thread):
 
         state = self.env.reset()
         state = torch.Tensor(state)
-        done = True
 
         t = 0
         while True:
@@ -140,7 +139,7 @@ class Worker(Thread):
 
                 if self.is_discrete:
                     # forward pass
-                    value, logit = model(state.unsqueeze(0))
+                    value, logit = model(state)
 
                     # prop dist over actions
                     prob = F.softmax(logit, dim=-1)
@@ -155,15 +154,14 @@ class Worker(Thread):
 
                 else:
                     # forward pass
-                    value, mu, sigma = model(state.unsqueeze(0))
+                    value, mu, sigma = model(state)
                     # print("Training worker {} -- mu: {} -- sigma: {}".format(self.worker_id, mu, sigma))
 
                     # assuming action space is in -high/high
-                    high = np.asscalar(self.env.action_space.high)
-                    low = np.asscalar(self.env.action_space.low)
-                    mu = high * mu
+                    high = self.env.action_space.high
+                    low = self.env.action_space.low
 
-                    # prop dist over actions
+                    # prob dist over actions
                     prob = torch.distributions.Normal(mu.view(-1, ).detach(), sigma.view(-1, ).detach())
 
                     # entropy for regularization
@@ -171,14 +169,13 @@ class Worker(Thread):
 
                     # sample during training for exploration
                     action = prob.sample(self.env.action_space.shape)
-                    #action = mu.detach().numpy()
+                    # print("Training worker {} action: {}".format(self.worker_id, action))
+                    # action = mu.detach().numpy()
 
                     # avoid sampling outside the allowed range of action_space
                     action = np.clip(action, low, high)
                     # print("Training worker {} action: {}".format(self.worker_id, action))
                     log_prob = prob.log_prob(action)
-
-                entropies.append(entropy)
 
                 # make selected move
                 if isinstance(self.env.action_space, Discrete):
@@ -196,13 +193,14 @@ class Worker(Thread):
                 # reset env to ensure to get latest state
                 if done:
                     t = 0
-                    print('reward_sum for id %d: %d' % (self.worker_id, reward_sum))
+                    # print('reward_sum for id %d: %d' % (self.worker_id, reward_sum))
                     state = self.env.reset()
 
                 state = torch.Tensor(state)
                 values.append(value)
                 log_probs.append(log_prob)
                 rewards.append(reward)
+                entropies.append(entropy)
 
                 # end if terminal state or max episodes are reached
                 if done:
@@ -212,13 +210,13 @@ class Worker(Thread):
 
             # if non terminal state is present set R to be value of current state
             if not done:
-                value = model(state.unsqueeze(0))[0]
+                value = model(state)[0]
                 R = value.detach()
 
             values.append(R)
 
             # compute loss and backprop
-            self._compute_loss(R, rewards, values, log_probs, entropies)
+            self._compute_loss(R, rewards, values, log_probs, entropies, model)
 
             self.lock.acquire()
             sync_grads(model, self.global_model)
@@ -226,7 +224,8 @@ class Worker(Thread):
 
             self.optimizer.step()
 
-    def _compute_loss(self, R: torch.Tensor, rewards: list, values: list, log_probs: list, entropies: list) -> None:
+    def _compute_loss(self, R: torch.Tensor, rewards: list, values: list, log_probs: list, entropies: list,
+                      model: ActorCriticNetwork) -> None:
         policy_loss = 0
         value_loss = 0
 
@@ -234,25 +233,28 @@ class Worker(Thread):
 
         # iterate over rewards from most recent to the starting one
         for i in reversed(range(len(rewards))):
-            R = rewards[i] + self.gamma * R
+            R = rewards[i] + self.discount * R
             advantage = R - values[i]
-            value_loss += advantage.pow(2)
+            value_loss += 0.5 * advantage.pow(2)
 
             if self.use_gae:
                 # Generalized Advantage Estimation
-                delta_t = rewards[i] + self.gamma * values[i + 1].detach() - values[i].detach()
-                gae = gae * self.gamma * self.tau + delta_t
-                policy_loss -= log_probs[i] * gae.detach() - self.beta * entropies[i]
+                delta = rewards[i] + self.discount * values[i + 1] - values[i]
+                gae = gae * self.discount * self.tau + delta
+                policy_loss -= (log_probs[i] * gae.detach() + self.beta * entropies[i])
             else:
-                policy_loss -= log_probs[i] * advantage - self.beta * entropies[i]
+                policy_loss -= (log_probs[i] * advantage + self.beta * entropies[i])
 
         # zero grads to avoid computation issues in the next step
+        model.zero_grad()
         self.optimizer.zero_grad()
 
         # compute combined loss of policy_loss and value_loss
         # avoid overfitting on value loss by scaling it down
         combined_loss = policy_loss + self.value_loss_coef * value_loss
         combined_loss.mean().backward()
+        # combined_loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
 
     def _test(self):
         """
@@ -267,25 +269,21 @@ class Worker(Thread):
         # get an instance of the current global model state
         model = ActorCriticNetwork(self.env.observation_space.shape[0], self.env.action_space, self.is_discrete)
         model.eval()
+        model.load_state_dict(self.global_model.state_dict())
 
         state = self.env.reset()
         state = torch.Tensor(state)
         reward_sum = 0
-        done = True
 
         t = 0
         while True:
             self.env.render()
             t += 1
 
-            # Get params from shared global model
-            if done:
-                model.load_state_dict(self.global_model.state_dict())
-
             # forward pass
             with torch.no_grad():
                 if self.is_discrete:
-                    _, logit = model(state.unsqueeze(0))
+                    _, logit = model(state)
 
                     # prob dist of action space, select best action
                     prob = F.softmax(logit, dim=-1)
@@ -293,16 +291,11 @@ class Worker(Thread):
 
                 else:
                     # select mean of normal dist as action --> Expectation
-                    _, mu, _ = model(state.unsqueeze(0))
-                    # print(mu)
+                    _, mu, _ = model(state)
+                    # print(value, mu, sigma)
                     action = mu
 
-            if isinstance(self.env.action_space, Discrete):
-                action = action.numpy()[0, 0]
-            elif isinstance(self.env.action_space, Box):
-                action = action.numpy()[0]
-
-            state, reward, done, _ = self.env.step(action)
+            state, reward, done, _ = self.env.step(action.numpy())
             done = done or t >= self.t_max
             reward_sum += reward
 
@@ -313,6 +306,10 @@ class Worker(Thread):
                 reward_sum = 0
                 t = 0
                 state = self.env.reset()
+
+                # Get params from shared global model
+                model.load_state_dict(self.global_model.state_dict())
+
                 # delay _test run for 10s to give the network some time to train
                 time.sleep(10)
 
