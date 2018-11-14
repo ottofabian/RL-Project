@@ -1,5 +1,3 @@
-import numpy as np
-
 from PILCO.Controller.Controller import Controller
 from PILCO.MGPR import MGPR
 
@@ -13,20 +11,19 @@ class RBFController(MGPR, Controller):
     def __init__(self, length_scales, n_actions):
         """
 
-        :param X:
-        :param y:
+        :param length_scales:
+        :param n_actions:
         """
 
         # Hyperparams to optimize are y, length-scales, X
 
         # sigma_f and sigma_eps are fixed for the RBF Controller, if it is seen as deterministic GP
         MGPR.__init__(self, length_scales=length_scales, n_targets=n_actions, optimizer="fmin_l_bfgs_b", sigma_f=1,
-                      sigma_eps=.01,
-                      alpha=1e-10, is_fixed=True)
+                      sigma_eps=.01, alpha=1e-10, is_fixed=True)
 
     def choose_action(self, mu, sigma):
         action_mu, action_cov, input_output_cov = self.predict_from_dist(mu, sigma)
-        action_cov -= np.diag(self.get_sigma_eps()[0] - 1e-6)
+        action_cov -= self.get_sigma_eps()[0] - 1e-6
 
         return action_mu, action_cov, input_output_cov
 

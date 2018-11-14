@@ -135,7 +135,7 @@ class PILCO(object):
         policy_y = np.random.rand(self.n_features, self.n_actions)
 
         policy.fit(policy_X, policy_y)
-        policy.update_params(X[:, :self.state_dim])
+        # policy.update_params(X[:, :self.state_dim])
 
         while True:
             convergence = False
@@ -280,35 +280,21 @@ class PILCO(object):
 
         for t in range(1, self.T + 1):
             # get mean and covar over next action
-            # TODO: Make this viable for x~N(mu, sigma)
             # PHD, page 44, Nonlinear Model: RBF Network
             action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov)
 
-            # ------------------------------------------------
-            # TODO: p(u)' is squashed distribution over p(u), see PHD thesis page 46, 2a)+b) and Section 2.3.2
-            # Squash and scale prediction
-            # See Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
-            # action_mu = self.env.action_space.high * np.exp(-(action_cov / 2)) @ np.sin(action_mu)
-            # TODO: How to calculate covar????
-            # action_cov = None
+            action_squashed_mu, action_squashed_cov, action_squashed_input_output_cov = self.squash_action_dist(
+                action_mu, action_cov, action_input_output_cov)
 
-            # TODO: compute dist over successor state aka p(x,u)
-            # get dist over successor state
-            # p_xu = np.concatenate([state_mu, action_mu])
-            # state_action_mu, state_action_cov = self.get_joint_dist(state_mu, state_cov, action_mu, action_cov)
-
-            m_u, s_u, c_xu = self.controller.compute_action(m_x, s_x)
-
-            m = tf.concat([m_x, m_u], axis=1)
-            s1 = tf.concat([s_x, s_x @ c_xu], axis=1)
-            s2 = tf.concat([tf.transpose(s_x @ c_xu), s_u], axis=1)
-            s = tf.concat([s1, s2], axis=0)
+            # get joint dist over successor state p(x,u)
+            state_action_mu, state_action_cov = self.get_joint_dist(state_mu, state_cov, action_squashed_mu,
+                                                                    action_squashed_cov,
+                                                                    action_squashed_input_output_cov)
 
             # ------------------------------------------------
 
-            # delta_mu, delta_cov = self.dynamics_model.predict_from_dist(state_action_mu, state_action_cov)
-            # TODO: THIS IS JUST FOR TESTING, USE THE LINE ABOVE IN FINAL CODE
-            delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_mu, state_cov)
+            delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
+                                                                                                state_action_cov)
 
             # compute mean and cov of successor state dist
             # # compute precision matrix and different inv
@@ -351,26 +337,6 @@ class PILCO(object):
 
             state_cov = state_next_cov
             state_mu = state_next_mu
-
-            # ------------------------------------------------
-            # This should be the output of the GP model
-            # ------------------------------------------------
-            # for e in range(y.shape[1]):
-            #     # TODO: K is probably the eth kernel value
-            #     # K = None
-            #
-            #     betas[e] = np.linalg.solve(K[e] + self.sigma_eps[e] * np.identity(K[e].shape[0]),
-            #                                np.identity(K[e].shape[0])) @ y
-            #
-            #     if isinstance(self.l[e], float):
-            #         temp = state_tilde_cov / self.l[e]
-            #     else:
-            #         temp = state_tilde_cov * np.linalg.solve(self.l[e], np.identity(self.l[e].shape))
-            #
-            #     diff = X - state_tilde_mu
-            #
-            #     # TODO: Finish with pseudo-algo on master thesis
-            #     # q[e] = self.sigma_f[e] * np.abs(temp + np.identity(temp.shape[0])) ** .5 * np.exp(-.5 (p_xu - ))
 
         return trajectory_mu, trajectory_cov
 
@@ -490,38 +456,61 @@ class PILCO(object):
     #         raise NotImplementedError
     #
     #     return x, targets_y, loss_l, latent
-    def get_joint_dist(self, state_mu, state_cov, action_mu, action_cov):
-        # TODO: Implement
-        # This should return the joint dist of state and action
 
-        # compute partial Gaussian as in Master Thesis, page 23
+    def get_joint_dist(self, state_mu, state_cov, action_mu, action_cov, input_output_cov):
+        """
+        This returns the joint gaussian dist of state and action
+        :param state_mu:
+        :param state_cov:
+        :param action_mu:
+        :param action_cov:
+        :param input_output_cov:
+        :return:
+        """
+
+        # compute joint Gaussian as in Master Thesis, page 23
         joint_mu = np.concatenate([state_mu, action_mu])
-        state_action_cov = None
 
         # Has shape
         # Σxt Σxt,ut
         # (Σxt,ut).T Σut
-        top = np.vstack((state_cov, state_action_cov))
-        bottom = np.vstack((state_action_cov.T, action_cov))
+        top = np.vstack((state_cov, input_output_cov))
+        bottom = np.vstack((input_output_cov.T, action_cov))
         joint_cov = np.hstack((top, bottom))
 
         return joint_mu, joint_cov
 
-    def squash_action_dist(self, mu, sigma):
+    def squash_action_dist(self, mu, sigma, input_output_cov):
         """
-        Rescales and squashes the distribution with sin
+        Rescales and squashes the distribution x with sin(x)
+        :param input_output_cov:
         :param mu:
         :param sigma:
         :return:
         """
+
+        # mu, sigma = np.array([.01, .5]), np.random.normal(size=(2, 2))
+
+        # p(u)' is squashed distribution over p(u) scaled by action space values,
+        #  see PHD thesis page 46, 2a)+b) and Section 2.3.2
         bound = self.env.action_space.high
 
         # compute mean of squashed dist
-        mu_squashed = bound * np.exp(-(sigma / 2)) @ np.sin(mu)
-        # E[sin(x)^2] - E[sin(x)]^2
-        sigma_squashed = bound ** 2 * .5 * (1 - np.exp(-2 * sigma) @ np.cos(2 * mu)) - mu_squashed ** 2
+        # See Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
+        mu_squashed = bound * np.exp(-sigma / 2) @ np.sin(mu)
+
+        # covar: E[sin(x)^2] - E[sin(x)]^2
+        sigma2 = -(sigma.T + sigma) / 2
+        sigma2_exp = np.exp(sigma2)
+        sigma_squashed = ((np.exp(sigma2 + sigma) - sigma2_exp) * np.cos(mu.T - mu) -
+                          (np.exp(sigma2 - sigma) - sigma2_exp) * np.cos(mu.T + mu))
+        sigma_squashed = bound.T @ bound * sigma_squashed / 2
+
+        # compute input-output-covariance and squash through sin(x)
+        input_output_cov_squashed = np.diag((bound * np.exp(-sigma / 2) * np.cos(mu)).flatten())
+        input_output_cov_squashed = input_output_cov_squashed @ input_output_cov
 
         # compute cross-cov between input and squashed output
-        cross_cov_squashed = bound * np.diag(np.exp(-np.diag_part(sigma) / 2) * np.cos(mu)) @ sigma_squashed
+        # input_output_cov_squashed = bound * np.diag(np.exp(-np.diag_part(sigma) / 2) * np.cos(mu))
 
-        return mu_squashed, sigma_squashed, cross_cov_squashed.reshape(mu.shape[1], mu.shape[1])
+        return mu_squashed, sigma_squashed, input_output_cov_squashed
