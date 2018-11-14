@@ -61,11 +61,11 @@ class PILCO(object):
         # Value calc and policy optimization
         # The cost function has to be learn with a GP as it comes from the environment and is not known.
         # TODO use GP for the cost function
-        self.ridge = 1e-6
         # TODO What is the input to the cost gp, only state or state-action?
+        # TODO: This is optional
         # I think only state
         gp_length_scale = np.ones(self.state_dim)
-        self.cost_model = GaussianProcessRegressor(kernel=RBF(length_scale=gp_length_scale) + WhiteKernel(self.ridge),
+        self.cost_model = GaussianProcessRegressor(kernel=RBF(length_scale=gp_length_scale) + WhiteKernel(self.var_eps),
                                                    optimizer='fmin_l_bfgs_b')
 
         # -----------------------------------------------------
