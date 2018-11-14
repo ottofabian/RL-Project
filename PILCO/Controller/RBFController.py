@@ -1,3 +1,5 @@
+import numpy as np
+
 from PILCO.Controller.Controller import Controller
 from PILCO.MGPR import MGPR
 
@@ -5,7 +7,12 @@ from PILCO.MGPR import MGPR
 class RBFController(MGPR, Controller):
     """RBF Controller/Policy"""
 
-    def update_params(self, *args):
+    def get_hyperparams(self):
+        y = np.array([gp.y for gp in self.gp_container]).T
+        concat = np.concatenate([self.X, y], axis=1)
+        return concat.T.flatten()
+
+    def optimize_params(self, *args):
         pass
 
     def __init__(self, length_scales, n_actions):
@@ -41,7 +48,7 @@ class RBFController(MGPR, Controller):
         #
         #     return
         #
-        # def update_params(self, X):
+        # def optimize_params(self, X):
         #     self.X = X
         #
         #     self.sigma = self.var * np.identity(X.shape[0])
@@ -76,7 +83,7 @@ class RBFController(MGPR, Controller):
         # #     # TODO Check axis dim
         # #     return np.sum(self.W @ self.phi(X), axis=1)
         # #
-        # # def update_params(self, W, sigma, mu):
+        # # def optimize_params(self, W, sigma, mu):
         # #     self.W = W
         # #     self.sigma = sigma
         # #     self.mu = mu
