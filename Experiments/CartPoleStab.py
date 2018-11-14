@@ -30,9 +30,9 @@ from PILCO.PILCO import PILCO
 
 seed = 123456
 
-a3c = A3C(n_worker=4, env_name='CartPole-v0', lr=1e-3, is_discrete=True, seed = seed)
-#a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-4, is_discrete=False, seed = seed)
-#a3c = A3C(n_worker=4, env_name='Pendulum-v0', lr=1e-4, is_discrete=False, seed=seed)
+#a3c = A3C(n_worker=4, env_name='CartPole-v0', lr=1e-3, is_discrete=True, seed = seed, optimizer_name='adam')
+#a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-4, is_discrete=False, seed = seed, optimizer_name='adam')
+a3c = A3C(n_worker=4, env_name='Pendulum-v0', lr=1e-4, is_discrete=False, seed=seed, optimizer_name='adam')
 a3c.run()
 
 #pilco = PILCO(env_name='Pendulum-v0', seed=seed, n_features=10, T=40)

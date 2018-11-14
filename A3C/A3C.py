@@ -13,7 +13,7 @@ from A3C.Worker import Worker
 class A3C(object):
 
     def __init__(self, n_worker: int, env_name: str, lr: float = 1e-4, is_discrete: bool = False,
-                 seed: int = 123) -> None:
+                 seed: int = 123, optimizer_name='rmsprop') -> None:
         """
 
         :param n_worker: Number of workers/threads to spawn which conduct the A3C algorithm.
@@ -23,6 +23,7 @@ class A3C(object):
         :param is_discrete: Boolean, indicating if the target variable is discrete or continuous.
                             This setting has effect on the network architecture as well as the loss function used.
                             For more detail see: p.12 - Asynchronous Methods for Deep Reinforcement Learning.pdf
+        :param optimizer_name: Optimizer used for shared weight updates. Possible arguments are 'rmsprop', 'adam'.
         """
         self.seed = seed
         self.env_name = env_name
@@ -39,6 +40,12 @@ class A3C(object):
 
         self.logger = logging.getLogger(__name__)
 
+        # validity check for input parameter
+        if optimizer_name not in ['rmsprop', 'adam']:
+            raise Exception('Your given optimizer %s is currently not supported. Choose either "rmsprop" or "adam"',
+                            optimizer_name)
+        self.optimizer_name = optimizer_name
+
     def run(self):
         torch.manual_seed(self.seed)
         # env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
@@ -46,9 +53,14 @@ class A3C(object):
         global_model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
         global_model.share_memory()
 
-        optimizer = SharedRMSProp(global_model.parameters(), lr=self.lr)
-        #optimizer = SharedAdam(global_model.parameters())
-        optimizer.share_memory()
+
+
+        if self.optimizer_name == 'rmsprop':
+            optimizer = SharedRMSProp(global_model.parameters(), lr=self.lr)
+        elif self.optimizer_name == 'adam':
+            optimizer = SharedAdam(global_model.parameters())
+        else:
+            raise Exception('Unexpected optimizer_name: %s' % self.optimizer_name)
 
         # start the test worker which is visualized to see how the current progress is
         # w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T,

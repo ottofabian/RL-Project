@@ -133,6 +133,8 @@ class Worker(Thread):
             rewards = []
             entropies = []
 
+            reward_sum = 0
+
             for step in range(self.n_steps):
                 t += 1
 
@@ -169,6 +171,7 @@ class Worker(Thread):
 
                     # sample during training for exploration
                     action = prob.sample(self.env.action_space.shape)
+                    #action = mu.detach().numpy()
 
                     # avoid sampling outside the allowed range of action_space
                     action = np.clip(action, low, high)
@@ -184,6 +187,7 @@ class Worker(Thread):
                     action = action.numpy()[0]
 
                 state, reward, done, _ = self.env.step(action)
+                reward_sum += reward
                 done = done or t >= self.t_max
 
                 with self.T.get_lock():
@@ -192,6 +196,7 @@ class Worker(Thread):
                 # reset env to ensure to get latest state
                 if done:
                     t = 0
+                    print('reward_sum for id %d: %d' % (self.worker_id, reward_sum))
                     state = self.env.reset()
 
                 state = torch.Tensor(state)
