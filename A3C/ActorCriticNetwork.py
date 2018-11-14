@@ -64,15 +64,16 @@ class ActorCriticNetwork(torch.nn.Module):
         """
         inputs = inputs.float()
         x = self.fc1(inputs)
-        x = F.relu6(x)
+        #x = F.relu6(x)
+        x = F.sigmoid(x)
         # critic_nn = self.dropout1(critic_nn)
         # actor_nn = F.relu(self.fc2(inputs))
         # actor_nn = self.dropout2(actor_nn)
 
         if self.is_discrete:
-            return self.critic_linear(x), self.actor_linear(x)
+            return torch.tanh(self.critic_linear(x)), self.actor_linear(x)
         else:
             mu = torch.tanh(self.mu(x))
             # print("Mu scaled:", mu.data)
             sigma = F.softplus(self.sigma(x)) + 1e-5
-            return self.critic_linear(x), mu, sigma
+            return torch.tanh(self.critic_linear(x)), mu, sigma
