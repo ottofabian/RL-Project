@@ -18,7 +18,7 @@ def cartpolebase_costfunc(x, a):
     :param a: Taken action
     :return: Reward (float)
     """
-    x_c, th, _, _ = x
+    _, th, _, _ = x
     rwd = -np.cos(th)
 
     return np.float32(rwd)

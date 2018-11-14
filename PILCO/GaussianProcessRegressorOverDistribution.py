@@ -6,7 +6,7 @@ from sklearn.gaussian_process.kernels import RBF, WhiteKernel, ConstantKernel
 
 class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
     """
-    Multivariate Gaussian Process Regression
+    Gaussian Process Regression given an input Gaussian
     """
 
     def __init__(self, length_scales, optimizer="fmin_l_bfgs_b", sigma_f=1, sigma_eps=1e-6, alpha=1e-10,

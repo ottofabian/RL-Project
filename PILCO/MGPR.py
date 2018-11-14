@@ -71,12 +71,12 @@ class MGPR(GaussianProcessRegressor):
         :return: mu, sigma for each target
         """
         # TODO: Change this when mu and sigma are correctly presented, currently action is missing
-        mu = np.zeros((mu.shape[0] + 1,))
-        sigma = np.identity((sigma.shape[0] + 1))
+        mu = np.zeros((mu.shape[0],))
+        sigma = np.identity((sigma.shape[0]))
 
         mu_out = np.zeros((self.n_targets,))
         sigma_out = np.zeros((self.n_targets, self.n_targets))
-        input_output_cov = np.zeros((self.X.shape[1], self.n_targets))
+        input_output_cov = np.zeros((self.n_targets, self.X.shape[1]))
 
         # get the independet mus from the gps
         for i in range(self.n_targets):
