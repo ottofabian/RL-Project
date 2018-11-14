@@ -164,14 +164,15 @@ class Worker(Thread):
                     mu = high * mu
 
                     # prop dist over actions
-                    prob = torch.distributions.Normal(mu.view(-1, ).detach(), sigma.view(-1, ).detach())
+                    prob = torch.distributions.Normal(mu.view(-1, ).detach(), 0) #sigma.view(-1, ).detach())
 
                     # entropy for regularization
                     entropy = prob.entropy()
 
                     # sample during training for exploration
                     action = prob.sample(self.env.action_space.shape)
-                    #action = mu.detach().numpy()
+                    #action = mu
+                    #action = np.array(mu) #mu.detach().numpy()
 
                     # avoid sampling outside the allowed range of action_space
                     action = np.clip(action, low, high)
@@ -196,7 +197,7 @@ class Worker(Thread):
                 # reset env to ensure to get latest state
                 if done:
                     t = 0
-                    print('reward_sum for id %d: %d' % (self.worker_id, reward_sum))
+                    #print('reward_sum for id %d: %d' % (self.worker_id, reward_sum))
                     state = self.env.reset()
 
                 state = torch.Tensor(state)
