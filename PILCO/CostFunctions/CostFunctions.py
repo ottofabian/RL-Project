@@ -5,7 +5,7 @@ Defines different costfunctions for several environments.
 These functions are used for the policy optimization in PILCO.
 """
 
-import autograd.numpy as np
+import numpy as np
 
 
 def cartpolebase_rewardfunc(x, a):

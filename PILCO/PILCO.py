@@ -1,19 +1,18 @@
 import copy
 
-import autograd.numpy as np
 import gym
+import numpy as np
 import quanser_robots
-from autograd import grad
 from scipy.optimize import minimize
 
 from PILCO.Controller import Controller
 from PILCO.Controller.RBFController import RBFController
-from PILCO.MGPR import MGPR
+from PILCO.GaussianProcess.MGPR import MGPR
 
 
 class PILCO(object):
 
-    def __init__(self, env_name: str, seed: int, n_features: int, T: int, cost_function: callable,
+    def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, cost_function: callable,
                  n_training_samples: int):
         """
 
@@ -21,7 +20,7 @@ class PILCO(object):
         :param env_name: gym env to work with
         :param seed: random seed for reproduceability
         :param n_features: Amount of features for RBF Controller
-        :param T: number of steps for trajectory rollout, also defined as horizon
+        :param Horizon: number of steps for trajectory rollout, also defined as horizon
         :param cost_function: Function handle which defines the cost for the given environment.
                               This function is used for policy optimization.
         """
@@ -31,7 +30,6 @@ class PILCO(object):
         self.env_name = env_name
         self.seed = seed
         self.n_features = n_features
-        self.noise_var = None
 
         # -----------------------------------------------------
         # env setup
@@ -65,7 +63,7 @@ class PILCO(object):
 
         # -----------------------------------------------------
         # policy search
-        self.T = T
+        self.T = Horizon
 
         # -----------------------------------------------------
         # Value calc
@@ -139,8 +137,8 @@ class PILCO(object):
 
     def optimize_policy(self, x, *args):
         self.opt_ctr += 1
-        p = args
-        policy = copy.deepcopy(p)[0]
+        p = args[0]
+        policy = copy.deepcopy(p)
         if isinstance(policy, RBFController):
             split = self.state_dim * self.n_features
             X = x[:split].reshape(self.n_features, self.state_dim)
@@ -167,7 +165,7 @@ class PILCO(object):
         args = (policy,)
         # x0 = policy.get_hyperparams()[self.state_dim * self.n_features:]
         x0 = policy.get_hyperparams()
-        res = minimize(self.optimize_policy, x0, args, method='L-BFGS-B', jac=grad(self.rollout))
+        res = minimize(self.optimize_policy, x0, args, method='L-BFGS-B', jac=None)
 
         self.opt_ctr = 0
         policy.fit(res)
@@ -178,6 +176,7 @@ class PILCO(object):
         rewards = []
 
         state_prev = self.env.reset()
+        self.env.render()
         done = False
 
         while not done:
@@ -186,7 +185,7 @@ class PILCO(object):
 
             # create history and create new training instance
             X.append(np.append(state_prev, action))
-            epsilon = np.random.normal(0, self.noise_var)
+            epsilon = np.random.normal(0, self.var_eps)
             y.append(state - state_prev + epsilon)
 
             state_prev = state
@@ -212,9 +211,7 @@ class PILCO(object):
         # TODO select good initial state dist
         # Currently this is taken from the CartPole Problem, Deisenroth (2010)
         state_mu = np.zeros((self.state_dim,))
-        if np.any(np.isnan(state_mu)):
-            print("NaNNaNNaNNaNNaNNaNNaN Batman")
-        state_cov = 1e-2 * np.identity(self.state_dim)
+        state_cov = 1e-3 * np.identity(self.state_dim)
         reward = 0
 
         # --------------------------------------------------------

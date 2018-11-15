@@ -34,6 +34,7 @@ seed = 123456
 # a3c = A3C(n_worker=4, env_name='Pendulum-v0', lr=1e-4, is_discrete=False, seed=seed)
 # a3c.run()
 
-pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=10, T=40, cost_function=cartpolebase_costfunc,
+pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=10, Horizon=40,
+              cost_function=cartpolebase_costfunc,
               n_training_samples=5)
 pilco.run(50)

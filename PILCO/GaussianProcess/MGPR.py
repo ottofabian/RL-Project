@@ -1,8 +1,8 @@
-import autograd.numpy as np
+import numpy as np
 # from scipy.linalg import np.linalg.solve
 from sklearn.gaussian_process import GaussianProcessRegressor
 
-from PILCO.GaussianProcessRegressorOverDistribution import GaussianProcessRegressorOverDistribution
+from PILCO.GaussianProcess.GaussianProcessRegressorOverDistribution import GaussianProcessRegressorOverDistribution
 
 
 class MGPR(GaussianProcessRegressor):

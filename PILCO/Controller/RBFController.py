@@ -1,7 +1,7 @@
-import autograd.numpy as np
+import numpy as np
 
 from PILCO.Controller.Controller import Controller
-from PILCO.MGPR import MGPR
+from PILCO.GaussianProcess.MGPR import MGPR
 
 
 class RBFController(MGPR, Controller):
