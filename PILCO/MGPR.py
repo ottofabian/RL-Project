@@ -76,7 +76,7 @@ class MGPR(GaussianProcessRegressor):
         sigma_out = np.zeros((self.n_targets, self.n_targets))
         input_output_cov = np.zeros((self.n_targets, self.X.shape[1]))
 
-        # get the independet mus from the gps
+        # get the independent mus from the gps
         for i in range(self.n_targets):
             mu_out[i] = self.gp_container[i].predict_from_dist(mu, sigma)
 

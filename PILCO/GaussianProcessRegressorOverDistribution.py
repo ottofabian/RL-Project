@@ -73,21 +73,27 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
 
         # This applies noise, but requires computing L
         K = self.kernel_(self.X)
-        # learned variance from evidence maximization
-        noise = np.identity(self.X.shape[0]) * self.sigma_eps
-        # inv of K only using lower part of matrix
-        # L = cholesky(K + noise, lower=True)
-        # self.K_inv = solve_triangular(L, np.identity(self.X.shape[0]))
 
-        # self.betas = solve_triangular(L, self.y)[:, 0]
+        # inv of K only using lower part of matrix
+        #
+        #
+
+        #
 
         if self.is_fixed:
             # this is required for the RBF controller
             self.K_inv = np.zeros(K.shape)
+            self.betas = K @ self.y
         else:
+            # learned variance from evidence maximization
+            noise = np.identity(self.X.shape[0]) * self.sigma_eps
             self.K_inv = solve(K + noise, np.identity(K.shape[0]))
-
-        self.betas = K @ self.y
+            self.betas = K @ self.y
+            # -------------------------------
+            # TODO: Prob better
+            # L = cholesky(K + noise)
+            # self.K_inv = solve_triangular(L, np.identity(self.X.shape[0]))
+            # self.betas = solve_triangular(L, self.y)[:, 0]
 
         return self.compute_mu(mu, sigma)
 
@@ -99,14 +105,35 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         :return: mu of p(delta_t+1)
         """
 
+        # TODO det is still nan, error somwhere else?
+        # Numerically more stable???
         precision = np.diag(self.length_scales)
-        precision_inv = solve(precision, np.identity(len(precision)))
+        # precision_inv = solve(precision, np.identity(len(precision)))
 
-        coefficient = self.sigma_f * np.linalg.det(sigma @ precision_inv + np.identity(len(precision_inv))) ** -.5
+        diff = (self.X - mu) @ precision
+        B = precision @ sigma @ precision + np.identity(precision.shape[0])
 
-        sigma_plus_precision_inv = solve(sigma + precision, np.identity(len(precision)))
+        t = diff @ B
 
-        diff = self.X - mu
-        self.qs = np.array([coefficient * np.exp(-.5 * d.T @ sigma_plus_precision_inv @ d) for d in diff])
+        # TODO: This is going to give nan for negative det
+        coefficient = 2 * self.sigma_f * np.linalg.det(B) ** -.5
+
+        # sigma_plus_precision_inv = solve(sigma + precision, np.identity(len(precision)))
+
+        self.qs = coefficient * np.exp(-.5 * np.sum(diff * t, 1))
 
         return self.betas.T @ self.qs
+
+        # As seen in paper implementation
+        # precision = np.diag(self.length_scales)
+        # precision_inv = solve(precision, np.identity(len(precision)))
+        #
+        # # TODO: This is going to give nan for negative det
+        # coefficient = self.sigma_f * np.linalg.det(sigma @ precision_inv + np.identity(len(precision_inv))) ** -.5
+        #
+        # sigma_plus_precision_inv = solve(sigma + precision, np.identity(len(precision)))
+        #
+        # diff = self.X - mu
+        # self.qs = np.array([coefficient * np.exp(-.5 * d.T @ sigma_plus_precision_inv @ d) for d in diff])
+        #
+        # return self.betas.T @ self.qs
