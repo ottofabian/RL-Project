@@ -1,4 +1,4 @@
-import numpy as np
+import autograd.numpy as np
 
 from PILCO.Controller.Controller import Controller
 from PILCO.MGPR import MGPR

@@ -1,5 +1,4 @@
-import numpy as np
-from numpy.linalg import solve
+import autograd.numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel, ConstantKernel
 
@@ -67,18 +66,12 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
 
         # TODO: Maybe use this, but it adds no noise
         # L = self.kernel_.L_
-        # L_inv = solve_triangular(L.T, np.eye(self.L_.shape[0]))
+        # L_inv = np.linalg.solve_triangular(L.T, np.eye(self.L_.shape[0]))
         # K_inv = L_inv.dot(L_inv.T)
         # ---------------------------------
 
         # This applies noise, but requires computing L
         K = self.kernel_(self.X)
-
-        # inv of K only using lower part of matrix
-        #
-        #
-
-        #
 
         if self.is_fixed:
             # this is required for the RBF controller
@@ -87,13 +80,13 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         else:
             # learned variance from evidence maximization
             noise = np.identity(self.X.shape[0]) * self.sigma_eps
-            self.K_inv = solve(K + noise, np.identity(K.shape[0]))
+            self.K_inv = np.linalg.solve(K + noise, np.identity(K.shape[0]))
             self.betas = K @ self.y
             # -------------------------------
             # TODO: Prob better
-            # L = cholesky(K + noise)
+            # L = np.linalg.cholesky(K + noise)
             # self.K_inv = solve_triangular(L, np.identity(self.X.shape[0]))
-            # self.betas = solve_triangular(L, self.y)[:, 0]
+            # self.betas = solve_triangular(L, self.y)
 
         return self.compute_mu(mu, sigma)
 
@@ -108,7 +101,7 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         # TODO det is still nan, error somwhere else?
         # Numerically more stable???
         precision = np.diag(self.length_scales)
-        # precision_inv = solve(precision, np.identity(len(precision)))
+        # precision_inv = np.linalg.solve(precision, np.identity(len(precision)))
 
         diff = (self.X - mu) @ precision
         B = precision @ sigma @ precision + np.identity(precision.shape[0])
@@ -116,9 +109,12 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         t = diff @ B
 
         # TODO: This is going to give nan for negative det
+        if np.any(np.isnan(B)):
+            print("Nan is B")
+
         coefficient = 2 * self.sigma_f * np.linalg.det(B) ** -.5
 
-        # sigma_plus_precision_inv = solve(sigma + precision, np.identity(len(precision)))
+        # sigma_plus_precision_inv = np.linalg.solve(sigma + precision, np.identity(len(precision)))
 
         self.qs = coefficient * np.exp(-.5 * np.sum(diff * t, 1))
 
@@ -126,12 +122,12 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
 
         # As seen in paper implementation
         # precision = np.diag(self.length_scales)
-        # precision_inv = solve(precision, np.identity(len(precision)))
+        # precision_inv = np.linalg.solve(precision, np.identity(len(precision)))
         #
         # # TODO: This is going to give nan for negative det
         # coefficient = self.sigma_f * np.linalg.det(sigma @ precision_inv + np.identity(len(precision_inv))) ** -.5
         #
-        # sigma_plus_precision_inv = solve(sigma + precision, np.identity(len(precision)))
+        # sigma_plus_precision_inv = np.linalg.solve(sigma + precision, np.identity(len(precision)))
         #
         # diff = self.X - mu
         # self.qs = np.array([coefficient * np.exp(-.5 * d.T @ sigma_plus_precision_inv @ d) for d in diff])

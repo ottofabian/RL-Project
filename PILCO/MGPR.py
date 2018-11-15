@@ -1,5 +1,5 @@
-import numpy as np
-from numpy.dual import solve
+import autograd.numpy as np
+# from scipy.linalg import np.linalg.solve
 from sklearn.gaussian_process import GaussianProcessRegressor
 
 from PILCO.GaussianProcessRegressorOverDistribution import GaussianProcessRegressorOverDistribution
@@ -101,7 +101,7 @@ class MGPR(GaussianProcessRegressor):
 
                 # place into cov matrix
                 if i == j:
-                    cov_ab = beta_a.T @ Q @ beta_b - self.gp_container[i].sigma_f - \
+                    cov_ab = beta_a.T @ Q @ beta_a - mu_out[i] ** 2 + self.gp_container[i].sigma_f ** 2 - \
                              np.trace(self.gp_container[i].K_inv @ Q)
                 else:
                     cov_ab = beta_a.T @ Q @ beta_b - mu_out[i] * mu_out[j]
@@ -116,7 +116,7 @@ class MGPR(GaussianProcessRegressor):
 
         # compute R
         R = sigma @ (precision_a_inv + precision_b_inv) + np.identity(sigma.shape[0])
-        R_inv = solve(R, np.identity(R.shape[0]))
+        R_inv = np.linalg.solve(R, np.identity(R.shape[0]))
 
         # compute z
         z = precision_a_inv @ zeta + precision_b_inv @ zeta
@@ -138,7 +138,7 @@ class MGPR(GaussianProcessRegressor):
 
         precision = np.diag(self.gp_container[i].length_scales)
         # print(precision, sigma)
-        sigma_plus_precision_inv = solve(sigma @ precision, np.identity(sigma.shape[0]))
+        sigma_plus_precision_inv = np.linalg.solve(sigma @ precision, np.identity(sigma.shape[0]))
         return np.sum(beta @ self.gp_container[i].qs * sigma @ sigma_plus_precision_inv @ zeta, axis=1)
 
     def get_kernels(self, X):
@@ -154,22 +154,13 @@ class MGPR(GaussianProcessRegressor):
         return K
 
     def y_train_mean(self):
-        means = []
-        for i in range(self.n_targets):
-            means.append(self.gp_container[i].y_train_mean())
-        return means
+        return np.array([gp.y_train_mean for gp in self.gp_container])
 
     def sample_y(self, X, n_samples=1, random_state=0):
-        samples = []
-        for i in range(self.n_targets):
-            samples.append(self.gp_container[i].sample_y(X, n_samples, random_state))
-        return samples
+        return np.array([gp.sample_y(X, n_samples, random_state) for gp in self.gp_container])
 
     def log_marginal_likelihood(self, theta=None, eval_gradient=False):
-        lml = []
-        for i in range(self.n_targets):
-            lml.append(self.gp_container[i].log_marginal_likelihood(theta, eval_gradient))
-        return lml
+        return np.array([gp.log_marginal_likelihood(theta, eval_gradient) for gp in self.gp_container])
 
     def get_sigma_fs(self):
         return np.array([c.sigma_f for c in self.gp_container])

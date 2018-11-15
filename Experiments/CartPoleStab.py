@@ -1,4 +1,3 @@
-from A3C.A3C import A3C
 from PILCO.CostFunctions.CostFunctions import cartpolebase_costfunc
 from PILCO.PILCO import PILCO
 
