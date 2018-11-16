@@ -21,7 +21,7 @@ class ActorCriticNetwork(torch.nn.Module):
 
         # network architecture specification
         fc1_out = 300
-        fc2_out = 200
+        fc2_out = 300
 
         self.fc1 = nn.Linear(n_inputs, fc1_out)
         self.fc2 = nn.Linear(n_inputs, fc2_out)
