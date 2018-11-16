@@ -1,4 +1,5 @@
 import copy
+import logging
 
 import gym
 import numpy as np
@@ -79,6 +80,10 @@ class PILCO(object):
         self.state_action_pairs = None
         self.state_delta = None
 
+        # -----------------------------------------------------
+        # logging instance
+        self.logger = logging.getLogger(__name__)
+
     def run(self, n_init):
 
         # TODO maybe change the structure to Deisenroth (2010), page 36
@@ -125,9 +130,9 @@ class PILCO(object):
             self.policy_improvement(policy)
 
             X_test, y_test, reward_test = self.execute_test_run(policy)
-            self.state_action_pairs = np.append(self.state_action_pairs, X_test)
-            self.state_delta = np.append(self.state_delta, y_test)
-            np.append(rewards, reward_test)
+            self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
+            self.state_delta = np.append(self.state_delta, y_test, axis=0)
+            rewards = np.append(rewards, reward_test)
 
     def learn_dynamics_model(self, X, y):
         # TODO do we only change params at the beginning?
@@ -166,8 +171,8 @@ class PILCO(object):
         # x0 = policy.get_hyperparams()[self.state_dim * self.n_features:]
         x0 = policy.get_hyperparams()
         # For testing only
-        options = {'maxiter': 1, 'disp': True}
-        res = minimize(self.optimize_policy, x0, args, method='L-BFGS-B', jac=None, options=options)
+        # options = {'maxiter': 1, 'disp': True}
+        res = minimize(self.optimize_policy, x0, args, method='L-BFGS-B', jac=None)
         # TODO Autograd
         # res = minimize(value_and_grad(self.optimize_policy), x0, args, method='L-BFGS-B', jac=True)
 
@@ -182,23 +187,27 @@ class PILCO(object):
         rewards = []
 
         state_prev = self.env.reset()
-        self.env.render()
         done = False
-
+        t = 0
         while not done:
-            action = policy.choose_action(state_prev)
+            self.env.render()
+            t += 1
+            state_prev = np.array(state_prev)
+            # no uncertainty during testing required
+            action, _, _ = policy.choose_action(state_prev, 0 * np.identity(len(state_prev)))
             state, reward, done, _ = self.env.step(action)
 
-            # create history and create new training instance
+            # create history and new training instance
             X.append(np.append(state_prev, action))
             epsilon = np.random.normal(0, self.var_eps)
             y.append(state - state_prev + epsilon)
-
+            rewards.append(reward)
             state_prev = state
 
-        return X, y, rewards
+        print("reward={}, episode_len={}".format(np.sum(rewards), t))
+        return np.array(X), np.array(y), np.array(rewards)
 
-    def get_init_hyperparams(self, X, y, i=None):
+    def get_init_hyperparams(self, X, y):
         """
         Compute hyperparams for GPR
         :param i:
@@ -206,9 +215,9 @@ class PILCO(object):
         :param y: target vector containing deltas of states
         :return:
         """
-        l = np.std(X[:i, :], axis=0)
-        sigma_f = np.std(y[:i, :])
-        sigma_eps = np.std(y[:i, :] / 10)
+        l = np.std(X, axis=0)
+        sigma_f = np.std(y)
+        sigma_eps = np.std(y / 10)
 
         return l, sigma_f, sigma_eps
 
