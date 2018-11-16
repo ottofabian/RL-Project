@@ -1,11 +1,8 @@
 from A3C.A3C import A3C
-<<<<<<< HEAD
 from PILCO.CostFunctions.CostFunctions import cartpolebase_costfunc
 from PILCO.PILCO import PILCO
 import logging
 from Experiments.util.ColorLogger import enable_color_logging
-=======
->>>>>>> 68a4dfe1a64073eab3708f9ff466965a6a60fd85
 
 # currently tested on the following environments:
 # CartPole-v0
