@@ -76,16 +76,14 @@ class MGPR(GaussianProcessRegressor):
         sigma_out = np.zeros((self.n_targets, self.n_targets))
         input_output_cov = np.zeros((self.n_targets, self.X.shape[1]))
 
-        # get the independent mus from the gps
+        # calculate combined Expectation of all gps
         for i in range(self.n_targets):
-            mu_out[i] = self.gp_container[i].predict_from_dist(mu, sigma)
+            mu_out[i] = self.gp_container[i].get_mu_from_dist(mu, sigma)
 
-        # The cov or delta x is not diagonal, therefor it is necessary to
+        # The cov og e.g. delta x is not diagonal, therefor it is necessary to
         # compute the cross-cov between each output
-        # This requires to compute the Expected value of the GP's outputs
+        # This requires to compute the expected value of the GP's outputs
         # from xa,xb - the product of the corresponding mean values from above
-
-        # calculate combined Expectation
 
         # compute zeta before hand, it does not change
         zeta = (self.X - mu).T

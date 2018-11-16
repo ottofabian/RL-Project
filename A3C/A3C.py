@@ -65,7 +65,7 @@ class A3C(object):
         # start the test worker which is visualized to see how the current progress is
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T,
                    seed=self.seed, lr=0, n_steps=0, t_max=100000, gamma=0, tau=0, beta=0,
-                   value_loss_coef=0, optimizer=None, is_train=False, use_gae=False, is_discrete=self.is_discrete,
+                   value_loss_coef=0, optimizer=None, is_train=False, use_gae=True, is_discrete=self.is_discrete,
                    lock=self.lock)
         w.start()
         self.worker_pool.append(w)
@@ -74,14 +74,14 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, T=self.T,
-                       seed=self.seed, lr=self.lr, n_steps=5, t_max=100000, gamma=.5, tau=.75, beta=.01,
-                       value_loss_coef=.5, optimizer=optimizer, is_train=True, use_gae=False,
+                       seed=self.seed, lr=self.lr, n_steps=5, t_max=100000, gamma=.99, tau=1, beta=.01,
+                       value_loss_coef=.5, optimizer=optimizer, is_train=True, use_gae=True,
                        is_discrete=self.is_discrete, lock=self.lock)
             w.start()
             self.worker_pool.append(w)
 
-        # for w in self.worker_pool:
-        #     w.join()
+        for w in self.worker_pool:
+            w.join()
 
     def stop(self):
         self.worker_pool = []

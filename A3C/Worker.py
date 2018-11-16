@@ -4,7 +4,6 @@ from multiprocessing import Value
 from threading import Thread
 
 import gym
-import numpy as np
 import quanser_robots
 import quanser_robots.cartpole
 import quanser_robots.cartpole.cartpole
@@ -26,8 +25,7 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
     :param shared_model: shared global model
     :return:
     """
-    for param, shared_param in zip(model.parameters(),
-                                   shared_model.parameters()):
+    for param, shared_param in zip(model.parameters(), shared_model.parameters()):
         if shared_param.grad is not None:
             return
         shared_param._grad = param.grad
@@ -106,6 +104,7 @@ class Worker(Thread):
         # logging instance
         self.logger = logging.getLogger(__name__)
 
+
     def run(self):
         if self.is_train:
             self._train()
@@ -118,21 +117,20 @@ class Worker(Thread):
         loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
         :return: self
         """
+
         # ensure different seed for each worker thread
         torch.manual_seed(self.seed + self.worker_id)
         self.env.seed(self.seed + self.worker_id)
 
         # init local NN instance for worker thread
         model = ActorCriticNetwork(self.env.observation_space.shape[0], self.env.action_space, self.is_discrete)
+        model.train()
 
         # if no shared optimizer is provided use individual one
         if self.optimizer is None:
             self.optimizer = torch.optim.RMSprop(self.global_model.parameters(), lr=self.lr)
 
-        model.train()
-
-        state = self.env.reset()
-        state = torch.Tensor(state)
+        state = torch.Tensor(self.env.reset())
 
         t = 0
         while True:
@@ -152,7 +150,7 @@ class Worker(Thread):
 
                 if self.is_discrete:
                     # forward pass
-                    value, logit = model(state)
+                    value, logit = model(state.unsqueeze(0))
 
                     # prop dist over actions
                     prob = F.softmax(logit, dim=-1)
@@ -174,24 +172,28 @@ class Worker(Thread):
                     high = self.env.action_space.high
                     low = self.env.action_space.low
 
+                    # ------------------------------------------
+                    # select action
+
                     # prob dist over actions
-                    prob = torch.distributions.Normal(mu.view(-1, ).detach(), sigma.view(-1, ).detach())
-
-                    # entropy for regularization
-                    entropy = prob.entropy()
-
+                    prob = torch.distributions.Normal(mu, sigma)
                     # sample during training for exploration
-                    action = prob.sample(self.env.action_space.shape)
-                    # print("Training worker {} action: {}".format(self.worker_id, action))
-                    # action = mu.detach().numpy()
+                    action = prob.sample()
 
                     # avoid sampling outside the allowed range of action_space
-                    action = np.clip(action, low, high)
+                    #action = np.clip(action, low, high)
 
                     Worker.actions_taken_training.append(action)
                     #Worker.values.append(value.detach().numpy())
 
                     # print("Training worker {} action: {}".format(self.worker_id, action))
+
+                    # ------------------------------------------
+                    # Compute statistics for loss
+
+                    # entropy for regularization
+                    entropy = prob.entropy()
+                    # log prob of action
                     log_prob = prob.log_prob(action)
 
                 # make selected move
@@ -200,8 +202,12 @@ class Worker(Thread):
                 elif isinstance(self.env.action_space, Box):
                     action = action.numpy()[0]
 
+                # avoid sampling outside the allowed range of action_space
+                # env is currently clipping internally
+                # action = np.clip(action, low, high)
+
                 state, reward, done, _ = self.env.step(action)
-                reward_sum += reward
+                reward_sum = reward_sum + reward
                 done = done or t >= self.t_max
 
                 with self.T.get_lock():
@@ -227,7 +233,7 @@ class Worker(Thread):
 
             # if non terminal state is present set R to be value of current state
             if not done:
-                value = model(state)[0]
+                value = model(state.unsqueeze(0))[0]
                 R = value.detach()
 
             values.append(R)
@@ -235,43 +241,40 @@ class Worker(Thread):
             # compute loss and backprop
             self._compute_loss(R, rewards, values, log_probs, entropies, model)
 
-            self.lock.acquire()
             sync_grads(model, self.global_model)
-            self.lock.release()
 
             self.optimizer.step()
 
     def _compute_loss(self, R: torch.Tensor, rewards: list, values: list, log_probs: list, entropies: list,
                       model: ActorCriticNetwork) -> None:
-        policy_loss = 0
-        value_loss = 0
+        actor_loss = 0
+        critic_loss = 0
 
         gae = torch.zeros(1, 1)
 
         # iterate over rewards from most recent to the starting one
         for i in reversed(range(len(rewards))):
-            R = rewards[i] + self.discount * R
+            R = rewards[i] + R * self.discount
             advantage = R - values[i]
-            value_loss += 0.5 * advantage.pow(2)
-
+            critic_loss = critic_loss + 0.5 * advantage.pow(2)
             if self.use_gae:
-                # Generalized Advantage Estimation
-                delta = rewards[i] + self.discount * values[i + 1] - values[i]
-                gae = gae * self.discount * self.tau + delta
-                policy_loss -= (log_probs[i] * gae.detach() + self.beta * entropies[i])
+                # Generalized Advantage Estimataion
+                delta_t = rewards[i] + self.discount * values[i + 1] - values[i]
+                gae = gae * self.discount * self.tau + delta_t
+                actor_loss = actor_loss - log_probs[i] * gae.detach() - self.beta * entropies[i]
             else:
-                policy_loss -= (log_probs[i] * advantage + self.beta * entropies[i])
+                actor_loss = actor_loss - log_probs[i] * advantage - self.beta * entropies[i]
 
         # zero grads to avoid computation issues in the next step
         model.zero_grad()
         self.optimizer.zero_grad()
 
-        # compute combined loss of policy_loss and value_loss
+        # compute combined loss of actor_loss and critic_loss
         # avoid overfitting on value loss by scaling it down
-        combined_loss = policy_loss + self.value_loss_coef * value_loss
+        combined_loss = actor_loss + self.value_loss_coef * critic_loss
         combined_loss.mean().backward()
         # combined_loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 50)
 
     def _test(self):
         """
@@ -288,8 +291,7 @@ class Worker(Thread):
         model.eval()
         model.load_state_dict(self.global_model.state_dict())
 
-        state = self.env.reset()
-        state = torch.Tensor(state)
+        state = torch.Tensor(self.env.reset())
         reward_sum = 0
 
         t = 0
@@ -304,7 +306,7 @@ class Worker(Thread):
             # forward pass
             with torch.no_grad():
                 if self.is_discrete:
-                    _, logit = model(state)
+                    _, logit = model(state.unsqueeze(0))
 
                     # prob dist of action space, select best action
                     prob = F.softmax(logit, dim=-1)
@@ -317,9 +319,15 @@ class Worker(Thread):
                     action = mu
                     taken_actions_test.append(action)
 
-            state, reward, done, _ = self.env.step(action.numpy())
+            # make selected move
+            if isinstance(self.env.action_space, Discrete):
+                action = action.numpy()[0, 0]
+            elif isinstance(self.env.action_space, Box):
+                action = action.numpy()[0]
+
+            state, reward, done, _ = self.env.step(action)
             done = done or t >= self.t_max
-            reward_sum += reward
+            reward_sum = reward_sum + reward
 
             # print current performance if terminal state or max episodes was reached
             if done:

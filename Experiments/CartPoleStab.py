@@ -1,8 +1,11 @@
 from A3C.A3C import A3C
+<<<<<<< HEAD
 from PILCO.CostFunctions.CostFunctions import cartpolebase_costfunc
 from PILCO.PILCO import PILCO
 import logging
 from Experiments.util.ColorLogger import enable_color_logging
+=======
+>>>>>>> 68a4dfe1a64073eab3708f9ff466965a6a60fd85
 
 # currently tested on the following environments:
 # CartPole-v0
@@ -30,8 +33,7 @@ from Experiments.util.ColorLogger import enable_color_logging
 # T=35006, reward=199.9990211725235, episode_len=200
 # T=50697, reward=199.99907058477402, episode_len=200
 
-seed = 123456
-
+seed = 1
 
 enable_color_logging()
 logging.info('Start Experiment')
