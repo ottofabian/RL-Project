@@ -7,14 +7,6 @@ from PILCO.GaussianProcess.MGPR import MGPR
 class RBFController(MGPR, Controller):
     """RBF Controller/Policy"""
 
-    def get_hyperparams(self):
-        y = np.array([gp.y for gp in self.gp_container]).T
-        concat = np.concatenate([self.X, y], axis=1)
-        return concat.T.flatten()
-
-    def optimize_params(self, *args):
-        pass
-
     def __init__(self, length_scales, n_actions):
         """
 
@@ -27,6 +19,22 @@ class RBFController(MGPR, Controller):
         # sigma_f and sigma_eps are fixed for the RBF Controller, if it is seen as deterministic GP
         MGPR.__init__(self, length_scales=length_scales, n_targets=n_actions, optimizer="fmin_l_bfgs_b", sigma_f=1,
                       sigma_eps=.01, alpha=1e-10, is_fixed=True)
+
+        self.length_scales = length_scales
+
+    def get_hyperparams(self):
+        concat = np.concatenate([self.X, self.y], axis=1)
+        return np.concatenate([concat.T.flatten(), self.get_length_scales().T.flatten()])
+
+    def set_hyper_params(self, X, y, length_scales):
+        self.X = X
+        self.y = y
+        super(RBFController, self).fit(X, y)
+        for i, gp in enumerate(self.gp_container):
+            gp.length_scales = length_scales[i]
+
+    def fit(self, X, y):
+        self.set_hyper_params(X, y, self.length_scales)
 
     def choose_action(self, mu, sigma):
         action_mu, action_cov, input_output_cov = self.predict_from_dist(mu, sigma)

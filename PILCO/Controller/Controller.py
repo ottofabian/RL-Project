@@ -8,7 +8,7 @@ class Controller(ABC):
         pass
 
     @abstractmethod
-    def optimize_params(self, *args):
+    def set_hyper_params(self, *args):
         pass
 
     @abstractmethod

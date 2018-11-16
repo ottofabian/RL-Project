@@ -1,5 +1,6 @@
 import numpy as np
 # from scipy.linalg import np.linalg.solve
+from scipy.linalg import solve
 from sklearn.gaussian_process import GaussianProcessRegressor
 
 from PILCO.GaussianProcess.GaussianProcessRegressorOverDistribution import GaussianProcessRegressorOverDistribution
@@ -44,6 +45,7 @@ class MGPR(GaussianProcessRegressor):
         :return:
         """
         self.X = X
+        self.y = y
         for i in range(self.n_targets):
             self.gp_container[i].fit(X, y[:, i])
 
@@ -67,9 +69,85 @@ class MGPR(GaussianProcessRegressor):
 
         """
         Predict dist given an uncertain input x~N(mu,sigma)
+        Based on the idea of: https://github.com/cryscan/pilco-learner
         :param mu: n_targets x n_state + n_actions
         :param sigma: n_targets x (n_state + n_actions) x (n_state + n_actions)
         :return: mu, sigma for each target
+        """
+
+        state_dim = self.X.shape[1]
+        target_dim = self.y.shape[1]
+
+        [gp.compute_params() for gp in self.gp_container]
+
+        beta = np.vstack([gp.alpha for gp in self.gp_container]).T
+        length_scales = self.get_length_scales()
+
+        # compute mean of predictive dist based on matlab code
+        precision_inv = np.stack([np.diag(1 / l) for l in length_scales])
+        diff = self.X - mu
+        # The precision_inv cancels out later on
+        diff_precision = diff @ precision_inv
+
+        B = precision_inv @ sigma @ precision_inv + np.eye(state_dim)
+
+        # diff / B, this has to be done differently in python
+        diff_B = np.stack([solve(B[i].T, diff_precision[i].T).T for i in range(target_dim)])
+
+        scaled_beta = np.exp(-np.sum(diff_precision * diff_B, 2) / 2) * beta.T
+        # lets hope det(B) is not negative, happend more than once :(
+        coefficient = 2 * self.get_sigma_fs() * np.linalg.det(B) ** -.5
+
+        mean = np.sum(scaled_beta, 1) * coefficient
+
+        # compute cross cov between input and output
+        diff_B_precision = np.matmul(diff_B, precision_inv)
+        input_output_cov = (np.transpose(diff_B_precision, [0, 2, 1]) @ np.expand_dims(scaled_beta, 2)).reshape(
+            target_dim, state_dim).T * coefficient
+        input_output_cov = sigma @ input_output_cov
+
+        # compute predictive covariance
+
+        k = 2 * self.get_sigma_fs().reshape(target_dim, 1) - np.sum(diff_precision ** 2, 2) * .5
+
+        diff_scaled = np.expand_dims(diff, 0) / np.expand_dims(2 * length_scales, 1)
+        diff_a = np.repeat(diff_scaled[:, np.newaxis, :, :], target_dim, 1)
+        diff_b = np.repeat(diff_scaled[np.newaxis, :, :, :], target_dim, 0)
+
+        precision_inv = np.stack([np.diag(1 / (2 * l)) for l in length_scales])
+        precision_add = np.expand_dims(precision_inv, 0) + np.expand_dims(precision_inv, 1)
+
+        # compute R, which is used for scaling
+        R = np.matmul(sigma, precision_add) + np.eye(state_dim)
+        denominator = np.linalg.det(R) ** -.5
+
+        R_inv = np.stack([solve(R.reshape(-1, state_dim, state_dim)[i], sigma) for i in range(target_dim ** 2)])
+        R_inv = R_inv.reshape(target_dim, target_dim, state_dim, state_dim)
+
+        # compute mahalanobis distance
+        aQ = np.matmul(diff_a, R_inv / 2)
+        bQ = np.matmul(-diff_b, R_inv / 2)
+        mahalanobis_dist = np.expand_dims(np.sum(aQ * diff_a, -1), -1) + np.expand_dims(
+            np.sum(bQ * diff_b, -1), -2) - 2 * np.einsum('...ij, ...kj->...ik', aQ, diff_b)
+
+        # compute Q matrix
+        Q = np.exp(k[:, np.newaxis, :, np.newaxis] + k[np.newaxis, :, np.newaxis, :] + mahalanobis_dist)
+
+        cov = np.einsum('ji,iljk,kl->il', beta, Q, beta)
+        trace = np.hstack([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)])
+        cov = (cov - np.diag(trace)) * denominator + np.diag(2 * length_scales)
+        cov = cov - np.matmul(mean[:, np.newaxis], mean[np.newaxis, :])
+
+        return mean, cov, input_output_cov.T
+
+    def predict_from_dist_v2(self, mu, sigma):
+
+        """
+        This method should not be used, it is only based on the mathematical description of Deisenroth(2010).
+        Use predict_from_dist() in order to get a matlab based method, which is numerically more stable.
+        :param mu:
+        :param sigma:
+        :return:
         """
 
         mu_out = np.zeros((self.n_targets,))
@@ -78,7 +156,7 @@ class MGPR(GaussianProcessRegressor):
 
         # calculate combined Expectation of all gps
         for i in range(self.n_targets):
-            mu_out[i] = self.gp_container[i].get_mu_from_dist(mu, sigma)
+            mu_out[i] = self.gp_container[i].compute_params(mu, sigma)
 
         # The cov og e.g. delta x is not diagonal, therefor it is necessary to
         # compute the cross-cov between each output
@@ -165,3 +243,6 @@ class MGPR(GaussianProcessRegressor):
 
     def get_sigma_eps(self):
         return np.array([c.sigma_eps for c in self.gp_container])
+
+    def get_length_scales(self):
+        return np.array([c.length_scales for c in self.gp_container])

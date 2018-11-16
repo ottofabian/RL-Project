@@ -88,8 +88,6 @@ class PILCO(object):
         self.state_delta = np.zeros((n_init, self.state_dim))
         rewards = np.zeros((n_init,))
 
-        policy = self.get_rbf_policy()
-
         i = 0
         while i < n_init:
             state_prev = self.env.reset()
@@ -119,6 +117,8 @@ class PILCO(object):
         self.state_delta = np.array(self.state_delta)
         rewards = np.array(rewards)
 
+        policy = self.get_rbf_policy()
+
         while True:
             self.learn_dynamics_model(self.state_action_pairs, self.state_delta)
             # Deisenroth (2010), page 47, 3.5.4
@@ -136,42 +136,47 @@ class PILCO(object):
                                    sigma_eps=sigma_eps)
         self.dynamics_model.fit(X, y)
 
+    def unwrap_rbf_params(self, x):
+        split1 = self.state_dim * self.n_features
+        split2 = self.n_actions * self.n_features + split1
+        X = x[:split1].reshape(self.n_features, self.state_dim)
+        y = x[split1:split2].reshape(self.n_features, self.n_actions)
+        length_scales = x[split2:].reshape(self.n_actions, self.state_dim)
+        return X, y, length_scales
+
     def optimize_policy(self, x, *args):
         self.opt_ctr += 1
         p = args[0]
         policy = copy.deepcopy(p)
         if isinstance(policy, RBFController):
-            split = self.state_dim * self.n_features
-            X = x[:split].reshape(self.n_features, self.state_dim)
-            y = x[split:].reshape(self.n_features, self.n_actions)
-
-            # X = np.array([np.linspace(-.01, .01, num=self.n_features) for _ in range(self.state_dim)]).T
-            # y = x.reshape(self.n_features, self.n_actions)
+            X, y, length_scales = self.unwrap_rbf_params(x)
+        # X = np.array([np.linspace(-.01, .01, num=self.n_features) for _ in range(self.state_dim)]).T
+        # y = x.reshape(self.n_features, self.n_actions)
         else:
             raise NotImplementedError("For this policy no optimization is implemented.")
 
-        policy.fit(X, y)
+        policy.set_hyper_params(X, y, length_scales)
         self.optimization_callback(policy)
 
         return self.rollout(policy)
-
-    def optimization_callback(self, policy):
-        if self.opt_ctr % 10 == 0:
-            print("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, self.rollout(policy)))
-        else:
-            print("Policy optimization iteration: {}".format(self.opt_ctr))
 
     def policy_improvement(self, policy):
         # minimise cost given policy
         args = (policy,)
         # x0 = policy.get_hyperparams()[self.state_dim * self.n_features:]
         x0 = policy.get_hyperparams()
-        res = minimize(self.optimize_policy, x0, args, method='L-BFGS-B', jac=None)
+        # For testing only
+        options = {'maxiter': 1, 'disp': True}
+        res = minimize(self.optimize_policy, x0, args, method='L-BFGS-B', jac=None, options=options)
+        # TODO Autograd
+        # res = minimize(value_and_grad(self.optimize_policy), x0, args, method='L-BFGS-B', jac=True)
 
         self.opt_ctr = 0
-        policy.fit(res)
+        X, y, length_scales = self.unwrap_rbf_params(res.x)
+        policy.set_hyper_params(X, y, length_scales)
 
     def execute_test_run(self, policy):
+
         X = []
         y = []
         rewards = []
@@ -201,9 +206,9 @@ class PILCO(object):
         :param y: target vector containing deltas of states
         :return:
         """
-        l = np.var(X[:i, :], axis=0)
-        sigma_f = np.var(y[:i, :])
-        sigma_eps = np.var(y[:i, :] / 10)
+        l = np.std(X[:i, :], axis=0)
+        sigma_f = np.std(y[:i, :])
+        sigma_eps = np.std(y[:i, :] / 10)
 
         return l, sigma_f, sigma_eps
 
@@ -241,13 +246,16 @@ class PILCO(object):
 
             # ------------------------------------------------
             # sample for reward
-            action = np.random.multivariate_normal(action_squashed_mu, action_squashed_cov,
-                                                   size=self.n_training_samples)
-            action = np.clip(action, self.env.action_space.low, self.env.action_space.high)
+            # TODO change this for an actual expected reward
+            # action = np.random.multivariate_normal(action_squashed_mu, action_squashed_cov,
+            #                                        size=self.n_training_samples)
+            # action = np.clip(action, self.env.action_space.low, self.env.action_space.high)
+            #
+            # sampled_state = np.random.multivariate_normal(state_mu, state_cov, size=self.n_training_samples)
+            # reward = reward + self.gamma ** t * np.mean(
+            #     [self.cost_function(s, action[i]) for i, s in enumerate(sampled_state)])
 
-            sampled_state = np.random.multivariate_normal(state_mu, state_cov, size=self.n_training_samples)
-            reward = reward + self.gamma ** t * np.mean(
-                [self.cost_function(s, action[i]) for i, s in enumerate(sampled_state)])
+            reward = reward + self.gamma ** t * self.cost_function(state_mu, state_cov)
 
             # ------------------------------------------------
             # get joint dist over successor state p(x,u)
@@ -367,14 +375,24 @@ class PILCO(object):
     def get_rbf_policy(self):
 
         # init model params
-        policy_X = np.random.multivariate_normal(np.zeros(self.state_dim),
-                                                 np.diag(np.full(self.state_dim, self.var_eps)), size=self.n_features)
-        policy_y = np.random.multivariate_normal(np.zeros(self.n_actions),
-                                                 np.diag(np.full(self.n_actions, self.var_eps)), size=self.n_features)
+        # policy_X = np.random.multivariate_normal(np.zeros(self.state_dim),
+        #                                          np.diag(np.full(self.state_dim, self.var_eps)), size=self.n_features)
+        # policy_y = np.random.multivariate_normal(np.zeros(self.n_actions),
+        #                                          np.diag(np.full(self.n_actions, self.var_eps)), size=self.n_features)
+
+        policy_X = np.random.normal(0, 0.1 ** 2, size=(self.n_features, self.state_dim))
+        policy_y = np.random.normal(0, 0.1 ** 2, size=(self.n_features, self.n_actions))
 
         # noise values are fixed for RBF policy
-        l, _, _ = self.get_init_hyperparams(policy_X, policy_y)
+        l, _, _ = self.get_init_hyperparams(self.state_action_pairs, self.state_delta)
 
-        policy = RBFController(length_scales=l, n_actions=self.n_actions)
-        policy.fit(policy_X, policy_y)
+        policy = RBFController(length_scales=l[:self.state_dim], n_actions=self.n_actions)
+        policy.set_hyper_params(policy_X, policy_y, l[:self.state_dim].reshape(self.n_actions, self.state_dim))
         return policy
+
+    def optimization_callback(self, policy):
+
+        if self.opt_ctr % 10 == 0:
+            print("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, self.rollout(policy)))
+        else:
+            print("Policy optimization iteration: {}".format(self.opt_ctr))

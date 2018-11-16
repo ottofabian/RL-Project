@@ -22,9 +22,6 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         :param random_state:
         """
 
-        # TODO: Change the length scales to a good initial value
-        self.length_scales = length_scales
-
         # TODO: Check if WhiteKernel is used correctly
         if is_fixed:
             kernel = ConstantKernel(sigma_f, constant_value_bounds=(sigma_f, sigma_f)) * RBF(
@@ -37,9 +34,9 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
                                                                        random_state)
         self.X = None
         self.y = None
-        self.sigma_eps = sigma_eps
-        self.length_scales = length_scales
-        self.sigma_f = sigma_f
+        # self.sigma_eps = sigma_eps
+        # self.length_scales = length_scales
+        # self.sigma_f = sigma_f
         self.is_fixed = is_fixed
 
         self.betas = None
@@ -47,22 +44,12 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         self.qs = None
 
     def fit(self, X, y):
-        super(GaussianProcessRegressorOverDistribution, self).fit(X, y)
+        if not self.is_fixed:
+            super(GaussianProcessRegressorOverDistribution, self).fit(X, y)
         self.X = X
         self.y = y
 
-        # retrieve optimized hyperparams
-        self.sigma_eps = np.exp(self.kernel_.theta[-1])
-        self.sigma_f = np.exp(self.kernel_.theta[0])
-        self.length_scales = np.exp(self.kernel_.theta[1:-1])
-
-    def get_mu_from_dist(self, mu, sigma):
-        """
-        Returns the new mean value of the predictive dist, e.g. p(u), given x~N(mu, sigma) via Moment matching
-        :param mu: mean of input, e.g. state-action distribution
-        :param sigma: covar of the input, e.g joint state-action distribution to represent uncertainty
-        :return: mu of predictive distribution p(u)
-        """
+    def compute_params(self):
 
         # TODO: Maybe use this, but it adds no noise
         # L = self.kernel_.L_
@@ -71,7 +58,7 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         # ---------------------------------
 
         # This applies noise, but requires computing L
-        K = self.kernel_(self.X)
+        K = self.kernel(self.X)
 
         if self.is_fixed:
             # this is required for the RBF controller
@@ -88,48 +75,64 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
             # self.K_inv = solve_triangular(L, np.identity(self.X.shape[0]))
             # self.betas = solve_triangular(L, self.y)
 
-        return self.compute_mu(mu, sigma)
-
     def compute_mu(self, mu, sigma):
         """
-        compute expectation of kernel(x_i, x*), where x*~N(mu, sigma) given the dist of the state  x~N(mu, sigma)
-        :param mu:
-        :param sigma:
-        :return: mu of p(delta_t+1)
+        Returns the new mean value of the predictive dist, e.g. p(u), given x~N(mu, sigma) via Moment matching
+        :param mu: mean of input, e.g. state-action distribution
+        :param sigma: covar of the input, e.g joint state-action distribution to represent uncertainty
+        :return: mu of predictive distribution p(u)
         """
 
         # TODO det is still nan, error somwhere else?
         # Numerically more stable???
-        precision = np.diag(self.length_scales)
+        # precision = np.diag(self.length_scales)
         # precision_inv = np.linalg.solve(precision, np.identity(len(precision)))
 
-        diff = (self.X - mu) @ precision
-        B = precision @ sigma @ precision + np.identity(precision.shape[0])
-
-        t = diff @ B
-
-        # TODO: This is going to give nan for negative det
-        if np.any(np.isnan(B)):
-            print("Nan is B")
-
-        coefficient = 2 * self.sigma_f * np.linalg.det(B) ** -.5
-
-        # sigma_plus_precision_inv = np.linalg.solve(sigma + precision, np.identity(len(precision)))
-
-        self.qs = coefficient * np.exp(-.5 * np.sum(diff * t, 1))
-
-        return self.betas.T @ self.qs
+        # diff = (self.X - mu) @ precision
+        #
+        # # TODO: This is going to give nan for negative det
+        # B = precision @ sigma @ precision + np.identity(precision.shape[0])
+        # t = diff @ B
+        #
+        # if np.any(np.isnan(B)):
+        #     print("Nan is B")
+        #
+        # coefficient = 2 * self.sigma_f * np.linalg.det(B) ** -.5
+        #
+        # # sigma_plus_precision_inv = np.linalg.solve(sigma + precision, np.identity(len(precision)))
+        #
+        # mean = coefficient * self.betas.T @ np.exp(-.5 * np.sum(diff * t, 1))
+        #
+        # return mean
 
         # As seen in paper implementation
         # precision = np.diag(self.length_scales)
         # precision_inv = np.linalg.solve(precision, np.identity(len(precision)))
         #
-        # # TODO: This is going to give nan for negative det
-        # coefficient = self.sigma_f * np.linalg.det(sigma @ precision_inv + np.identity(len(precision_inv))) ** -.5
-        #
-        # sigma_plus_precision_inv = np.linalg.solve(sigma + precision, np.identity(len(precision)))
-        #
-        # diff = self.X - mu
-        # self.qs = np.array([coefficient * np.exp(-.5 * d.T @ sigma_plus_precision_inv @ d) for d in diff])
-        #
-        # return self.betas.T @ self.qs
+        # TODO: This is going to give nan for negative det
+        precision = np.diag(self.length_scales)
+        precision_inv = np.diag(1 / self.length_scales)
+        coefficient = self.sigma_f * np.linalg.det(sigma @ precision_inv + np.identity(len(precision_inv))) ** -.5
+
+        sigma_plus_precision_inv = np.linalg.solve(sigma + precision, np.identity(len(precision)))
+
+        diff = self.X - mu
+        self.qs = np.array([coefficient * np.exp(-.5 * d.T @ sigma_plus_precision_inv @ d) for d in diff])
+
+        return self.betas.T @ self.qs
+
+    @property
+    def length_scales(self):
+        return self.kernel.get_params()['k1__k2__length_scale']
+
+    @length_scales.setter
+    def length_scales(self, length_scales: np.ndarray) -> None:
+        self.kernel.set_params(k1__k2__length_scale=length_scales)
+
+    @property
+    def sigma_f(self):
+        return self.kernel.get_params()['k1__k1__constant_value']
+
+    @property
+    def sigma_eps(self):
+        return self.kernel.get_params()['k2__noise_level']
