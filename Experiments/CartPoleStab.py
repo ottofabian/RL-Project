@@ -1,5 +1,4 @@
-from PILCO.CostFunctions.CostFunctions import cartpolebase_costfunc
-from PILCO.PILCO import PILCO
+from A3C.A3C import A3C
 
 # currently tested on the following environments:
 # CartPole-v0
@@ -27,14 +26,14 @@ from PILCO.PILCO import PILCO
 # T=35006, reward=199.9990211725235, episode_len=200
 # T=50697, reward=199.99907058477402, episode_len=200
 
-seed = 123456
+seed = 1
 
-# a3c = A3C(n_worker=4, env_name='CartPole-v0', lr=1e-3, is_discrete=True, seed = seed)
-# a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-4, is_discrete=False, seed = seed)
+a3c = A3C(n_worker=2, env_name='CartPole-v0', lr=1e-4, is_discrete=True, seed=seed)
+# a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-4, is_discrete=False, seed=seed)
 # a3c = A3C(n_worker=4, env_name='Pendulum-v0', lr=1e-4, is_discrete=False, seed=seed)
-# a3c.run()
-
-pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=10, Horizon=40,
-              cost_function=cartpolebase_costfunc,
-              n_training_samples=5)
-pilco.run(50)
+a3c.run()
+#
+# pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=10, Horizon=40,
+#               cost_function=cartpolebase_costfunc,
+#               n_training_samples=5)
+# pilco.run(50)

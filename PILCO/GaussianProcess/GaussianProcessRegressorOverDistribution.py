@@ -56,12 +56,12 @@ class GaussianProcessRegressorOverDistribution(GaussianProcessRegressor):
         self.sigma_f = np.exp(self.kernel_.theta[0])
         self.length_scales = np.exp(self.kernel_.theta[1:-1])
 
-    def predict_from_dist(self, mu, sigma):
+    def get_mu_from_dist(self, mu, sigma):
         """
-        Returns
-        :param mu: mean of joint state-action distribution
-        :param sigma: covar of joint state-action distribution to represent uncertainty
-        :return: mu, sigma of predictive distribution p(u)
+        Returns the new mean value of the predictive dist, e.g. p(u), given x~N(mu, sigma) via Moment matching
+        :param mu: mean of input, e.g. state-action distribution
+        :param sigma: covar of the input, e.g joint state-action distribution to represent uncertainty
+        :return: mu of predictive distribution p(u)
         """
 
         # TODO: Maybe use this, but it adds no noise

@@ -48,6 +48,7 @@ class PILCO(object):
         # -----------------------------------------------------
         # training params
         self.n_training_samples = n_training_samples
+        self.gamma = 0.9  # discount factor
 
         # -----------------------------------------------------
         # dynamics model
@@ -245,7 +246,8 @@ class PILCO(object):
             action = np.clip(action, self.env.action_space.low, self.env.action_space.high)
 
             sampled_state = np.random.multivariate_normal(state_mu, state_cov, size=self.n_training_samples)
-            reward += np.mean([self.cost_function(s, action[i]) for i, s in enumerate(sampled_state)])
+            reward = reward + self.gamma ** t * np.mean(
+                [self.cost_function(s, action[i]) for i, s in enumerate(sampled_state)])
 
             # ------------------------------------------------
             # get joint dist over successor state p(x,u)

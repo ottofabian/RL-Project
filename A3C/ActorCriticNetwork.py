@@ -8,7 +8,7 @@ from gym.spaces import Discrete
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        nn.init.kaiming_uniform_(m.weight.data)
+        nn.init.xavier_normal_(m.weight.data)
         m.bias.data.fill_(0)
 
 
@@ -20,8 +20,8 @@ class ActorCriticNetwork(torch.nn.Module):
         self.action_space = action_space
 
         # network architecture specification
-        fc1_out = 300
-        fc2_out = 200
+        fc1_out = 100
+        fc2_out = 100
 
         self.fc1 = nn.Linear(n_inputs, fc1_out)
         self.fc2 = nn.Linear(n_inputs, fc2_out)
@@ -39,14 +39,14 @@ class ActorCriticNetwork(torch.nn.Module):
 
         if self.is_discrete:
             # in the dicrete case it has
-            self.actor_linear = nn.Linear(fc1_out, n_outputs)
+            self.actor_linear = nn.Linear(fc2_out, n_outputs)
         else:
             # in the continuous case it has one output for the mu and one for the sigma variable
             # later the workers can sample from a normal distribution
             self.mu = nn.Linear(fc1_out, n_outputs)
             self.sigma = nn.Linear(fc1_out, n_outputs)
 
-        # initialize the weights using Xavier initialization
+        # initialize the weights
         self.apply(init_weights)
         self.train()
 
@@ -59,14 +59,17 @@ class ActorCriticNetwork(torch.nn.Module):
                  In the continuous case: value, mu, sigma
         """
         inputs = inputs.float()
-        x = self.fc1(inputs)
         # x = F.relu6(x)
 
         if self.is_discrete:
+
+            x = self.fc2(inputs)
             # return torch.tanh(self.critic_linear(x)), self.actor_linear(x)
             return self.critic_linear(x), self.actor_linear(x)
 
         else:
+
+            x = self.fc1(inputs)
             bound = torch.from_numpy(self.action_space.high)
             mu = bound * torch.tanh(self.mu(x))
             # print("Mu scaled:", mu.data)
