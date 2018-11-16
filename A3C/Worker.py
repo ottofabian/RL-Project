@@ -13,7 +13,7 @@ from gym.spaces import Discrete, Box
 from torch.optim import Optimizer
 import matplotlib.pyplot as plt
 import logging
-
+import numpy as np
 from A3C.ActorCriticNetwork import ActorCriticNetwork
 
 
@@ -77,7 +77,8 @@ class Worker(Thread):
         logging.debug('Chosen Environment %s' % self.env_name)
         logging.debug('Observation Space: %s' % self.env.observation_space)
         logging.debug('Action Space: %s' % self.env.action_space)
-        logging.debug('Action Range: [%.3f, %.3f]' % (self.env.action_space.low, self.env.action_space.high))
+        if self.is_discrete is False:
+            logging.debug('Action Range: [%.3f, %.3f]' % (self.env.action_space.low, self.env.action_space.high))
         #print(self.env.action_space)
 
         # training params
@@ -108,6 +109,7 @@ class Worker(Thread):
     def run(self):
         if self.is_train:
             self._train()
+            logging.debug('._train')
         else:
             self._test()
 
@@ -200,13 +202,13 @@ class Worker(Thread):
                 if isinstance(self.env.action_space, Discrete):
                     action = action.numpy()[0, 0]
                 elif isinstance(self.env.action_space, Box):
-                    action = action.numpy()[0]
+                    action = action.numpy()
 
                 # avoid sampling outside the allowed range of action_space
                 # env is currently clipping internally
                 # action = np.clip(action, low, high)
 
-                state, reward, done, _ = self.env.step(action)
+                state, reward, done, _ = self.env.step(np.array(action))
                 reward_sum = reward_sum + reward
                 done = done or t >= self.t_max
 
@@ -259,7 +261,7 @@ class Worker(Thread):
             critic_loss = critic_loss + 0.5 * advantage.pow(2)
             if self.use_gae:
                 # Generalized Advantage Estimataion
-                delta_t = rewards[i] + self.discount * values[i + 1] - values[i]
+                delta_t = rewards[i] + self.discount * values[i + 1].data - values[i]
                 gae = gae * self.discount * self.tau + delta_t
                 actor_loss = actor_loss - log_probs[i] * gae.detach() - self.beta * entropies[i]
             else:
@@ -323,7 +325,7 @@ class Worker(Thread):
             if isinstance(self.env.action_space, Discrete):
                 action = action.numpy()[0, 0]
             elif isinstance(self.env.action_space, Box):
-                action = action.numpy()[0]
+                action = action.numpy() #[0]
 
             state, reward, done, _ = self.env.step(action)
             done = done or t >= self.t_max

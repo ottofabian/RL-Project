@@ -123,7 +123,8 @@ def add_coloring_to_emit_ansi(fn):
 
     return new
 
-def enable_color_logging():
+
+def enable_color_logging(debug_lvl=logging.DEBUG):
     if platform.system() == 'Windows':
         # Windows does not support ANSI escapes and we are using API calls to set the console color
         logging.StreamHandler.emit = add_coloring_to_emit_windows(logging.StreamHandler.emit)
@@ -132,10 +133,10 @@ def enable_color_logging():
         logging.StreamHandler.emit = add_coloring_to_emit_ansi(logging.StreamHandler.emit)
 
     root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
+    root.setLevel(debug_lvl)
 
     ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(debug_lvl)
     # FORMAT = '[%(asctime)-s][%(name)-s][\033[1m%(levelname)-7s\033[0m] %(message)-s'
     # FORMAT='%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
 

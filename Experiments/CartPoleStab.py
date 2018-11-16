@@ -32,10 +32,10 @@ from Experiments.util.ColorLogger import enable_color_logging
 
 seed = 1
 
-enable_color_logging()
+enable_color_logging(debug_lvl=logging.DEBUG)
 logging.info('Start Experiment')
-#a3c = A3C(n_worker=1, env_name='CartPole-v0', lr=1e-3, is_discrete=True, seed = seed)
-a3c = A3C(n_worker=1, env_name='CartpoleStabShort-v0', lr=1e-4, is_discrete=False, seed = seed)
+a3c = A3C(n_worker=1, env_name='CartPole-v0', lr=1e-3, is_discrete=True, seed = seed)
+#a3c = A3C(n_worker=1, env_name='CartpoleStabShort-v0', lr=1e-4, is_discrete=False, seed = seed)
 #a3c = A3C(n_worker=1, env_name='Pendulum-v0', lr=1e-4, is_discrete=False, seed=seed)
 a3c.run()
 
