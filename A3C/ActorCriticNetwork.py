@@ -20,11 +20,11 @@ class ActorCriticNetwork(torch.nn.Module):
         self.action_space = action_space
 
         # network architecture specification
-        fc1_out = 100
-        fc2_out = 100
+        fc1_out = 128 * 2
+        fc2_out = 128 * 2
 
         self.fc1 = nn.Linear(n_inputs, fc1_out)
-        self.fc2 = nn.Linear(n_inputs, fc2_out)
+        #self.fc2 = nn.Linear(fc1_out, fc2_out)
 
         # Define the two heads of the network
         # -----------------------------------
@@ -59,22 +59,26 @@ class ActorCriticNetwork(torch.nn.Module):
                  In the continuous case: value, mu, sigma
         """
         inputs = inputs.float()
-        # x = F.relu6(x)
 
         if self.is_discrete:
+            x = self.fc1(inputs)
+            #x = F.relu6(x)
+            x = F.relu(x)
+            #x = self.fc2(x)
+            #x = F.relu(x)
 
-            x = self.fc2(inputs)
             # return torch.tanh(self.critic_linear(x)), self.actor_linear(x)
             return self.critic_linear(x), self.actor_linear(x)
 
         else:
 
             x = self.fc1(inputs)
+            x = F.relu(x)
             bound = torch.from_numpy(self.action_space.high)
             mu = bound * torch.tanh(self.mu(x))
             # print("Mu scaled:", mu.data)
             sigma = F.softplus(self.sigma(x)) + 1e-5
-            # return torch.tanh(self.critic_linear(x)), mu, sigma
-            # value = torch.tanh(self.critic_linear(x))
-            value = self.critic_linear(F.relu6(self.fc2(inputs)))
+            #return torch.tanh(self.critic_linear(x)), mu, sigma
+            value = torch.tanh(self.critic_linear(x))
+            #value = self.critic_linear(F.relu6(self.fc2(inputs)))
             return value, mu, sigma

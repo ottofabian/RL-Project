@@ -342,7 +342,7 @@ class Worker(Thread):
                 # Get params from shared global model
                 model.load_state_dict(self.global_model.state_dict())
 
-                if iteration == 3:
+                if iteration == 3 and self.is_discrete is False:
                     plt.hist(Worker.actions_taken_training)
                     plt.title('Taken Action during Training')
                     plt.show()
