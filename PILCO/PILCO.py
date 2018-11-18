@@ -162,7 +162,7 @@ class PILCO(object):
 
         policy.set_hyper_params(X, y, length_scales)
         self.optimization_callback(policy)
-
+        self.logger.debug("Best Params: \n", X, y, length_scales)
         return self.rollout(policy)
 
     def policy_improvement(self, policy):
@@ -179,6 +179,7 @@ class PILCO(object):
         self.opt_ctr = 0
         X, y, length_scales = self.unwrap_rbf_params(res.x)
         policy.set_hyper_params(X, y, length_scales)
+        self.logger.debug("Best Params: \n", X, y, length_scales)
 
     def execute_test_run(self, policy):
 
@@ -226,7 +227,8 @@ class PILCO(object):
         # TODO select good initial state dist
         # Currently this is taken from the CartPole Problem, Deisenroth (2010)
         state_mu = np.zeros((self.state_dim,))
-        state_cov = 1e-3 * np.identity(self.state_dim)
+        # state_mu = np.array([0., 0., 0., np.pi, np.pi])
+        state_cov = 1e-2 * np.identity(self.state_dim)
         reward = 0
 
         # --------------------------------------------------------
@@ -401,7 +403,7 @@ class PILCO(object):
 
     def optimization_callback(self, policy):
 
-        if self.opt_ctr % 10 == 0:
+        if self.opt_ctr % 2 == 0:
             print("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, self.rollout(policy)))
         else:
             print("Policy optimization iteration: {}".format(self.opt_ctr))
