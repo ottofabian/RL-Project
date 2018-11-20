@@ -1,7 +1,5 @@
 import logging
 
-from A3C.A2C import A2C
-from A3C.A3C import A3C
 from Experiments.util.ColorLogger import enable_color_logging
 from PILCO.CostFunctions.CostFunctions import cartpolebase_costfunc
 from PILCO.PILCO import PILCO
@@ -37,13 +35,13 @@ seed = 1
 enable_color_logging(debug_lvl=logging.DEBUG)
 logging.info('Start Experiment')
 #a3c = A3C(n_worker=4, env_name='CartPole-v0', lr=1e-4, is_discrete=True, seed = seed, optimizer_name='adam')
-a2c = A2C(env_name='CartPole-v0', lr=1e-4, is_discrete=True, seed = seed, optimizer_name='adam')
-a2c.train()
+# a2c = A2C(env_name='CartpoleStabShort-v0', lr=1e-4, is_discrete=False, seed = seed, optimizer_name='adam')
+# a2c.train()
 #a3c = A3C(n_worker=4, env_name='CartpoleStabShort-v0', lr=1e-4, is_discrete=False, seed = seed)
 #a3c = A3C(n_worker=1, env_name='Pendulum-v0', lr=1e-4, is_discrete=False, seed=seed)
 #a3c.run()
 
-#pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=10, Horizon=40,
-#              cost_function=cartpolebase_costfunc,
-#              n_training_samples=5)
-#pilco.run(100)
+# n_features in paper was 100
+pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=5, Horizon=40,
+              cost_function=cartpolebase_costfunc)
+pilco.run(100)

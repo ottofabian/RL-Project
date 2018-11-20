@@ -53,3 +53,4 @@ def cartpolebase_costfunc_dist(mu, sigma):
     _, _, cos_th, _, _ = mu
 
     return np.float32(cos_th)
+
