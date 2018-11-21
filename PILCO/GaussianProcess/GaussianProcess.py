@@ -1,3 +1,5 @@
+import logging
+
 import autograd.numpy as np
 from autograd import value_and_grad
 from scipy.optimize import minimize
@@ -10,28 +12,20 @@ class GaussianProcess(object):
     Gaussian Process Regression
     """
 
-    def __init__(self, length_scales, sigma_f=1, sigma_eps=0.01):
-        """
+    def __init__(self, length_scales, sigma_f=1, sigma_eps=1, is_policy=False):
 
-        :param optimizer:
-        :param sigma_f:
-        :param sigma_eps:
-        :param alpha:
-        :param n_restarts_optimizer:
-        :param normalize_y:
-        :param copy_X_train:
-        :param random_state:
-        """
         self.kernel = RBFKernel() + WhiteNoiseKernel()
 
         self.X = None
         self.y = None
-        self.sigma_eps = sigma_eps
+        self.sigma_eps = np.atleast_1d(sigma_eps)
         self.length_scales = length_scales
-        self.sigma_f = sigma_f
+        self.sigma_f = np.atleast_1d(sigma_f)
 
         self.n_targets = None
         self.state_dim = None
+
+        self.is_policy = is_policy
 
         # params to penalize high hyperparams
         self.length_scale_pen = 100
@@ -42,10 +36,13 @@ class GaussianProcess(object):
         self.K_inv = None
         self.qs = None
 
+        self.logger = logging.getLogger(__name__)
+
     def fit(self, X, y):
+
         # ensure they are 2d
         y = y.reshape(y.shape[0], -1)
-        X = X.reshape(X.shape[0], -1)
+        # X = X.reshape(X.shape[0], -1)
 
         self.X = X
         self.y = y
@@ -53,49 +50,52 @@ class GaussianProcess(object):
         self.n_targets = y.shape[1]
         self.state_dim = X.shape[1]
 
-        self.std_pen = np.std(X, 0)
-        self.optimize()
+        if not self.is_policy:
+            self.std_pen = np.std(X, 0)
 
-    def _optimize_hyperparams(self, params, *args):
+    def _optimize_hyperparams(self, params):
         p = 30
         length_scales, sigma_f, sigma_eps = self._unwrap_params(params)
 
         L = self.log_marginal_likelihood(params)
         L = L + np.sum(((length_scales - np.log(self.std_pen)) / np.log(self.length_scale_pen)) ** p)
         L = L + np.sum(((sigma_f - sigma_eps) / np.log(self.signal_to_noise)) ** p)
-        print(L)
+        # print(L)
         return L
 
     def optimize(self):
         """
-        This is used to optimize the hyperparams for the GP, given it is not the policy
+        This is used to optimize the hyperparams for the GP
         :return:
         """
-
+        self.logger.info("Optimization for GP started.")
         params = self._wrap_kernel_hyperparams()
 
         try:
+            self.logger.info("Optimization with L-BFGS-B started.")
             res = minimize(value_and_grad(self._optimize_hyperparams), params, jac=True, method='L-BFGS-B')
         except Exception:
+            self.logger.info("Optimization with CG started.")
             res = minimize(value_and_grad(self._optimize_hyperparams), params, jac=True, method='CG')
 
         best_params = res.x
 
-        l, f, e = self._unwrap_params(best_params)
-        self.length_scales, self.sigma_f, self.sigma_eps = np.exp(l), np.exp(f), np.exp(e)
+        self.length_scales, self.sigma_f, self.sigma_eps = self._unwrap_params(best_params)
         self.compute_params()
 
     def _wrap_kernel_hyperparams(self):
 
-        split1 = self.n_targets * self.state_dim
-        split2 = self.n_targets + split1
+        # split1 = self.state_dim
+        # split2 = self.n_targets + split1
+        #
+        # params = np.zeros([self.state_dim + 2])
+        # params[:split1] = np.log(self.length_scales)
+        # params[split1:split2] = np.log(self.sigma_f)
+        # params[split2:] = np.log(self.sigma_eps)
+        #
+        # return params
 
-        params = np.zeros([self.n_targets, self.state_dim + 2])
-        params[:, :split1] = np.log(self.length_scales)
-        params[:, split1:split2] = np.log(self.sigma_f)
-        params[:, split2:] = np.log(self.sigma_eps)
-
-        return params
+        return np.concatenate([self.length_scales, self.sigma_f, self.sigma_eps])
 
     def log_marginal_likelihood(self, hyp):
 
@@ -131,7 +131,7 @@ class GaussianProcess(object):
         """
 
         # Numerically more stable???
-        precision = np.diag(self.length_scales)
+        precision = np.diag(np.exp(self.length_scales))
 
         diff = (self.X - mu) @ precision
 
@@ -139,17 +139,17 @@ class GaussianProcess(object):
         B = precision @ sigma @ precision + np.identity(precision.shape[0])
         t = diff @ B
 
-        coefficient = 2 * self.sigma_f * np.linalg.det(B) ** -.5
+        coefficient = np.exp(2 * self.sigma_f) * np.linalg.det(B) ** -.5
         mean = coefficient * self.betas.T @ np.exp(-.5 * np.sum(diff * t, 1))
 
         return mean
 
     def _unwrap_params(self, params):
 
-        split1 = self.state_dim * self.n_targets
+        split1 = self.state_dim
         split2 = self.n_targets + split1
 
-        length_scales = params[:split1].reshape(self.n_targets, self.state_dim)
+        length_scales = params[:split1]
         sigma_f = params[split1:split2]
         sigma_eps = params[split2:]
         return length_scales, sigma_f, sigma_eps
