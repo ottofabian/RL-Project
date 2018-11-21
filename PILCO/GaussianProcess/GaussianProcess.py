@@ -153,27 +153,3 @@ class GaussianProcess(object):
         sigma_f = params[split1:split2]
         sigma_eps = params[split2:]
         return length_scales, sigma_f, sigma_eps
-
-    # @property
-    # def length_scales(self):
-    #     return self.kernel.get_params()['k1__k2__length_scale']
-    #
-    # @property
-    # def sigma_f(self):
-    #     return self.kernel.get_params()['k1__k1__constant_value']
-    #
-    # @property
-    # def sigma_eps(self):
-    #     return self.kernel.get_params()['k2__noise_level']
-    #
-    # @length_scales.setter
-    # def length_scales(self, length_scales: np.ndarray) -> None:
-    #     self.kernel.set_params(k1__k2__length_scale=length_scales)
-    #
-    # @sigma_eps.setter
-    # def sigma_eps(self, value):
-    #     self._sigma_eps = value
-    #
-    # @sigma_f.setter
-    # def sigma_f(self, value):
-    #     self._sigma_f = value

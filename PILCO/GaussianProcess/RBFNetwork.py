@@ -38,13 +38,6 @@ class RBFNetwork(GaussianProcess):
     def set_rollout(self, rollout: callable):
         self.rollout = rollout
 
-    def _optimization_callback(self):
-
-        if self.opt_ctr % 10 == 0:
-            print("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, self.rollout()))
-        else:
-            print("Policy optimization iteration: {}".format(self.opt_ctr))
-
     def _wrap_policy_hyperparams(self):
 
         N = self.X.shape[0]
@@ -95,31 +88,14 @@ class RBFNetwork(GaussianProcess):
         cost = self.rollout()
 
         # print progress
-        self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, cost))
+        self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, cost._value))
         # self._optimization_callback()
 
         return cost
 
-    # @property
-    # def length_scales(self):
-    #     return self.kernel.get_params()['k1__k2__length_scale']
-    #
-    # @property
-    # def sigma_f(self):
-    #     return self.kernel.get_params()['k1__k1__constant_value']
-    #
-    # @property
-    # def sigma_eps(self):
-    #     return self.kernel.get_params()['k2__noise_level']
-    #
-    # @length_scales.setter
-    # def length_scales(self, length_scales: np.ndarray) -> None:
-    #     self.kernel.set_params(k1__k2__length_scale=length_scales)
-    #
-    # @sigma_eps.setter
-    # def sigma_eps(self, value):
-    #     self._sigma_eps = value
-    #
-    # @sigma_f.setter
-    # def sigma_f(self, value):
-    #     self._sigma_f = value
+    def _optimization_callback(self):
+
+        if self.opt_ctr % 10 == 0:
+            print("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, self.rollout()))
+        else:
+            print("Policy optimization iteration: {}".format(self.opt_ctr))

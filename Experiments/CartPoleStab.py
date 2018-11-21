@@ -42,8 +42,8 @@ logging.info('Start Experiment')
 #a3c.run()
 
 # n_features in paper was 100
-pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=100, Horizon=40,
-              cost_function=cartpolebase_costfunc)
-# pilco = PILCO(env_name='Pendulum-v0', seed=seed, n_features=100, Horizon=10,
+# pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=100, Horizon=20,
 #               cost_function=cartpolebase_costfunc)
+pilco = PILCO(env_name='Pendulum-v0', seed=seed, n_features=100, Horizon=20,
+              cost_function=cartpolebase_costfunc)
 pilco.run(200)
