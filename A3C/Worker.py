@@ -260,35 +260,34 @@ class Worker(Thread):
             values.append(R)
 
             # compute loss and backprop
-
-            actor_loss = []
-            critic_loss = []
+            actor_loss = 0
+            critic_loss = 0
             gae = torch.zeros(1, 1)
 
             # iterate over rewards from most recent to the starting one
             for i in reversed(range(len(rewards))):
                 R = rewards[i] + R * self.discount
                 advantage = R - values[i]
-                critic_loss.append(0.5 * advantage.pow(2))
+                critic_loss = critic_loss + 0.5 * advantage.pow(2)
                 if self.use_gae:
                     # Generalized Advantage Estimation
-                    delta_t = rewards[i] + self.discount * values[i + 1].data - values[i].detach()
+                    delta_t = rewards[i] + self.discount * values[i + 1] - values[i]
                     gae = gae * self.discount * self.tau + delta_t
-                    actor_loss.append(-log_probs[i] * Variable(gae) - self.beta * entropies[i])
+                    actor_loss = actor_loss - log_probs[i] * gae.detach() - self.beta * entropies[i]
                 else:
-                    actor_loss.append(-log_probs[i] * advantage.detach() - self.beta * entropies[i])
+                    actor_loss = actor_loss - log_probs[i] * advantage.detach() - self.beta * entropies[i]
 
             # zero grads to avoid computation issues in the next step
             self.optimizer.zero_grad()
 
             # compute combined loss of actor_loss and critic_loss
             # avoid overfitting on value loss by scaling it down
-            combined_loss = torch.stack(actor_loss).sum() + self.value_loss_coef * torch.stack(critic_loss).sum()
+            combined_loss = actor_loss + self.value_loss_coef * critic_loss
             # combined_loss.mean().backward()
             combined_loss.backward()
             # torch.nn.utils.clip_grad_norm_(model.parameters(), 50)
-            sync_grads(model, self.global_model)
 
+            sync_grads(model, self.global_model)
             self.optimizer.step()
 
     def _compute_loss(self, R: torch.Tensor, rewards: list, values: list, log_probs: list, entropies: list,

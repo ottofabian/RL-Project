@@ -76,7 +76,7 @@ class A3C(object):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, T=self.T,
                        seed=self.seed, lr=self.lr, n_steps=5, t_max=100000, gamma=.9, tau=1, beta=.005,
-                       value_loss_coef=.5, optimizer=None, is_train=True, use_gae=False,
+                       value_loss_coef=1, optimizer=None, is_train=True, use_gae=False,
                        is_discrete=self.is_discrete, lock=self.lock, global_reward=self.global_reward)
             w.start()
             self.worker_pool.append(w)
