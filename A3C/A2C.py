@@ -8,23 +8,21 @@ Please describe what the content of this file is about
 
 """
 import gym
+import numpy as np
+import ptan
+import torch
+import torch.nn.functional as F
+import torch.nn.utils as nn_utils
+import torch.optim as optim
+from tensorboardX import SummaryWriter
 
 from A3C.A3C import A3C
 from A3C.ActorCriticNetwork import ActorCriticNetwork
-import torch.optim as optim
-import torch
-import torch.nn.functional as F
-import numpy as np
-import torch.nn.utils as nn_utils
-import logging
-import ptan
-from tensorboardX import SummaryWriter
-
 
 GAMMA = 0.99
 LEARNING_RATE = 0.001
 ENTROPY_BETA = 0.01
-BATCH_SIZE = 5 #128
+BATCH_SIZE = 128
 NUM_ENVS = 50
 
 BELLMAN_STEPS = 4
@@ -46,7 +44,7 @@ class A2C(A3C):
         :param optimizer_name: Optimizer used for shared weight updates. Possible arguments are 'rmsprop', 'adam'.
         """
 
-        super().__init__(1, env_name, lr, is_discrete, seed, optimizer_name)
+        super(A2C, self).__init__(1, env_name, lr, is_discrete, seed, optimizer_name)
 
         self.env = gym.make(self.env_name)
         self.model = ActorCriticNetwork(self.env.observation_space.shape[0], self.env.action_space, self.is_discrete)
@@ -148,7 +146,34 @@ class A2C(A3C):
                         values.append(value)
 
                     else:
-                        pass
+                        # forward pass
+                        value, mu, sigma = self.model(state)
+                        print("Training -- mu: {} -- sigma: {}".format(self.worker_id, mu, sigma))
+
+                        # assuming action space is in -high/high
+                        high = self.env.action_space.high
+                        low = self.env.action_space.low
+
+                        # ------------------------------------------
+                        # select action
+
+                        # prob dist over actions
+                        prob = torch.distributions.Normal(mu, sigma)
+                        # sample during training for exploration
+                        action = prob.sample()
+
+                        # avoid sampling outside the allowed range of action_space
+                        # action = np.clip(action, low, high)
+
+                        print("Training action: {}".format(action))
+
+                        # ------------------------------------------
+                        # Compute statistics for loss
+
+                        # entropy for regularization
+                        entropy = prob.entropy()
+                        # log prob of action
+                        log_prob = prob.log_prob(action)
 
                 R = torch.zeros(1, 1)
 

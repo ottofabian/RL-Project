@@ -37,6 +37,8 @@ class PILCO(object):
         else:
             # use the official gym env as default
             self.env = gym.make(self.env_name)
+
+        self.env._max_episode_steps = 500
         self.env.seed(self.seed)
 
         # get the number of available action from the environment
@@ -45,7 +47,7 @@ class PILCO(object):
 
         # -----------------------------------------------------
         # training params
-        self.gamma = 1  # discount factor
+        self.gamma = .99  # discount factor
 
         # -----------------------------------------------------
         # models
