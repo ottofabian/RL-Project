@@ -69,6 +69,7 @@ def test(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: 
                     env.render()
 
                 with torch.no_grad():
+
                     if is_discrete:
                         _, logit = model(state.float())
 
@@ -78,8 +79,8 @@ def test(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: 
 
                     else:
                         # select mean of normal dist as action --> Expectation
-                        _, mu, _ = model(state)
-                        action = mu
+                        _, mu, _ = model(Variable(state))
+                        action = mu.data
                         taken_actions_test.append(action)
 
                 # make selected move
@@ -193,11 +194,13 @@ def train(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed:
                 value, mu, sigma = model(Variable(state))
                 # print("Training worker {} -- mu: {} -- sigma: {}".format(worker_id, mu, sigma))
 
-                dist = torch.distributions.Normal(mu, sigma)
+                # dist = torch.distributions.Normal(mu, sigma)
 
                 # ------------------------------------------
                 # select action
-                action = dist.sample().detach()
+                eps_v = Variable(torch.randn(mu.size()))
+                action = (mu + sigma.sqrt() * eps_v).data
+                # action = dist.sample().detach()
 
                 # assuming action space is in -high/high
                 # env is currently clipping internally
@@ -207,8 +210,12 @@ def train(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed:
 
                 # ------------------------------------------
                 # Compute statistics for loss
-                log_prob = dist.log_prob(action)
-                entropy = 0.5 + 0.5 * math.log(2 * math.pi) + torch.log(dist.scale)
+                exp_ = (-1 * (Variable(action) - mu).pow(2) / (2 * sigma)).exp()
+                scale = 1 / (2 * sigma * math.pi).sqrt()
+                log_prob = (exp_ * scale).log()
+                # log_prob = dist.log_prob(action)
+
+                entropy = -0.5 * ((sigma + 2 * math.pi).log() + 1.)
                 # entropy = dist.entropy()
 
                 # -----------------------------------------------------------------
@@ -271,14 +278,14 @@ def train(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed:
 
         # if non terminal state is present set R to be value of current state
         if not done:
-            R = model(Variable(state))[0].detach()
+            R = model(Variable(state))[0].data
 
         values.append(Variable(R))
-        R = Variable(R)
         # compute loss and backprop
         actor_loss = 0
         critic_loss = 0
         gae = torch.zeros(1, 1)
+        R = Variable(R)
 
         # iterate over rewards from most recent to the starting one
         for i in reversed(range(len(rewards))):
@@ -291,16 +298,16 @@ def train(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed:
                 gae = gae * gamma * tau + delta_t
                 actor_loss = actor_loss - log_probs[i] * Variable(gae) - beta * entropies[i]
             else:
-                actor_loss = actor_loss - log_probs[i] * advantage.detach() - beta * entropies[i]
+                actor_loss = actor_loss - log_probs[i] * advantage.data - beta * entropies[i]
 
         # zero grads to avoid computation issues in the next step
         optimizer.zero_grad()
 
         # compute combined loss of actor_loss and critic_loss
         # avoid overfitting on value loss by scaling it down
-        combined_loss = actor_loss + value_loss_coef * critic_loss
+        (actor_loss + value_loss_coef * critic_loss).backward()
         # combined_loss.mean().backward()
-        combined_loss.backward()
+        # combined_loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 40)
 
         sync_grads(model, shared_model)

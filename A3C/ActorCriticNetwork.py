@@ -8,8 +8,8 @@ import torch.nn.functional as F
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        nn.init.kaiming_normal_(m.weight.data)
-        m.bias.data.fill_(.1)
+        nn.init.xavier_normal_(m.weight.data)
+        m.bias.data.fill_(0)
 
 
 class ActorCriticNetwork(torch.nn.Module):
@@ -22,13 +22,19 @@ class ActorCriticNetwork(torch.nn.Module):
         self.n_outputs = action_space.shape[0]
         self.n_inputs = n_inputs
 
-        self.n_inputs = self.n_inputs
-        self.hidden_action = nn.Linear(self.n_inputs, 100)
-        self.mu = nn.Linear(100, self.n_outputs)
-        self.sigma = nn.Linear(100, self.n_outputs)
+        n_hidden = 200
 
-        self.hidden_value = nn.Linear(self.n_inputs, 100)
-        self.value = nn.Linear(100, 1)
+        self.n_inputs = self.n_inputs
+        self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
+        self.hidden_action2 = nn.Linear(n_hidden, n_hidden)
+        self.hidden_action3 = nn.Linear(n_hidden, n_hidden)
+        self.mu = nn.Linear(n_hidden, self.n_outputs)
+        self.sigma = nn.Linear(n_hidden, self.n_outputs)
+
+        self.hidden_value1 = nn.Linear(self.n_inputs, n_hidden)
+        self.hidden_value2 = nn.Linear(n_hidden, n_hidden)
+        self.hidden_value3 = nn.Linear(n_hidden, n_hidden)
+        self.value = nn.Linear(n_hidden, 1)
 
         self.apply(init_weights)
 
@@ -120,11 +126,17 @@ class ActorCriticNetwork(torch.nn.Module):
         #
         # return self.critic_value(stem_out), bound * self.actor_mu(stem_out), self.actor_variance(stem_out)
 
-        x = inputs.float()
-        action_hidden = F.relu(self.hidden_action(x))
+        inputs = inputs.float()
+        action_hidden = F.relu(self.hidden_action1(inputs))
+        action_hidden = F.relu(self.hidden_action2(action_hidden))
+        action_hidden = F.relu(self.hidden_action3(action_hidden))
         mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(action_hidden))
-        sigma = F.softplus(self.sigma(action_hidden)) + 1e-3  # avoid 0
-        value_hidden = F.relu(self.hidden_value(x))
+        sigma = F.softplus(self.sigma(action_hidden)) + 1e-5  # avoid 0
+
+        value_hidden = F.relu(self.hidden_value1(inputs))
+        value_hidden = F.relu(self.hidden_value2(value_hidden))
+        value_hidden = F.relu(self.hidden_value3(value_hidden))
         value = self.value(value_hidden)
+
         return value, mu, sigma
 

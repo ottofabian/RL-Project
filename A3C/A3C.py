@@ -1,7 +1,6 @@
 import logging
 
 import gym
-import torch
 from torch.multiprocessing import Value, Lock, Process
 
 from A3C.ActorCriticNetwork import ActorCriticNetwork
@@ -48,7 +47,7 @@ class A3C(object):
         self.optimizer_name = optimizer_name
 
     def run(self):
-        torch.manual_seed(self.seed)
+        # torch.manual_seed(self.seed)
         # env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
         env = gym.make(self.env_name)
         shared_model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
@@ -91,7 +90,7 @@ class A3C(object):
 
         for rank in range(0, self.n_worker):
             p = Process(target=train, args=(self.env_name, self.n_worker, shared_model, self.seed, self.T, self.lr,
-                                            10, 10000, .99, 1, .01, .5, optimizer, True, self.is_discrete,
+                                            5, 200, .99, 1, .0001, .5, optimizer, True, self.is_discrete,
                                             self.global_reward))
             p.start()
             self.worker_pool.append(p)
