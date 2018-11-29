@@ -1,13 +1,13 @@
 import logging
-from multiprocessing import Value, Lock
 
 import gym
 import torch
+from torch.multiprocessing import Value, Lock, Process
 
 from A3C.ActorCriticNetwork import ActorCriticNetwork
 from A3C.Optimizers.SharedAdam import SharedAdam
 from A3C.Optimizers.SharedRMSProp import SharedRMSProp
-from A3C.Worker import Worker
+from A3C.Test import test, train
 
 
 class A3C(object):
@@ -51,39 +51,55 @@ class A3C(object):
         torch.manual_seed(self.seed)
         # env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
         env = gym.make(self.env_name)
-        global_model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
-        global_model.share_memory()
+        shared_model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
+        shared_model.share_memory()
 
         if self.optimizer_name == 'rmsprop':
-            optimizer = SharedRMSProp(global_model.parameters(), lr=self.lr)
+            optimizer = SharedRMSProp(shared_model.parameters(), lr=self.lr)
         elif self.optimizer_name == 'adam':
-            optimizer = SharedAdam(global_model.parameters(), lr=self.lr)
+            optimizer = SharedAdam(shared_model.parameters(), lr=self.lr)
         else:
             raise Exception('Unexpected optimizer_name: %s' % self.optimizer_name)
 
         optimizer.share_memory()
 
         # start the test worker which is visualized to see how the current progress is
-        w = Worker(env_name=self.env_name, worker_id=self.n_worker, global_model=global_model, T=self.T,
-                   seed=self.seed, lr=0, n_steps=0, t_max=100000, gamma=0, tau=0, beta=0,
-                   value_loss_coef=0, optimizer=None, is_train=False, use_gae=True, is_discrete=self.is_discrete,
-                   lock=self.lock, global_reward=self.global_reward)
-        w.start()
-        self.worker_pool.append(w)
+        # w = Worker(env_name=self.env_name, worker_id=self.n_worker, shared_model=shared_model, T=self.T,
+        #            seed=self.seed, lr=0, n_steps=0, t_max=100000, gamma=0, tau=0, beta=0,
+        #            value_loss_coef=0, optimizer=None, is_train=False, use_gae=True, is_discrete=self.is_discrete,
+        #            lock=self.lock, global_reward=self.global_reward)
+        # w.start()
+        # self.worker_pool.append(w)
+        #
+        # # start all training workers which update the model parameters
+        # for wid in range(0, self.n_worker):
+        #     self.logger.info("Worker {} created".format(wid))
+        #     w = Worker(env_name=self.env_name, worker_id=wid, shared_model=shared_model, T=self.T,
+        #                seed=self.seed, lr=self.lr, n_steps=5, t_max=100000, gamma=.9, tau=1, beta=.005,
+        #                value_loss_coef=1, optimizer=None, is_train=True, use_gae=False,
+        #                is_discrete=self.is_discrete, lock=self.lock, global_reward=self.global_reward)
+        #     w.start()
+        #     self.worker_pool.append(w)
+        #
+        # for w in self.worker_pool:
+        #     w.join()
 
-        # start all training workers which update the model parameters
-        for wid in range(0, self.n_worker):
-            self.logger.info("Worker {} created".format(wid))
-            w = Worker(env_name=self.env_name, worker_id=wid, global_model=global_model, T=self.T,
-                       seed=self.seed, lr=self.lr, n_steps=5, t_max=100000, gamma=.9, tau=1, beta=.005,
-                       value_loss_coef=1, optimizer=None, is_train=True, use_gae=False,
-                       is_discrete=self.is_discrete, lock=self.lock, global_reward=self.global_reward)
-            w.start()
-            self.worker_pool.append(w)
+        p = Process(target=test, args=(self.env_name, self.n_worker, shared_model, self.seed, self.T, 10000,
+                                       self.is_discrete, self.global_reward))
+        p.start()
+        self.worker_pool.append(p)
 
-        for w in self.worker_pool:
-            w.join()
+        for rank in range(0, self.n_worker):
+            p = Process(target=train, args=(self.env_name, self.n_worker, shared_model, self.seed, self.T, self.lr,
+                                            10, 10000, .99, 1, .01, .5, optimizer, True, self.is_discrete,
+                                            self.global_reward))
+            p.start()
+            self.worker_pool.append(p)
+
+        for p in self.worker_pool:
+            p.join()
 
     def stop(self):
         self.worker_pool = []
         self.T = Value('i', 0)
+        self.global_reward = Value('d', 0)

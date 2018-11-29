@@ -1,8 +1,6 @@
 import logging
 import math
 import time
-from multiprocessing import Value
-from threading import Thread
 
 import gym
 import numpy as np
@@ -13,6 +11,8 @@ import torch
 import torch.nn.functional as F
 from gym.spaces import Discrete, Box
 from torch.autograd import Variable
+# from multiprocessing import Value, Process
+from torch.multiprocessing import Value, Process
 from torch.optim import Optimizer
 
 from A3C.ActorCriticNetwork import ActorCriticNetwork
@@ -34,7 +34,7 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
         shared_param._grad = param.grad
 
 
-class Worker(Thread):
+class Worker(Process):
     # DEBUG list to store the taken actions by the worker threads
     actions_taken_training = []
     values_training = []
@@ -69,7 +69,7 @@ class Worker(Thread):
         self.env_name = env_name
 
         # check if the requested environment is a quanser robot env
-        if self.env_name in ['CartpoleStabShort-v0']:
+        if 'RR' in self.env_name:
             self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
         else:
             # use the official gym env as default
@@ -124,7 +124,7 @@ class Worker(Thread):
 
     def _train(self):
         """
-        Start worker in training mode, i.e.training the shared model with backprop
+        Start worker in training mode, i.e. training the shared model with backprop
         loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
         :return: self
         """
@@ -140,6 +140,7 @@ class Worker(Thread):
         # if no shared optimizer is provided use individual one
         if self.optimizer is None:
             self.optimizer = torch.optim.RMSprop(self.global_model.parameters(), lr=self.lr)
+            # self.optimizer = torch.optim.Adam(self.global_model.parameters(), lr=self.lr)
 
         state = torch.from_numpy(np.array(self.env.reset()))
 
@@ -154,7 +155,7 @@ class Worker(Thread):
             rewards = []
             entropies = []
 
-            reward_sum = 0
+            # reward_sum = 0
 
             for step in range(self.n_steps):
                 t += 1
@@ -176,14 +177,14 @@ class Worker(Thread):
 
                 else:
 
-                    value, mu, sigma = model(state.float())
+                    value, mu, sigma = model(Variable(state.unsqueeze(0)))
                     # print("Training worker {} -- mu: {} -- sigma: {}".format(self.worker_id, mu, sigma))
 
-                    dist = model.distribution(mu, sigma)
+                    dist = torch.distributions.Normal(mu, sigma)
 
                     # ------------------------------------------
                     # select action
-                    action = dist.sample()
+                    action = dist.sample().data
 
                     # assuming action space is in -high/high
                     # env is currently clipping internally
@@ -193,7 +194,7 @@ class Worker(Thread):
 
                     # ------------------------------------------
                     # Compute statistics for loss
-                    log_prob = dist.log_prob(action)
+                    log_prob = dist.log_prob(Variable(action))
                     entropy = 0.5 + 0.5 * math.log(2 * math.pi) + torch.log(dist.scale)
 
                     # -----------------------------------------------------------------
@@ -220,8 +221,8 @@ class Worker(Thread):
                 elif isinstance(self.env.action_space, Box):
                     action = action.numpy()
 
-                state, reward, done, _ = self.env.step(np.array(action))
-                reward_sum = reward_sum + reward
+                state, reward, done, _ = self.env.step(action.flatten())
+
                 done = done or t >= self.t_max
 
                 with self.T.get_lock():
@@ -245,17 +246,20 @@ class Worker(Thread):
                 if done:
                     break
 
+            # TODO: Implement this correctly
             with self.global_reward.get_lock():
                 if self.global_reward.value == 0:
-                    self.global_reward.value = reward_sum
+                    self.global_reward.value = sum(rewards)
                 else:
-                    self.global_reward.value = self.global_reward.value * 0.99 + reward_sum * 0.01
+                    self.global_reward.value = self.global_reward.value * 0.99 + sum(rewards) * 0.01
 
             R = torch.zeros(1, 1)
 
             # if non terminal state is present set R to be value of current state
             if not done:
-                R = model(state.float())[0].detach()
+                R = model(Variable(state))[0].data
+
+            R = Variable(R)
 
             values.append(R)
 
@@ -271,9 +275,9 @@ class Worker(Thread):
                 critic_loss = critic_loss + 0.5 * advantage.pow(2)
                 if self.use_gae:
                     # Generalized Advantage Estimation
-                    delta_t = rewards[i] + self.discount * values[i + 1] - values[i]
+                    delta_t = rewards[i] + self.discount * values[i + 1].data - values[i].data
                     gae = gae * self.discount * self.tau + delta_t
-                    actor_loss = actor_loss - log_probs[i] * gae.detach() - self.beta * entropies[i]
+                    actor_loss = actor_loss - log_probs[i] * Variable(gae) - self.beta * entropies[i]
                 else:
                     actor_loss = actor_loss - log_probs[i] * advantage.detach() - self.beta * entropies[i]
 
@@ -285,7 +289,7 @@ class Worker(Thread):
             combined_loss = actor_loss + self.value_loss_coef * critic_loss
             # combined_loss.mean().backward()
             combined_loss.backward()
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), 50)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 40)
 
             sync_grads(model, self.global_model)
             self.optimizer.step()
@@ -336,13 +340,11 @@ class Worker(Thread):
         model.eval()
         # model.load_state_dict(self.global_model.state_dict())
 
-        state = torch.Tensor(self.env.reset())
+        state = torch.from_numpy(np.array(self.env.reset()))
         reward_sum = 0
 
         t = 0
-
         taken_actions_test = []
-
         iteration = 0
         done = False
 
@@ -354,12 +356,14 @@ class Worker(Thread):
             rewards = np.zeros(10)
             eps_len = np.zeros(10)
 
+            # make 10 runs to get current avg performance
             for i in range(10):
                 while not done:
+                    t += 1
+
                     if i == 0:
                         self.env.render()
-                    t += 1
-                    # forward pass
+
                     with torch.no_grad():
                         if self.is_discrete:
                             _, logit = model(state.float())
@@ -370,9 +374,9 @@ class Worker(Thread):
 
                         else:
                             # select mean of normal dist as action --> Expectation
-                            _, mu, _ = model(state.float())
-                            # print(value, mu, sigma)
-                            action = mu
+                            _, mu, _ = model(state)
+                            print(mu)
+                            action = mu.data
                             taken_actions_test.append(action)
 
                     # make selected move
@@ -383,12 +387,9 @@ class Worker(Thread):
 
                     state, reward, done, _ = self.env.step(action)
                     done = done or t >= self.t_max
-                    reward_sum = reward_sum + reward
+                    reward_sum += reward
 
-                    # print current performance if terminal state or max episodes was reached
                     if done:
-                        # print("T={}, reward={}, episode_len={}".format(self.T.value, reward_sum, t))
-
                         # reset current cumulated reward and episode counter as well as env
                         rewards[i] = reward_sum
                         reward_sum = 0
@@ -407,10 +408,8 @@ class Worker(Thread):
                         #     plt.title('Taken Action during Test-Phase')
                         #     plt.show()
 
-                        # delay _test run for 10s to give the network some time to train
-                        # time.sleep(10)
                         # plt.figure()
-                        # iteration += 1
+                        iteration += 1
 
                     state = torch.from_numpy(np.array(state))
                 done = False

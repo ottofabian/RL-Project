@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        nn.init.normal_(m.weight.data, 0, .1)
+        nn.init.kaiming_normal_(m.weight.data)
         m.bias.data.fill_(.1)
 
 
@@ -31,9 +31,6 @@ class ActorCriticNetwork(torch.nn.Module):
         self.value = nn.Linear(100, 1)
 
         self.apply(init_weights)
-
-        # set_init([self.a1, self.mu, self.sigma, self.c1, self.v])
-        self.distribution = torch.distributions.Normal
 
         # network architecture specification
         # n_hidden_units = 256
@@ -131,8 +128,3 @@ class ActorCriticNetwork(torch.nn.Module):
         value = self.value(value_hidden)
         return value, mu, sigma
 
-    def choose_action(self, s):
-        self.training = False
-        mu, sigma, _ = self.forward(s)
-        m = self.distribution(mu.view(1, ).data, sigma.view(1, ).data)
-        return m.sample().numpy()
