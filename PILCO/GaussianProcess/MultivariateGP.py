@@ -116,6 +116,9 @@ class MultivariateGP(object):
 
         return mean, cov, input_output_cov
 
+    def predict(self, x):
+        return np.array([gp.predict(x) for gp in self.gp_container])
+
     def optimize(self):
         for i in range(self.n_targets):
             self.gp_container[i].optimize()

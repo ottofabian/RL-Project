@@ -231,6 +231,15 @@ class PILCO(object):
             # compute delta and build next state dist
             delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
                                                                                                 state_action_cov)
+
+            x = np.random.multivariate_normal(state_action_mu._value, state_action_cov._value, size=10000)
+            pred = self.dynamics_model.predict(x)
+            print("-" * 50)
+            print("Difference between sampling and Moment matching:")
+            print("Mean:\n{}".format(np.mean(pred, axis=1) - delta_mu._value))
+            print("Mean ratio:\n {}".format((np.mean(pred, axis=1) - delta_mu._value) / delta_mu._value))
+            print("Covariance:\n{}".format(np.cov(pred) - delta_cov._value))
+            print("Covariance ratio:\n{}".format((np.cov(pred) - delta_cov._value) / delta_cov._value))
             # Cov(state, delta) is subset of Cov((state, action), delta)
             state_input_output_cov = delta_input_output_cov[:, :self.state_dim]
 

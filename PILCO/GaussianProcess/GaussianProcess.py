@@ -97,9 +97,15 @@ class GaussianProcess(object):
 
         return np.concatenate([self.length_scales, self.sigma_f, self.sigma_eps])
 
+    def predict(self, x):
+        # K_trans = self.kernel(self._wrap_kernel_hyperparams(), x)
+        # y_mean = K_trans.dot(self.betas)
+        return (np.mean(self.y, axis=0) + self.betas.T @ self.kernel(self._wrap_kernel_hyperparams(), x, self.X)[
+            0]).flatten()
+
     def log_marginal_likelihood(self, hyp):
 
-        K = self.kernel(hyp, self.X)[0]  # [n, n]
+        K = self.kernel(hyp, self.X)[0]
         L = np.linalg.cholesky(K)
         alpha = np.linalg.solve(K, self.y)
 
