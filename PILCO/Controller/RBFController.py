@@ -31,8 +31,11 @@ class RBFController(MultivariateGP, Controller):
     def choose_action(self, mu, sigma, squash=True, bound=1):
         action_mu, action_cov, input_output_cov = self.predict_from_dist(mu, sigma)
         # action_cov = action_cov - self.get_sigma_eps()[0] - self.ridge
-
-        return self.squash_action_dist(action_mu, action_cov, input_output_cov, bound)
+        if squash:
+            action_mu, action_cov, input_output_cov = self.squash_action_dist(action_mu, action_cov, input_output_cov,
+                                                                              bound)
+        # prediction from GP of cross_cov is times inv(s)
+        return action_mu, action_cov, input_output_cov @ sigma
 
     def squash_action_dist(self, mu, sigma, input_output_cov, bound):
         """
@@ -48,23 +51,20 @@ class RBFController(MultivariateGP, Controller):
 
         # compute mean of squashed dist
         # See Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
-        mu_squashed = bound * np.exp(-sigma / 2) @ np.sin(mu)
+        mu_squashed = bound * np.exp(-sigma / 2) * np.sin(mu)
 
-        # covar: E[sin(x)^2] - E[sin(x)]^2
+        # # covar: E[sin(x)^2] - E[sin(x)]^2
         sigma2 = -(sigma.T + sigma) / 2
         sigma2_exp = np.exp(sigma2)
         sigma_squashed = ((np.exp(sigma2 + sigma) - sigma2_exp) * np.cos(mu.T - mu) -
                           (np.exp(sigma2 - sigma) - sigma2_exp) * np.cos(mu.T + mu))
-        sigma_squashed = bound.T @ bound * sigma_squashed / 2
+        sigma_squashed = np.dot(bound.T, bound) * sigma_squashed / 2
 
         # compute input-output-covariance and squash through sin(x)
         input_output_cov_squashed = np.diag((bound * np.exp(-sigma / 2) * np.cos(mu)).flatten())
-        input_output_cov_squashed = input_output_cov_squashed @ input_output_cov
+        input_output_cov_squashed = input_output_cov @ input_output_cov_squashed
 
-        # compute cross-cov between input and squashed output
-        # input_output_cov_squashed = bound * np.diag(np.exp(-np.diag_part(sigma) / 2) * np.cos(mu))
-
-        return mu_squashed, sigma_squashed, input_output_cov_squashed
+        return mu_squashed, sigma_squashed, input_output_cov_squashed.T
 
     # def get_hyperparams(self):
     #     concat = np.concatenate([self.X, self.y], axis=1)

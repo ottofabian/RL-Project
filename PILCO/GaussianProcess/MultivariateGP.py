@@ -36,7 +36,7 @@ class MultivariateGP(object):
         Based on the idea of: https://github.com/cryscan/pilco-learner
         :param mu: n_targets x n_state + n_actions
         :param sigma: n_targets x (n_state + n_actions) x (n_state + n_actions)
-        :return: mu, sigma for each target
+        :return: mu, sigma and inv(sigma) times input_output_cov
         """
 
         state_dim = self.X.shape[1]
@@ -47,9 +47,13 @@ class MultivariateGP(object):
 
         beta = np.vstack([gp.betas.T for gp in self.gp_container]).T
         length_scales = self.get_length_scales()
+        sigma_f = self.get_sigma_fs()
 
         precision_inv = np.stack([np.diag(np.exp(-l)) for l in length_scales])
+        precision_inv2 = np.stack([np.diag(np.exp(-2 * l)) for l in length_scales])
+
         diff = self.X - mu
+        diff_scaled = np.expand_dims(diff, axis=0) / np.expand_dims(np.exp(2 * length_scales), axis=1)
 
         # ----------------------------------------------------------------------------------------------------
         # compute mean of predictive dist based on matlab code
@@ -62,37 +66,35 @@ class MultivariateGP(object):
         # diff / B, this has to be done differently in python
         t = np.stack([np.linalg.solve(B[i].T, zeta_a[i].T).T for i in range(target_dim)])
 
-        scaled_beta = np.exp(-np.sum(zeta_a * t, 2) / 2) * beta.T
+        scaled_beta = np.exp(-np.sum(zeta_a * t, axis=2) / 2) * beta.T
 
         # TODO: Why the fuck is the det(B) always negative at some point
-        coefficient = np.exp(2 * self.get_sigma_fs().reshape(self.n_targets)) / np.sqrt(np.linalg.det(B))
+        coefficient = np.exp(2 * sigma_f.reshape(self.n_targets)) * np.linalg.det(B) ** -.5
 
-        mean = np.sum(scaled_beta, 1) * coefficient
+        mean = np.sum(scaled_beta, axis=1) * coefficient
 
-        # compute cross cov between input and output
+        # compute cross cov between input and output times inv(S)
         zeta_b = np.matmul(t, precision_inv)
-        input_output_cov = (np.transpose(zeta_b, [0, 2, 1]) @ np.expand_dims(scaled_beta, 2)).reshape(
+        input_output_cov = (np.transpose(zeta_b, [0, 2, 1]) @ np.expand_dims(scaled_beta, axis=2)).reshape(
             target_dim, state_dim).T * coefficient
-        input_output_cov = input_output_cov.T @ sigma
+        # input_output_cov = input_output_cov
 
         # ----------------------------------------------------------------------------------------------------
         # compute predictive covariance
 
-        k = 2 * self.get_sigma_fs().reshape(target_dim, 1) - np.sum(zeta_a ** 2, 2) * .5
+        k = 2 * sigma_f.reshape(target_dim, 1) - np.sum(zeta_a ** 2, axis=2) * .5
 
-        diff_scaled = np.expand_dims(diff, 0) / np.expand_dims(np.exp(2 * length_scales), 1)
-        diff_a = np.repeat(diff_scaled[:, np.newaxis, :, :], target_dim, 1)
-        diff_b = np.repeat(diff_scaled[np.newaxis, :, :, :], target_dim, 0)
+        diff_a = np.repeat(diff_scaled[:, np.newaxis, :, :], target_dim, axis=1)
+        diff_b = np.repeat(diff_scaled[np.newaxis, :, :, :], target_dim, axis=0)
 
-        precision_inv2 = np.stack([np.diag(np.exp(-2 * l)) for l in length_scales])
         precision_add = np.expand_dims(precision_inv2, 0) + np.expand_dims(precision_inv2, 1)
 
         # compute R, which is used for scaling
         R = np.matmul(sigma, precision_add) + np.identity(state_dim)
-        denominator = 1 / np.sqrt(np.linalg.det(R))
+        scaling_factor = np.linalg.det(R) ** -.5
 
         R_inv = np.stack(
-            [np.linalg.solve(R.reshape(-1, state_dim, state_dim)[i], sigma) for i in range(target_dim * target_dim)])
+            [np.linalg.solve(R.reshape(-1, state_dim, state_dim)[i], sigma) for i in range(target_dim ** 2)])
         R_inv = R_inv.reshape(target_dim, target_dim, state_dim, state_dim)
 
         # compute squared mahalanobis distance
@@ -105,12 +107,12 @@ class MultivariateGP(object):
         Q = np.exp(k[:, np.newaxis, :, np.newaxis] + k[np.newaxis, :, np.newaxis, :] + mahalanobis_dist)
 
         if self.is_policy:
-            cov = denominator * np.einsum('ji,iljk,kl->il', beta, Q, beta) + 1e-6 * np.identity(target_dim)
+            cov = scaling_factor * np.einsum('ji,iljk,kl->il', beta, Q, beta) + 1e-6 * np.identity(target_dim)
         else:
             cov = np.einsum('ji,iljk,kl->il', beta, Q, beta)
             trace = np.hstack([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)])
-            cov = (cov - np.diag(trace)) * denominator + \
-                  np.diag(np.exp(2 * self.get_sigma_fs().reshape(self.n_targets)))
+            cov = (cov - np.diag(trace)) * scaling_factor + \
+                  np.diag(np.exp(2 * sigma_f.reshape(self.n_targets)))
 
         cov = cov - np.matmul(mean[:, np.newaxis], mean[np.newaxis, :])
 

@@ -12,7 +12,8 @@ from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 class PILCO(object):
 
     def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, cost_function: callable,
-                 T_inv: np.ndarray = None, target_state: np.ndarray = None, cost_width: np.ndarray = None):
+                 T_inv: np.ndarray = None, target_state: np.ndarray = None, cost_width: np.ndarray = None, squash=True,
+                 p=.5):
         """
 
         :param env_name: gym env to work with
@@ -32,13 +33,13 @@ class PILCO(object):
         # -----------------------------------------------------
         # env setup
         # check if the requested environment is a quanser robot env
-        if self.env_name in ['CartpoleStabShort-v0']:
+        if 'RR' in self.env_name:
             self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
         else:
             # use the official gym env as default
             self.env = gym.make(self.env_name)
 
-        self.env._max_episode_steps = 500
+        self.env._max_episode_steps = 250
         self.env.seed(self.seed)
 
         # get the number of available action from the environment
@@ -53,6 +54,7 @@ class PILCO(object):
         # models
         self.dynamics_model = None
         self.policy = None
+        self.squash = squash
 
         # -----------------------------------------------------
         # policy search Horizon
@@ -212,8 +214,13 @@ class PILCO(object):
             # ------------------------------------------------
             # get mean and covar over next action, optionally with squashing
             # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
-            action_mu, action_cov, action_input_output_cov = self.policy.choose_action(state_mu, state_cov, squash=True,
+            action_mu, action_cov, action_input_output_cov = self.policy.choose_action(state_mu, state_cov,
+                                                                                       squash=self.squash,
                                                                                        bound=self.env.action_space.high)
+
+            state_action_mu, state_action_cov = self.get_joint_dist(state_mu, state_cov, action_mu.flatten(),
+                                                                    action_cov, action_input_output_cov)
+
             # self.logger.debug(str(t))
             # self.logger.debug(str("action"))
             # self.logger.debug(str(np.any(np.isnan(action_mu))))
@@ -221,9 +228,7 @@ class PILCO(object):
 
             # ------------------------------------------------
             # get joint dist over successor state p(x,u)
-            state_action_mu, state_action_cov = self.get_joint_dist(state_mu, state_cov, action_mu,
-                                                                    action_cov,
-                                                                    action_input_output_cov)
+
             # self.logger.debug(str("joint state"))
             # self.logger.debug(str(np.any(np.isnan(state_action_mu))))
             # self.logger.debug(str(np.any(np.isnan(state_action_cov))))
@@ -232,16 +237,19 @@ class PILCO(object):
             delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
                                                                                                 state_action_cov)
 
-            x = np.random.multivariate_normal(state_action_mu._value, state_action_cov._value, size=10000)
-            pred = self.dynamics_model.predict(x)
-            print("-" * 50)
-            print("Difference between sampling and Moment matching:")
-            print("Mean:\n{}".format(np.mean(pred, axis=1) - delta_mu._value))
-            print("Mean ratio:\n {}".format((np.mean(pred, axis=1) - delta_mu._value) / delta_mu._value))
-            print("Covariance:\n{}".format(np.cov(pred) - delta_cov._value))
-            print("Covariance ratio:\n{}".format((np.cov(pred) - delta_cov._value) / delta_cov._value))
+            # cross cov is times inv(s), see matlab code
+            delta_input_output_cov = state_action_cov @ delta_input_output_cov
+
+            # x = np.random.multivariate_normal(state_action_mu._value, state_action_cov._value, size=10000)
+            # pred = self.dynamics_model.predict(x)
+            # print("-" * 50)
+            # print("Difference between sampling and Moment matching:")
+            # print("Mean:\n{}".format(np.mean(pred, axis=1) - delta_mu._value))
+            # print("Mean ratio:\n {}".format((np.mean(pred, axis=1) - delta_mu._value) / delta_mu._value))
+            # print("Covariance:\n{}".format(np.cov(pred) - delta_cov._value))
+            # print("Covariance ratio:\n{}".format((np.cov(pred) - delta_cov._value) / delta_cov._value))
             # Cov(state, delta) is subset of Cov((state, action), delta)
-            state_input_output_cov = delta_input_output_cov[:, :self.state_dim]
+            state_input_output_cov = delta_input_output_cov.T[:, :self.state_dim]
 
             state_next_mu = state_mu + delta_mu
             state_next_cov = state_cov + delta_cov + state_input_output_cov + state_input_output_cov.T
@@ -319,11 +327,11 @@ class PILCO(object):
         diff = mu - self.target_state
 
         # compute expected cost
-        mean = -np.exp(-diff @ S1 @ diff.T * .5) * ((np.linalg.det(np.eye(self.state_dim) + sigma_T_inv)) * -.5)
+        mean = -np.exp(-diff @ S1 @ diff.T / 2) * ((np.linalg.det(np.eye(self.state_dim) + sigma_T_inv)) ** -.5)
 
         # compute variance of cost
         S2 = np.linalg.solve((np.eye(self.state_dim) + 2 * sigma_T_inv).T, self.T_inv.T).T
-        r2 = np.exp(-diff @ S2 @ diff.T) * ((np.linalg.det(np.eye(self.state_dim) + 2 * sigma_T_inv)) * -.5)
+        r2 = np.exp(-diff @ S2 @ diff.T) * ((np.linalg.det(np.identity(self.state_dim) + 2 * sigma_T_inv)) ** -.5)
         cov = r2 - mean ** 2
 
         # for numeric reasons set to 0
