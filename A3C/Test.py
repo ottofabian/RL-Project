@@ -1,16 +1,17 @@
-import math
 import time
 
 import gym
 import numpy as np
+import ptan
 import torch
-import torch.nn.functional as F
-from gym.spaces import Discrete, Box
+from tensorboardX import SummaryWriter
 from torch.autograd import Variable
 from torch.multiprocessing import Value
 from torch.optim import Optimizer
 
-from A3C.ActorCriticNetwork import ActorCriticNetwork
+from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
+from A3C.Models.ActorNetwork import ActorNetwork
+from A3C.Models.CriticNetwork import CriticNetwork
 
 
 def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
@@ -27,8 +28,8 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
         shared_param._grad = param.grad
 
 
-def test(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: int, T: Value, t_max: int = 100000,
-         is_discrete: bool = False, global_reward: Value = None):
+def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork, seed: int,
+         T: Value, t_max: int = 100000, is_discrete: bool = False, global_reward: Value = None):
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/_test.py
@@ -40,22 +41,23 @@ def test(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: 
     env.seed(seed + worker_id)
 
     # get an instance of the current global model state
-    model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
-    model.eval()
+    model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
+    model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
+    model_actor.eval()
+    model_critic.eval()
     # model.load_state_dict(global_model.state_dict())
 
     state = torch.from_numpy(np.array(env.reset()))
     reward_sum = 0
 
     t = 0
-    taken_actions_test = []
-    iteration = 0
     done = True
 
     while True:
 
         # Get params from shared global model
-        model.load_state_dict(shared_model.state_dict())
+        model_critic.load_state_dict(shared_model_critic.state_dict())
+        model_actor.load_state_dict(shared_model_actor.state_dict())
 
         rewards = np.zeros(10)
         eps_len = np.zeros(10)
@@ -70,26 +72,11 @@ def test(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: 
 
                 with torch.no_grad():
 
-                    if is_discrete:
-                        _, logit = model(state.float())
+                    # select mean of normal dist as action --> Expectation
+                    mu, _ = model_actor(Variable(state))
+                    action = mu.data
 
-                        # prob dist of action space, select best action
-                        prob = F.softmax(logit, dim=-1)
-                        action = prob.max(1, keepdim=True)[1]
-
-                    else:
-                        # select mean of normal dist as action --> Expectation
-                        _, mu, _ = model(Variable(state))
-                        action = mu.data
-                        taken_actions_test.append(action)
-
-                # make selected move
-                if isinstance(env.action_space, Discrete):
-                    action = action.numpy()[0, 0]
-                elif isinstance(env.action_space, Box):
-                    action = action.numpy()
-
-                state, reward, done, _ = env.step(action)
+                state, reward, done, _ = env.step(action.numpy())
                 done = done or t >= t_max
                 reward_sum += reward
 
@@ -103,18 +90,6 @@ def test(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: 
 
                     state = env.reset()
 
-                    # if iteration == 3 and is_discrete is False:
-                    #     plt.hist(Worker.actions_taken_training)
-                    #     plt.title('Taken Action during Training')
-                    #     plt.show()
-                    #
-                    #     plt.hist(Worker.actions_taken_training)
-                    #     plt.title('Taken Action during Test-Phase')
-                    #     plt.show()
-
-                    # plt.figure()
-                    iteration += 1
-
                 state = torch.from_numpy(np.array(state))
             done = False
 
@@ -125,16 +100,11 @@ def test(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: 
         # delay _test run for 10s to give the network some time to train
         time.sleep(10)
 
-        # plt.figure()
-        # plt.hist(Worker.values)
-        # plt.title('Predicted Values during Training')
-        # plt.show()
 
-
-def train(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: int, T: Value, lr: float = 1e-4,
-          n_steps: int = 0, t_max: int = 100000, gamma: float = .99, tau: float = 1, beta: float = .01,
-          value_loss_coef: float = .5, optimizer: Optimizer = None, use_gae: bool = True, is_discrete: bool = False,
-          global_reward=None):
+def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
+          seed: int, T: Value, lr: float = 1e-4, n_steps: int = 0, t_max: int = 100000, gamma: float = .99,
+          tau: float = 1, beta: float = .01, value_loss_coef: float = .5, optimizer: Optimizer = None,
+          use_gae: bool = True, is_discrete: bool = False, global_reward=None):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
@@ -147,21 +117,33 @@ def train(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed:
     env.seed(seed + worker_id)
 
     # init local NN instance for worker thread
-    model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
+    model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
+    model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
 
     # if no shared optimizer is provided use individual one
     if optimizer is None:
-        optimizer = torch.optim.RMSprop(shared_model.parameters(), lr=lr)
+        optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=lr)
+        optimizer_actor = torch.optim.RMSprop(shared_model_actor.parameters(), lr=lr)
         # optimizer = torch.optim.Adam(global_model.parameters(), lr=lr)
 
-    model.train()
+    model_actor.train()
+    model_critic.train()
+
+    writer = SummaryWriter()
 
     state = torch.from_numpy(np.array(env.reset()))
 
     t = 0
+    iter = 0
+
+    loss_container_critic = []
+    loss_container_actor = []
+    loss_mean_critic = []
+    loss_mean_actor = []
     while True:
         # Get state of the global model
-        model.load_state_dict(shared_model.state_dict())
+        model_critic.load_state_dict(shared_model_critic.state_dict())
+        model_actor.load_state_dict(shared_model_actor.state_dict())
 
         # containers for computing loss
         values = []
@@ -169,146 +151,164 @@ def train(env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed:
         rewards = []
         entropies = []
 
+        states = []
+
         # reward_sum = 0
+        with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
 
-        for step in range(n_steps):
-            t += 1
+            for step in range(n_steps):
+                t += 1
 
-            if is_discrete:
-                # forward pass
-                value, logit = model(state)
+                value = model_critic(Variable(state))
+                mu, sigma = model_actor(Variable(state))
 
-                # prop dist over actions
-                prob = F.softmax(logit, dim=-1)
-                log_prob = F.log_softmax(logit, dim=-1)
+                states.append(state)
 
-                # compute entropy for loss regularization
-                entropy = -(log_prob * prob).sum(1, keepdim=True)
-
-                # choose action based on prob dist
-                action = prob.multinomial(num_samples=1).detach()
-                log_prob = log_prob.gather(1, action)
-
-            else:
-
-                value, mu, sigma = model(Variable(state))
-                # print("Training worker {} -- mu: {} -- sigma: {}".format(worker_id, mu, sigma))
-
-                # dist = torch.distributions.Normal(mu, sigma)
+                dist = torch.distributions.Normal(mu, sigma)
 
                 # ------------------------------------------
-                # select action
-                eps_v = Variable(torch.randn(mu.size()))
-                action = (mu + sigma.sqrt() * eps_v).data
-                # action = dist.sample().detach()
-
-                # assuming action space is in -high/high
-                # env is currently clipping internally
-                # high = np.asscalar(env.action_space.high)
-                # low = np.asscalar(env.action_space.low)
-                # action = np.clip(action, low, high)
+                # # select action
+                # eps_v = Variable(torch.randn(mu.size()))
+                # action = (mu + sigma.sqrt() * eps_v).data
+                action = dist.sample().detach()
 
                 # ------------------------------------------
                 # Compute statistics for loss
-                exp_ = (-1 * (Variable(action) - mu).pow(2) / (2 * sigma)).exp()
-                scale = 1 / (2 * sigma * math.pi).sqrt()
-                log_prob = (exp_ * scale).log()
-                # log_prob = dist.log_prob(action)
+                # exp_ = (-1 * (Variable(action) - mu).pow(2) / (2 * sigma)).exp()
+                # scale = 1 / (2 * sigma * math.pi).sqrt()
+                # log_prob = (exp_ * scale).log()
+                log_prob = dist.log_prob(action)
 
-                entropy = -0.5 * ((sigma + 2 * math.pi).log() + 1.)
-                # entropy = dist.entropy()
+                # entropy = -0.5 * ((sigma + 2 * math.pi).log() + 1.)
+                entropy = dist.entropy()
 
-                # -----------------------------------------------------------------
-                # eps = Variable(torch.randn(mu.size()))
-                # action = (mu + sigma.sqrt() * eps).data.numpy()
-                #
-                # # assuming action space is in -high/high
-                # high = np.asscalar(env.action_space.high)
-                # low = np.asscalar(env.action_space.low)
-                # action = np.clip(action, low, high)
-                #
-                # action = Variable(torch.from_numpy(action))
-                #
-                # entropy = 0.5 + 0.5 * math.log(2 * math.pi) + torch.log(dist.scale)  # exploration
+                # make selected move
+                state, reward, done, _ = env.step(action.numpy())
 
-                # Worker.actions_taken_training.append(action)
-                # Worker.values.append(value.detach().numpy())
+                done = done or t >= t_max
 
-                # print("Training worker {} action: {}".format(worker_id, action))
+                with T.get_lock():
+                    T.value += 1
 
-            # make selected move
-            if isinstance(env.action_space, Discrete):
-                action = action.numpy()[0, 0]
-            elif isinstance(env.action_space, Box):
-                action = action.numpy()
+                reward = min(max(-1, reward), 1)
 
-            state, reward, done, _ = env.step(action)
+                values.append(value)
+                log_probs.append(log_prob)
+                rewards.append(reward)
+                entropies.append(entropy)
 
-            done = done or t >= t_max
+                # reset env to beginning if done
+                if done:
+                    t = 0
+                    state = env.reset()
 
-            with T.get_lock():
-                T.value += 1
+                state = torch.from_numpy(np.array(state))
 
-            reward = min(max(-1, reward), 1)
+                # end if terminal state or max episodes are reached
+                if done:
+                    break
 
-            values.append(value)
-            log_probs.append(log_prob)
-            rewards.append(reward)
-            entropies.append(entropy)
+            # # TODO: Implement this correctly
+            # with global_reward.get_lock():
+            #     if global_reward.value == 0:
+            #         global_reward.value = sum(rewards)
+            #     else:
+            #         global_reward.value = global_reward.value * 0.99 + sum(rewards) * 0.01
 
-            # reset env to beginning if done
-            if done:
-                t = 0
-                state = env.reset()
+            R = torch.zeros(1, 1)
 
-            state = torch.from_numpy(np.array(state))
+            # if non terminal state is present set R to be value of current state
+            if not done:
+                R = model_critic(Variable(state)).data
 
-            # end if terminal state or max episodes are reached
-            if done:
-                break
+            values.append(Variable(R))
+            # compute loss and backprop
+            actor_loss = 0
+            critic_loss = 0
+            gae = torch.zeros(1, 1)
+            R = Variable(R)
 
-        # TODO: Implement this correctly
-        with global_reward.get_lock():
-            if global_reward.value == 0:
-                global_reward.value = sum(rewards)
-            else:
-                global_reward.value = global_reward.value * 0.99 + sum(rewards) * 0.01
+            # iterate over rewards from most recent to the starting one
+            for i in reversed(range(len(rewards))):
+                R = rewards[i] + R * gamma
+                advantage = R - values[i]
+                critic_loss = critic_loss + 0.5 * advantage.pow(2)
+                if use_gae:
+                    # Generalized Advantage Estimation
+                    delta_t = rewards[i] + gamma * values[i + 1].data - values[i].data
+                    gae = gae * gamma * tau + delta_t
+                    actor_loss = actor_loss - log_probs[i] * Variable(gae) - beta * entropies[i]
+                else:
+                    actor_loss = actor_loss - log_probs[i] * advantage.data - beta * entropies[i]
 
-        R = torch.zeros(1, 1)
+            # zero grads to avoid computation issues in the next step
+            optimizer_critic.zero_grad()
+            optimizer_actor.zero_grad()
 
-        # if non terminal state is present set R to be value of current state
-        if not done:
-            R = model(Variable(state))[0].data
+            critic_loss.backward()
+            actor_loss.backward()
 
-        values.append(Variable(R))
-        # compute loss and backprop
-        actor_loss = 0
-        critic_loss = 0
-        gae = torch.zeros(1, 1)
-        R = Variable(R)
+            # compute combined loss of actor_loss and critic_loss
+            # avoid overfitting on value loss by scaling it down
+            # (actor_loss + value_loss_coef * critic_loss).backward()
+            # combined_loss.mean().backward()
+            # combined_loss.backward()
 
-        # iterate over rewards from most recent to the starting one
-        for i in reversed(range(len(rewards))):
-            R = rewards[i] + R * gamma
-            advantage = R - values[i]
-            critic_loss = critic_loss + 0.5 * advantage.pow(2)
-            if use_gae:
-                # Generalized Advantage Estimation
-                delta_t = rewards[i] + gamma * values[i + 1].data - values[i].data
-                gae = gae * gamma * tau + delta_t
-                actor_loss = actor_loss - log_probs[i] * Variable(gae) - beta * entropies[i]
-            else:
-                actor_loss = actor_loss - log_probs[i] * advantage.data - beta * entropies[i]
+            torch.nn.utils.clip_grad_norm_(model_critic.parameters(), 40)
+            torch.nn.utils.clip_grad_norm_(model_actor.parameters(), 40)
 
-        # zero grads to avoid computation issues in the next step
-        optimizer.zero_grad()
+            sync_grads(model_critic, shared_model_critic)
+            sync_grads(model_actor, shared_model_actor)
+            optimizer_critic.step()
+            optimizer_actor.step()
 
-        # compute combined loss of actor_loss and critic_loss
-        # avoid overfitting on value loss by scaling it down
-        (actor_loss + value_loss_coef * critic_loss).backward()
-        # combined_loss.mean().backward()
-        # combined_loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 40)
+            # loss_container_critic.append(critic_loss.data)
+            # loss_container_actor.append(actor_loss.data)
 
-        sync_grads(model, shared_model)
-        optimizer.step()
+            iter += 1
+
+            grads_critic = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                           for p in model_critic.parameters()
+                                           if p.grad is not None])
+
+            grads_actor = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                          for p in model_actor.parameters()
+                                          if p.grad is not None])
+
+            tb_tracker.track("values", np.mean([v.data for v in values]), iter)
+            tb_tracker.track("batch_rewards", np.mean(np.array(rewards)), iter)
+            tb_tracker.track("loss_policy", actor_loss, iter)
+            tb_tracker.track("loss_value", critic_loss, iter)
+            tb_tracker.track("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), iter)
+            tb_tracker.track("grad_max_actor", np.max(np.abs(grads_actor)), iter)
+            tb_tracker.track("grad_var_actor", np.var(grads_actor), iter)
+            tb_tracker.track("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), iter)
+            tb_tracker.track("grad_max_critic", np.max(np.abs(grads_critic)), iter)
+            tb_tracker.track("grad_var_critic", np.var(grads_critic), iter)
+
+            # if iter % 50 == 0:
+            #     loss_mean_actor.append(np.mean(np.array(loss_container_actor[-50])))
+            #     loss_mean_critic.append(np.mean(np.array(loss_container_critic[-50])))
+            #
+            #     plt.figure(0)
+            #     plt.plot(loss_container_critic)
+            #     plt.title("Critic Loss")
+            #
+            #     # plt.plot(np.arange(50, len(loss_container_critic)+1, 50), loss_mean_critic)
+            #     # plt.title("Critic Loss Mean over 50")
+            #
+            #     plt.figure(1)
+            #     plt.plot(loss_container_critic)
+            #     plt.title("Actor Loss")
+            #
+            #     # plt.plot(np.arange(50, len(loss_container_actor)+1, 50), loss_mean_actor)
+            #     # plt.title(, "Actor Loss Mean over 50")
+            #
+            #     plt.show()
+
+            # model_critic.load_state_dict(shared_model_critic.state_dict())
+            #
+            # print("Value before training:")
+            # print([v.data for v in values])
+            # print("Value after training:")
+            # print(model_critic(torch.stack(states)))

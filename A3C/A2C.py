@@ -17,7 +17,7 @@ import torch.optim as optim
 from tensorboardX import SummaryWriter
 
 from A3C.A3C import A3C
-from A3C.ActorCriticNetwork import ActorCriticNetwork
+from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
 
 GAMMA = 0.99
 LEARNING_RATE = 0.001

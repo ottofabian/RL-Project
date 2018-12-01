@@ -3,9 +3,8 @@ import logging
 import gym
 from torch.multiprocessing import Value, Lock, Process
 
-from A3C.ActorCriticNetwork import ActorCriticNetwork
-from A3C.Optimizers.SharedAdam import SharedAdam
-from A3C.Optimizers.SharedRMSProp import SharedRMSProp
+from A3C.Models.ActorNetwork import ActorNetwork
+from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Test import test, train
 
 
@@ -50,17 +49,21 @@ class A3C(object):
         # torch.manual_seed(self.seed)
         # env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
         env = gym.make(self.env_name)
-        shared_model = ActorCriticNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
-        shared_model.share_memory()
 
-        if self.optimizer_name == 'rmsprop':
-            optimizer = SharedRMSProp(shared_model.parameters(), lr=self.lr)
-        elif self.optimizer_name == 'adam':
-            optimizer = SharedAdam(shared_model.parameters(), lr=self.lr)
-        else:
-            raise Exception('Unexpected optimizer_name: %s' % self.optimizer_name)
+        shared_model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
+        shared_model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
 
-        optimizer.share_memory()
+        shared_model_critic.share_memory()
+        shared_model_actor.share_memory()
+
+        # if self.optimizer_name == 'rmsprop':
+        #     optimizer = SharedRMSProp(shared_model.parameters(), lr=self.lr)
+        # elif self.optimizer_name == 'adam':
+        #     optimizer = SharedAdam(shared_model.parameters(), lr=self.lr)
+        # else:
+        #     raise Exception('Unexpected optimizer_name: %s' % self.optimizer_name)
+
+        # optimizer.share_memory()
 
         # start the test worker which is visualized to see how the current progress is
         # w = Worker(env_name=self.env_name, worker_id=self.n_worker, shared_model=shared_model, T=self.T,
@@ -83,15 +86,17 @@ class A3C(object):
         # for w in self.worker_pool:
         #     w.join()
 
-        p = Process(target=test, args=(self.env_name, self.n_worker, shared_model, self.seed, self.T, 10000,
-                                       self.is_discrete, self.global_reward))
+        p = Process(target=test, args=(
+        self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed, self.T, 10000,
+        self.is_discrete, self.global_reward))
         p.start()
         self.worker_pool.append(p)
 
         for rank in range(0, self.n_worker):
-            p = Process(target=train, args=(self.env_name, self.n_worker, shared_model, self.seed, self.T, self.lr,
-                                            5, 200, .99, 1, .0001, .5, optimizer, True, self.is_discrete,
-                                            self.global_reward))
+            p = Process(target=train, args=(
+            self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed, self.T, self.lr,
+            20, 200, .99, 1, .0001, .5, None, True, self.is_discrete,
+            self.global_reward))
             p.start()
             self.worker_pool.append(p)
 

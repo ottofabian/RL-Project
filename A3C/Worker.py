@@ -15,7 +15,7 @@ from torch.autograd import Variable
 from torch.multiprocessing import Value, Process
 from torch.optim import Optimizer
 
-from A3C.ActorCriticNetwork import ActorCriticNetwork
+from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
 
 pi = Variable(torch.FloatTensor([math.pi]))
 

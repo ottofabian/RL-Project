@@ -128,14 +128,14 @@ class ActorCriticNetwork(torch.nn.Module):
 
         inputs = inputs.float()
         action_hidden = F.relu(self.hidden_action1(inputs))
-        action_hidden = F.relu(self.hidden_action2(action_hidden))
-        action_hidden = F.relu(self.hidden_action3(action_hidden))
+        # action_hidden = F.relu(self.hidden_action2(action_hidden))
+        # action_hidden = F.relu(self.hidden_action3(action_hidden))
         mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(action_hidden))
         sigma = F.softplus(self.sigma(action_hidden)) + 1e-5  # avoid 0
 
         value_hidden = F.relu(self.hidden_value1(inputs))
-        value_hidden = F.relu(self.hidden_value2(value_hidden))
-        value_hidden = F.relu(self.hidden_value3(value_hidden))
+        # value_hidden = F.relu(self.hidden_value2(value_hidden))
+        # value_hidden = F.relu(self.hidden_value3(value_hidden))
         value = self.value(value_hidden)
 
         return value, mu, sigma
