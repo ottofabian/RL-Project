@@ -15,8 +15,7 @@ class RBFController(MultivariateGP, Controller):
         sigma_eps = .01
 
         MultivariateGP.__init__(self, length_scales=length_scales, n_targets=n_actions, sigma_f=sigma_f,
-                                sigma_eps=sigma_eps,
-                                container=RBFNetwork, is_policy=True)
+                                sigma_eps=sigma_eps, container=RBFNetwork, is_policy=True)
 
         for gp in self.gp_container:
             gp.set_rollout(rollout)
@@ -26,11 +25,12 @@ class RBFController(MultivariateGP, Controller):
 
     def fit(self, X, y):
         MultivariateGP.fit(self, X, y)
+        # compute K_inv and betas for later prediction
         [gp.compute_params() for gp in self.gp_container]
 
     def choose_action(self, mu, sigma, squash=True, bound=1):
         action_mu, action_cov, input_output_cov = self.predict_from_dist(mu, sigma)
-        # action_cov = action_cov - self.get_sigma_eps()[0] - self.ridge
+
         if squash:
             action_mu, action_cov, input_output_cov = self.squash_action_dist(action_mu, action_cov, input_output_cov,
                                                                               bound)
@@ -40,20 +40,20 @@ class RBFController(MultivariateGP, Controller):
     def squash_action_dist(self, mu, sigma, input_output_cov, bound):
         """
         Rescales and squashes the distribution x with sin(x)
-        :param input_output_cov:
+        See Deisenroth(2010) Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
         :param mu:
         :param sigma:
-        :return:
+        :param input_output_cov:
+        :return: mu_squashed, sigma_squashed, input_output_cov_squashed
         """
 
         # p(u)' is squashed distribution over p(u) scaled by action space values,
         # see Deisenroth (2010), page 46, 2a)+b) and Section 2.3.2
 
         # compute mean of squashed dist
-        # See Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
         mu_squashed = bound * np.exp(-sigma / 2) * np.sin(mu)
 
-        # # covar: E[sin(x)^2] - E[sin(x)]^2
+        # covar: E[sin(x)^2] - E[sin(x)]^2
         sigma2 = -(sigma.T + sigma) / 2
         sigma2_exp = np.exp(sigma2)
         sigma_squashed = ((np.exp(sigma2 + sigma) - sigma2_exp) * np.cos(mu.T - mu) -
@@ -65,39 +65,3 @@ class RBFController(MultivariateGP, Controller):
         input_output_cov_squashed = input_output_cov @ input_output_cov_squashed
 
         return mu_squashed, sigma_squashed, input_output_cov_squashed.T
-
-    # def get_hyperparams(self):
-    #     concat = np.concatenate([self.X, self.y], axis=1)
-    #     return np.concatenate([concat.T.flatten(), self.get_length_scales().T.flatten()])
-
-    # def set_hyper_params(self, X, y, length_scales):
-    #     self.X = X.reshape(X.shape[1], -1)
-    #     self.y = y.reshape(y.shape[1], -1)
-    #     self.length_scales = length_scales
-    #     super(RBFController, self).fit(X, y)
-    #     for i, gp in enumerate(self.gp_container):
-    #         gp.length_scales = length_scales[i]
-
-    # def fit(self, X, y):
-    #     self.set_hyper_params(X, y, self.length_scales)
-    #
-    #
-    # def optimize_params(self, X):
-    #     self.X = X
-    #
-    #     self.sigma = self.var * np.identity(X.shape[0])
-    #     self.mu = np.zeros(self.sigma.shape[0])
-    #
-    #     self._set_beta()
-    #
-    # def _set_y(self):
-    #     pred = self.choose_action(self.X)
-    #     return pred + self.sample_measurement_noise()
-    #
-    # def _set_beta(self):
-    #     K = self.kernel(self.X)
-    #     self.beta = solve(K + self.sample_measurement_noise(), np.identity(K.shape[0])) @ self.y.T
-    #
-    # def sample_measurement_noise(self):
-    #     return np.random.multivariate_normal(self.mu, self.sigma)
-    #

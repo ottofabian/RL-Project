@@ -19,7 +19,7 @@ class RBFNetwork(GaussianProcess):
 
     def optimize(self):
         params = self._wrap_policy_hyperparams()
-        options = {'maxiter': 150, 'disp': False}
+        options = {'maxiter': 150, 'disp': True}
 
         try:
             res = minimize(value_and_grad(self._optimize_hyperparams), params, method='L-BFGS-B', jac=True,
@@ -29,25 +29,25 @@ class RBFNetwork(GaussianProcess):
                            options=options)
 
         self.opt_ctr = 0
-        best_params = res.x
-        self.X, self.y, self.length_scales, self.sigma_eps = self._unwrap_params(best_params)
+        self.X, self.y, self.length_scales, self.sigma_eps = self._unwrap_params(res.x)
         self.compute_params()
 
-        # self.logger.debug("Best Params: \n", X, y, length_scales)
+        # self.logger.debug("Best Params: \n", self.X, self.y, self.length_scales)
 
     def set_rollout(self, rollout: callable):
         self.rollout = rollout
 
     def _wrap_policy_hyperparams(self):
 
-        N = self.X.shape[0]
+        n_features = self.X.shape[0]
 
-        split1 = self.state_dim * N  # split for RBF centers
-        split2 = self.n_targets * N + split1  # split for training targets/weights
+        split1 = self.state_dim * n_features  # split for RBF centers
+        split2 = self.n_targets * n_features + split1  # split for training targets/weights
 
-        params = np.zeros([self.state_dim * N + self.n_targets * N + self.state_dim + 1])
-        params[:split1] = self.X.reshape(self.state_dim * N)
-        params[split1:split2] = self.y.reshape(self.n_targets * N)
+        params = np.zeros([self.state_dim * n_features + self.n_targets * n_features + self.state_dim + 1])
+
+        params[:split1] = self.X.reshape(self.state_dim * n_features)
+        params[split1:split2] = self.y.reshape(self.n_targets * n_features)
         params[split2:-1] = self.length_scales
         params[-1] = self.sigma_eps
 
@@ -64,13 +64,13 @@ class RBFNetwork(GaussianProcess):
 
     def _unwrap_params(self, params):
 
-        N = self.X.shape[0]
+        n_features = self.X.shape[0]
 
-        split1 = self.state_dim * N  # split for RBF centers
-        split2 = self.n_targets * N + split1  # split for training targets/weights
+        split1 = self.state_dim * n_features  # split for RBF centers
+        split2 = self.n_targets * n_features + split1  # split for training targets/weights
 
-        X = params[:split1].reshape(N, self.state_dim)
-        y = params[split1:split2].reshape(N, self.n_targets)
+        X = params[:split1].reshape(n_features, self.state_dim)
+        y = params[split1:split2].reshape(n_features, self.n_targets)
         length_scales = params[split2:-1]
         sigma_eps = params[-1]
 
@@ -81,21 +81,13 @@ class RBFNetwork(GaussianProcess):
         self.opt_ctr += 1
         self.X, self.y, self.length_scales, self.sigma_eps = self._unwrap_params(params)
 
-        # required for beta and K computation, when updating the parameters
+        # computes beta and K_inv for updated hyperparams
         self.compute_params()
 
-        # returns cost of trajectory
+        # returns cost of trajectory rollout
         cost = self.rollout()
 
         # print progress
-        self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, cost._value))
-        # self._optimization_callback()
+        self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, cost._value[0]))
 
         return cost
-
-    def _optimization_callback(self):
-
-        if self.opt_ctr % 10 == 0:
-            print("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, self.rollout()))
-        else:
-            print("Policy optimization iteration: {}".format(self.opt_ctr))

@@ -4,7 +4,8 @@ import autograd.numpy as np
 from autograd import value_and_grad
 from scipy.optimize import minimize
 
-from PILCO.Kernels.Kernels import RBFKernel, WhiteNoiseKernel
+from PILCO.Kernels.RBFKernel import RBFKernel
+from PILCO.Kernels.WhiteNoiseKernel import WhiteNoiseKernel
 
 
 class GaussianProcess(object):
@@ -68,6 +69,7 @@ class GaussianProcess(object):
         This is used to optimize the hyperparams for the GP
         :return:
         """
+
         self.logger.info("Optimization for GP started.")
         params = self._wrap_kernel_hyperparams()
 
@@ -75,26 +77,18 @@ class GaussianProcess(object):
             self.logger.info("Optimization with L-BFGS-B started.")
             res = minimize(value_and_grad(self._optimize_hyperparams), params, jac=True, method='L-BFGS-B')
         except Exception:
+            # use CG if numerical instablities occur during optimization
             self.logger.info("Optimization with CG started.")
             res = minimize(value_and_grad(self._optimize_hyperparams), params, jac=True, method='CG')
 
         best_params = res.x
 
         self.length_scales, self.sigma_f, self.sigma_eps = self._unwrap_params(best_params)
+
+        # compute betas and K_inv which is required for later predictions
         self.compute_params()
 
     def _wrap_kernel_hyperparams(self):
-
-        # split1 = self.state_dim
-        # split2 = self.n_targets + split1
-        #
-        # params = np.zeros([self.state_dim + 2])
-        # params[:split1] = np.log(self.length_scales)
-        # params[split1:split2] = np.log(self.sigma_f)
-        # params[split2:] = np.log(self.sigma_eps)
-        #
-        # return params
-
         return np.concatenate([self.length_scales, self.sigma_f, self.sigma_eps])
 
     def predict(self, x):
@@ -151,6 +145,12 @@ class GaussianProcess(object):
         return mean
 
     def _unwrap_params(self, params):
+        """
+        unwrap vector of hyperparams into seperate values for gp
+        Required for optimization
+        :param params: vector of length scales, sigma_f, sigma_eps
+        :return: length scales, sigma_f, sigma_eps
+        """
 
         split1 = self.state_dim
         split2 = self.n_targets + split1

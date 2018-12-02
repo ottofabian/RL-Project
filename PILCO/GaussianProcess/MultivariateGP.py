@@ -118,15 +118,38 @@ class MultivariateGP(object):
 
         return mean, cov, input_output_cov
 
+    def optimize(self):
+        for gp in self.gp_container:
+            gp.optimize()
+
     def predict(self, x):
         return np.array([gp.predict(x) for gp in self.gp_container])
 
-    def optimize(self):
-        for i in range(self.n_targets):
-            self.gp_container[i].optimize()
+    def compute_cross_cov(self, i, j, zeta, sigma):
+        precision_a_inv = np.diag(1 / self.gp_container[i].length_scales)
+        precision_b_inv = np.diag(1 / self.gp_container[j].length_scales)
+
+        # compute R
+        R = sigma @ (precision_a_inv + precision_b_inv) + np.identity(sigma.shape[0])
+        R_inv = np.linalg.solve(R, np.identity(R.shape[0]))
+
+        # compute z
+        z = precision_a_inv @ zeta + precision_b_inv @ zeta
+
+        # compute n using matrix inversion lemma, Appendix A.4 Deisenroth (2010)
+        right = (zeta.T @ precision_a_inv @ zeta +
+                 zeta.T @ precision_b_inv @ zeta -
+                 z.T @ R_inv @ sigma @ z) / 2
+
+        const = 2 * (np.log(self.gp_container[i].sigma_f) + np.log(self.gp_container[j].sigma_f))
+        n_square = const - right
+
+        # Compute Q
+        Q = np.exp(n_square) / np.sqrt(np.linalg.det(R))
+
+        return Q
 
     def predict_from_dist_v2(self, mu, sigma):
-
         """
         This method should not be used, it is only based on the mathematical description of Deisenroth(2010).
         Use predict_from_dist() in order to get a matlab based method, which is numerically more stable.
@@ -170,30 +193,6 @@ class MultivariateGP(object):
                 sigma_out[i, j] = cov_ab
 
         return mu_out, sigma_out, input_output_cov
-
-    def compute_cross_cov(self, i, j, zeta, sigma):
-        precision_a_inv = np.diag(1 / self.gp_container[i].length_scales)
-        precision_b_inv = np.diag(1 / self.gp_container[j].length_scales)
-
-        # compute R
-        R = sigma @ (precision_a_inv + precision_b_inv) + np.identity(sigma.shape[0])
-        R_inv = np.linalg.solve(R, np.identity(R.shape[0]))
-
-        # compute z
-        z = precision_a_inv @ zeta + precision_b_inv @ zeta
-
-        # compute n using matrix inversion lemma, Appendix A.4 Deisenroth (2010)
-        right = (zeta.T @ precision_a_inv @ zeta +
-                 zeta.T @ precision_b_inv @ zeta -
-                 z.T @ R_inv @ sigma @ z) / 2
-
-        const = 2 * (np.log(self.gp_container[i].sigma_f) + np.log(self.gp_container[j].sigma_f))
-        n_square = const - right
-
-        # Compute Q
-        Q = np.exp(n_square) / np.sqrt(np.linalg.det(R))
-
-        return Q
 
     def compute_input_output_cov(self, i, beta, sigma, zeta):
 
