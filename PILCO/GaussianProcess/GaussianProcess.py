@@ -56,7 +56,7 @@ class GaussianProcess(object):
 
     def _optimize_hyperparams(self, params):
         p = 30
-        length_scales, sigma_f, sigma_eps = self._unwrap_params(params)
+        length_scales, sigma_f, sigma_eps = self.unwrap_params(params)
 
         L = self.log_marginal_likelihood(params)
         L = L + np.sum(((length_scales - np.log(self.std_pen)) / np.log(self.length_scale_pen)) ** p)
@@ -72,6 +72,9 @@ class GaussianProcess(object):
 
         self.logger.info("Optimization for GP started.")
         params = self._wrap_kernel_hyperparams()
+        self.logger.debug("Length scales before: {}".format(np.array2string(self.length_scales)))
+        self.logger.debug("Sigma_f before: {}".format(np.array2string(self.sigma_f)))
+        self.logger.debug("Sigma_eps before: {}".format(np.array2string(self.sigma_eps)))
 
         try:
             self.logger.info("Optimization with L-BFGS-B started.")
@@ -83,7 +86,11 @@ class GaussianProcess(object):
 
         best_params = res.x
 
-        self.length_scales, self.sigma_f, self.sigma_eps = self._unwrap_params(best_params)
+        self.length_scales, self.sigma_f, self.sigma_eps = self.unwrap_params(best_params)
+
+        self.logger.debug("Length scales after: {}".format(np.array2string(self.length_scales)))
+        self.logger.debug("Sigma_f after: {}".format(np.array2string(self.sigma_f)))
+        self.logger.debug("Sigma_eps after: {}".format(np.array2string(self.sigma_eps)))
 
         # compute betas and K_inv which is required for later predictions
         self.compute_params()
@@ -144,7 +151,7 @@ class GaussianProcess(object):
 
         return mean
 
-    def _unwrap_params(self, params):
+    def unwrap_params(self, params):
         """
         unwrap vector of hyperparams into seperate values for gp
         Required for optimization

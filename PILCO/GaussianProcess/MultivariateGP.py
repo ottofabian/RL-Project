@@ -1,3 +1,5 @@
+import logging
+
 import autograd.numpy as np
 
 
@@ -16,6 +18,9 @@ class MultivariateGP(object):
         self.gp_container = [
             container(length_scales=length_scales, sigma_eps=sigma_eps, sigma_f=sigma_f, is_policy=is_policy) for _ in
             range(self.n_targets)]
+
+        self.logger = logging.getLogger(__name__)
+
 
     def fit(self, X, y):
         """

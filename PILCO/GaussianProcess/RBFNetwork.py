@@ -15,29 +15,13 @@ class RBFNetwork(GaussianProcess):
         super(RBFNetwork, self).__init__(length_scales, sigma_f, sigma_eps, is_policy)
 
         self.opt_ctr = 0  # optimization counter
-        self.rollout = None
 
-    def optimize(self):
-        params = self._wrap_policy_hyperparams()
-        options = {'maxiter': 150, 'disp': True}
+    #     self.rollout = None
+    #
+    # def set_rollout(self, rollout: callable):
+    #     self.rollout = rollout
 
-        try:
-            res = minimize(value_and_grad(self._optimize_hyperparams), params, method='L-BFGS-B', jac=True,
-                           options=options)
-        except Exception:
-            res = minimize(value_and_grad(self._optimize_hyperparams), params, method='CG', jac=True,
-                           options=options)
-
-        self.opt_ctr = 0
-        self.X, self.y, self.length_scales, self.sigma_eps = self._unwrap_params(res.x)
-        self.compute_params()
-
-        # self.logger.debug("Best Params: \n", self.X, self.y, self.length_scales)
-
-    def set_rollout(self, rollout: callable):
-        self.rollout = rollout
-
-    def _wrap_policy_hyperparams(self):
+    def wrap_policy_hyperparams(self):
 
         n_features = self.X.shape[0]
 
@@ -62,7 +46,7 @@ class RBFNetwork(GaussianProcess):
         self.K_inv = np.zeros(K.shape)
         self.betas = K @ self.y
 
-    def _unwrap_params(self, params):
+    def unwrap_params(self, params):
 
         n_features = self.X.shape[0]
 
@@ -75,19 +59,42 @@ class RBFNetwork(GaussianProcess):
         sigma_eps = params[-1]
 
         # ensure noise is an numpy array
-        return X, y, length_scales, np.atleast_1d(sigma_eps)
+        self.X, self.y, self.length_scales, self.sigma_eps = X, y, length_scales, np.atleast_1d(sigma_eps)
 
-    def _optimize_hyperparams(self, params):
-        self.opt_ctr += 1
-        self.X, self.y, self.length_scales, self.sigma_eps = self._unwrap_params(params)
+    # def _optimize_hyperparams(self, params):
+    #     self.opt_ctr += 1
+    #     self.X, self.y, self.length_scales, self.sigma_eps = self.unwrap_params(params)
+    #     print(params)
+    #
+    #     # computes beta and K_inv for updated hyperparams
+    #     self.compute_params()
+    #
+    #     # returns cost of trajectory rollout
+    #     cost = self.rollout(self, print=False)
+    #
+    #     # print progress
+    #     self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, cost._value[0]))
+    #
+    #     return cost
 
-        # computes beta and K_inv for updated hyperparams
+    def optimize(self):
+        params = self.wrap_policy_hyperparams()
+        options = {'maxiter': 150, 'disp': True}
+
+        try:
+            # res = minimize(value_and_grad(self._optimize_hyperparams), params, method='L-BFGS-B', jac=True,
+            #                options=options)
+            res = minimize(self._optimize_hyperparams, params, method='L-BFGS-B', jac=False,
+                           options=options)
+        except Exception:
+            res = minimize(value_and_grad(self._optimize_hyperparams), params, method='CG', jac=True,
+                           options=options)
+
+        # Make one more run for plots
+        self.rollout(self, print=True)
+
+        self.opt_ctr = 0
+        self.X, self.y, self.length_scales, self.sigma_eps = self.unwrap_params(res.x)
         self.compute_params()
 
-        # returns cost of trajectory rollout
-        cost = self.rollout()
-
-        # print progress
-        self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, cost._value[0]))
-
-        return cost
+        # self.logger.debug("Best Params: \n", self.X, self.y, self.length_scales)

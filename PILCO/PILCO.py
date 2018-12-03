@@ -4,6 +4,8 @@ import autograd.numpy as np
 import gym
 import matplotlib.pyplot as plt
 import quanser_robots
+from autograd.builtins import isinstance
+from autograd.numpy.numpy_boxes import ArrayBox
 
 from PILCO.Controller.RBFController import RBFController
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
@@ -41,6 +43,7 @@ class PILCO(object):
 
         self.env._max_episode_steps = 250
         self.env.seed(self.seed)
+        self.state_names = ["x", "sin(theta)", "cos(theta)", "x_dot", "theta_dot"]
 
         # get the number of available action from the environment
         self.state_dim = self.env.observation_space.shape[0]
@@ -197,7 +200,7 @@ class PILCO(object):
 
         return l, sigma_f, sigma_eps
 
-    def rollout(self):
+    def rollout(self, policy, print=False):
 
         # TODO select good initial state dist
         # Currently this is taken from the CartPole Problem, Deisenroth (2010)
@@ -222,9 +225,9 @@ class PILCO(object):
             # get mean and covar over next action, optionally with squashing
             # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
             # TODO check if this is working properly, the successor state is never changing over time. Maybe wrong actions is applied
-            action_mu, action_cov, action_input_output_cov = self.policy.choose_action(state_mu, state_cov,
-                                                                                       squash=self.squash,
-                                                                                       bound=self.env.action_space.high)
+            action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
+                                                                                  squash=self.squash,
+                                                                                  bound=self.env.action_space.high)
 
             # ------------------------------------------------
             # get joint dist over successor state p(x,u)
@@ -240,20 +243,32 @@ class PILCO(object):
             # cross cov is times inv(s), see matlab code
             delta_input_output_cov = state_action_cov @ delta_input_output_cov
 
-            # x = np.random.multivariate_normal(state_action_mu._value, state_action_cov._value, size=10000)
-            # pred = self.dynamics_model.predict(x)
+            # sample over dist for debugging
+            x = np.random.multivariate_normal(state_action_mu._value, state_action_cov._value, size=1000)
+            pred = []
+            self.env.reset()
+            for elem in x:
+                self.env.env.state = elem[:-1]
+                s, r, d, _ = self.env.step(np.array([elem[-1]]))
+                pred.append(s)
+
+            pred = np.array(pred)
+
+            # pred = self.dynamics_model.predict(x).T
+
+            delta_mu = np.mean(pred, axis=0)
+            delta_cov = np.cov(pred.T)
             # print("-" * 50)
             # print("Difference between sampling and Moment matching:")
             # print("Mean:\n{}".format(np.mean(pred, axis=1) - delta_mu._value))
             # print("Mean ratio:\n {}".format((np.mean(pred, axis=1) - delta_mu._value) / delta_mu._value))
             # print("Covariance:\n{}".format(np.cov(pred) - delta_cov._value))
             # print("Covariance ratio:\n{}".format((np.cov(pred) - delta_cov._value) / delta_cov._value))
-            # Cov(state, delta) is subset of Cov((state, action), delta)
 
             # ------------------------------------------------
             # compute distribution over next state
 
-            # state_input_output_cov is subset of delta_input_output_cov
+            # Cov(state, delta) is subset of Cov((state, action), delta)
             state_input_output_cov = delta_input_output_cov.T[:, :self.state_dim]
 
             state_next_mu = state_mu + delta_mu
@@ -269,15 +284,25 @@ class PILCO(object):
             state_mu = state_next_mu
             state_cov = state_next_cov
 
-        mu_container = np.array(mu_container)
-        sigma_container = np.array(sigma_container)
+        if print:
+            mu_container = np.array(mu_container)
+            sigma_container = np.array(sigma_container)
 
-        for i in range(len(state_mu)):
-            m = mu_container[:, i]._value
-            s = sigma_container[:, i, i]._value
-            plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
-            plt.title("Trajectory prediction for ")
-            plt.show()
+            for i in range(len(state_mu)):
+                m = mu_container[:, i]
+                s = sigma_container[:, i, i]
+
+                if isinstance(m, ArrayBox):
+                    m = m._value
+
+                try:
+                    s = s._value
+                except Exception:
+                    s = s
+
+                plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
+                plt.title("Trajectory prediction for {}".format(self.state_names[i]))
+                plt.show()
 
         return reward
 
@@ -317,10 +342,12 @@ class PILCO(object):
             # and do not need to compute this with gaussian_trig
             length_scales = np.ones(self.state_dim)
 
-            self.policy = RBFController(n_actions=self.n_actions, rollout=self.rollout, length_scales=length_scales)
+            self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features, rollout=self.rollout,
+                                        length_scales=length_scales)
             self.policy.fit(policy_X, policy_y)
 
         self.policy.optimize()
+        print()
 
     def saturated_cost(self, mu, sigma):
         mu = np.atleast_2d(mu)
