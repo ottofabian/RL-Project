@@ -31,7 +31,7 @@ class MultivariateGP(object):
         self.X = X
         self.y = y
         for i in range(self.n_targets):
-            self.gp_container[i].fit(X, y[:, i])
+            self.gp_container[i].fit(X, y[:, i:i + 1])
 
     def predict_from_dist(self, mu, sigma):
 
@@ -67,22 +67,21 @@ class MultivariateGP(object):
         # compute mean of predictive dist based on matlab code
 
         # The precision_inv cancels out later on
-        zeta_a = np.matmul(diff, precision_inv)
+        zeta_a = diff @ precision_inv
 
         B = precision_inv @ sigma @ precision_inv + np.identity(state_dim)
 
-        # diff / B, this has to be done differently in python
+        # B is symmetric, so the T is not really necessary.
         t = np.stack([np.linalg.solve(B[i].T, zeta_a[i].T).T for i in range(target_dim)])
 
         scaled_beta = np.exp(-np.sum(zeta_a * t, axis=2) / 2) * beta.T
 
-        # TODO: Why the fuck is the det(B) always negative at some point
         coefficient = np.exp(2 * sigma_f) * np.linalg.det(B) ** -.5
 
         mean = np.sum(scaled_beta, axis=1) * coefficient
 
         # compute cross cov between input and output times inv(S)
-        zeta_b = np.matmul(t, precision_inv)
+        zeta_b = t @ precision_inv
         input_output_cov = (np.transpose(zeta_b, [0, 2, 1]) @ np.expand_dims(scaled_beta, axis=2)).reshape(
             target_dim, state_dim).T * coefficient
 
@@ -92,23 +91,23 @@ class MultivariateGP(object):
         k = 2 * sigma_f.reshape(target_dim, 1) - np.sum(zeta_a ** 2, axis=2) * .5
 
         diff_a = np.repeat(diff_scaled[:, np.newaxis, :, :], target_dim, axis=1)
-        diff_b = np.repeat(diff_scaled[np.newaxis, :, :, :], target_dim, axis=0)
+        diff_b = -np.repeat(diff_scaled[np.newaxis, :, :, :], target_dim, axis=0)
 
         precision_add = np.expand_dims(precision_inv2, 0) + np.expand_dims(precision_inv2, 1)
 
         # compute R, which is used for scaling
-        R = np.matmul(sigma, precision_add) + np.identity(state_dim)
+        R = sigma @ precision_add + np.identity(state_dim)
         scaling_factor = np.linalg.det(R) ** -.5
 
         R_inv = np.stack(
             [np.linalg.solve(R.reshape(-1, state_dim, state_dim)[i], sigma) for i in range(target_dim ** 2)])
-        R_inv = R_inv.reshape(target_dim, target_dim, state_dim, state_dim)
+        R_inv = R_inv.reshape(target_dim, target_dim, state_dim, state_dim) / 2
 
         # compute squared mahalanobis distance
-        aQ = np.matmul(diff_a, R_inv / 2)
-        bQ = np.matmul(-diff_b, R_inv / 2)
-        mahalanobis_dist = np.expand_dims(np.sum(aQ * diff_a, axis=-1), axis=-1) + np.expand_dims(
-            np.sum(bQ * -diff_b, axis=-1), axis=-2) - 2 * np.einsum('...ij, ...kj->...ik', aQ, -diff_b)
+        diff_a_Q = diff_a @ R_inv
+        diff_b_Q = diff_b @ R_inv
+        mahalanobis_dist = np.expand_dims(np.sum(diff_a_Q * diff_a, axis=-1), axis=-1) + np.expand_dims(
+            np.sum(diff_b_Q * diff_b, axis=-1), axis=-2) - 2 * np.einsum('...ij, ...kj->...ik', diff_a_Q, diff_b)
 
         # compute Q matrix
         Q = np.exp(k[:, np.newaxis, :, np.newaxis] + k[np.newaxis, :, np.newaxis, :] + mahalanobis_dist)
@@ -120,7 +119,7 @@ class MultivariateGP(object):
             trace = np.hstack([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)])
             cov = (cov - np.diag(trace)) * scaling_factor + np.diag(np.exp(2 * sigma_f))
 
-        cov = cov - np.matmul(mean[:, np.newaxis], mean[np.newaxis, :])
+        cov = cov - mean[:, np.newaxis] @ mean[np.newaxis, :]
 
         return mean, cov, input_output_cov
 
@@ -129,6 +128,8 @@ class MultivariateGP(object):
             gp.optimize()
 
     def predict(self, x):
+        # compute K_inv and betas
+        [gp.compute_matrices() for gp in self.gp_container]
         return np.array([gp.predict(x) for gp in self.gp_container])
 
     def compute_cross_cov(self, i, j, zeta, sigma):

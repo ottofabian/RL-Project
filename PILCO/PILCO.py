@@ -125,7 +125,7 @@ class PILCO(object):
             done = False
 
             while not done and i < n_init:
-                self.env.render()
+                # self.env.render()
                 action = self.env.action_space.sample()
                 state, reward, done, _ = self.env.step(action)
 
@@ -205,13 +205,16 @@ class PILCO(object):
         # TODO select good initial state dist
         # Currently this is taken from the CartPole Problem, Deisenroth (2010)
         state_mu = np.zeros((self.state_dim,))
-        # state_mu = np.array([0., 0., 0., np.pi, np.pi])
         state_cov = 1e-2 * np.identity(self.state_dim)
+        # Make s positive semidefinite
+        state_cov = state_cov.dot(state_cov.T)
+
         reward = 0
 
         # --------------------------------------------------------
         # Alternatives:
         # state_mu = X[:, :self.state_dim].mean(axis=0)
+        # state_mu = np.array([0., 0., 0., np.pi, np.pi])
 
         # state_cov = X[:, :self.state_dim].std(axis=0)
         # state_cov = np.cov(X[:, :self.state_dim], rowvar=False
@@ -399,6 +402,8 @@ class PILCO(object):
             policy_X = np.random.multivariate_normal(np.full(self.state_dim, mu), sigma * np.identity(self.state_dim),
                                                      size=(self.n_features,))
             policy_y = target_noise * np.random.randn(self.n_features, self.n_actions)
+            # A = np.random.rand(self.state_dim, self.n_actions)
+            # policy_y = np.sin(policy_X).dot(A) + policy_y - 0.5)
 
             # augmented states would be initialized with .7, but we already have sin and cos given
             # and do not need to compute this with gaussian_trig

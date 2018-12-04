@@ -7,6 +7,37 @@ from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
 
 
+def squash_action_dist(mu, sigma, input_output_cov, bound):
+    """
+    Rescales and squashes the distribution x with sin(x)
+    See Deisenroth(2010) Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
+    :param bound:
+    :param mu:
+    :param sigma:
+    :param input_output_cov:
+    :return: mu_squashed, sigma_squashed, input_output_cov_squashed
+    """
+
+    # p(u)' is squashed distribution over p(u) scaled by action space values,
+    # see Deisenroth (2010), page 46, 2a)+b) and Section 2.3.2
+
+    # compute mean of squashed dist
+    mu_squashed = bound * np.exp(-sigma / 2) * np.sin(mu)
+
+    # covar: E[sin(x)^2] - E[sin(x)]^2
+    sigma2 = -(sigma.T + sigma) / 2
+    sigma2_exp = np.exp(sigma2)
+    sigma_squashed = ((np.exp(sigma2 + sigma) - sigma2_exp) * np.cos(mu.T - mu) -
+                      (np.exp(sigma2 - sigma) - sigma2_exp) * np.cos(mu.T + mu))
+    sigma_squashed = np.dot(bound.T, bound) * sigma_squashed / 2
+
+    # compute input-output-covariance and squash through sin(x)
+    input_output_cov_squashed = np.diag((bound * np.exp(-sigma / 2) * np.cos(mu)).flatten())
+    input_output_cov_squashed = input_output_cov @ input_output_cov_squashed
+
+    return mu_squashed, sigma_squashed, input_output_cov_squashed
+
+
 class RBFController(MultivariateGP, Controller):
     """RBF Controller/Policy"""
 
@@ -31,8 +62,6 @@ class RBFController(MultivariateGP, Controller):
     def fit(self, X, y):
         # TODO this fits all X for all predictions, this does not matter for 1D actions
         MultivariateGP.fit(self, X, y)
-        # compute K_inv and betas for later prediction
-        [gp.compute_matrices() for gp in self.gp_container]
 
         # second X shape is for lengthscales
         # self.n_params = X.shape[0] * X.shape[1] + y.shape[0] * y.shape[1] + X.shape[0] + 1
@@ -41,8 +70,8 @@ class RBFController(MultivariateGP, Controller):
         action_mu, action_cov, input_output_cov = self.predict_from_dist(mu, sigma)
 
         if squash:
-            action_mu, action_cov, input_output_cov = self.squash_action_dist(action_mu, action_cov, input_output_cov,
-                                                                              bound)
+            action_mu, action_cov, input_output_cov = squash_action_dist(action_mu, action_cov, input_output_cov,
+                                                                         bound)
         # prediction from GP of cross_cov is times inv(s)
         return action_mu, action_cov, sigma @ input_output_cov
 
@@ -92,33 +121,3 @@ class RBFController(MultivariateGP, Controller):
             cost if type(cost) == np.ndarray else cost._value)))
 
         return cost
-
-    def squash_action_dist(self, mu, sigma, input_output_cov, bound):
-        """
-        Rescales and squashes the distribution x with sin(x)
-        See Deisenroth(2010) Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
-        :param bound:
-        :param mu:
-        :param sigma:
-        :param input_output_cov:
-        :return: mu_squashed, sigma_squashed, input_output_cov_squashed
-        """
-
-        # p(u)' is squashed distribution over p(u) scaled by action space values,
-        # see Deisenroth (2010), page 46, 2a)+b) and Section 2.3.2
-
-        # compute mean of squashed dist
-        mu_squashed = bound * np.exp(-sigma / 2) * np.sin(mu)
-
-        # covar: E[sin(x)^2] - E[sin(x)]^2
-        sigma2 = -(sigma.T + sigma) / 2
-        sigma2_exp = np.exp(sigma2)
-        sigma_squashed = ((np.exp(sigma2 + sigma) - sigma2_exp) * np.cos(mu.T - mu) -
-                          (np.exp(sigma2 - sigma) - sigma2_exp) * np.cos(mu.T + mu))
-        sigma_squashed = np.dot(bound.T, bound) * sigma_squashed / 2
-
-        # compute input-output-covariance and squash through sin(x)
-        input_output_cov_squashed = np.diag((bound * np.exp(-sigma / 2) * np.cos(mu)).flatten())
-        input_output_cov_squashed = input_output_cov @ input_output_cov_squashed
-
-        return mu_squashed, sigma_squashed, input_output_cov_squashed
