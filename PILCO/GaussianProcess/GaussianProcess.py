@@ -33,9 +33,9 @@ class GaussianProcess(object):
         self.signal_to_noise = 500
         self.std_pen = 1
 
+        self.K = None
         self.betas = None
         self.K_inv = None
-        self.qs = None
 
         self.logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ class GaussianProcess(object):
         self.logger.debug("Sigma_eps after: {}".format(np.array2string(self.sigma_eps)))
 
         # compute betas and K_inv which is required for later predictions
-        self.compute_params()
+        self.compute_matrices()
 
     def _wrap_kernel_hyperparams(self):
         return np.concatenate([self.length_scales, self.sigma_f, self.sigma_eps])
@@ -110,18 +110,19 @@ class GaussianProcess(object):
         L = np.linalg.cholesky(K)
         alpha = np.linalg.solve(K, self.y)
 
-        return 0.5 * self.X.shape[0] * self.n_targets * np.log(2 * np.pi) + 0.5 * np.dot(self.y.flatten(), alpha) + \
+        return 0.5 * self.X.shape[0] * self.n_targets * np.log(2 * np.pi) + 0.5 * np.dot(self.y.flatten(order="F"),
+                                                                                         alpha) + \
                np.sum(np.log(np.diag(L)))
 
-    def compute_params(self):
+    def compute_matrices(self):
 
         params = self._wrap_kernel_hyperparams()
-        K = self.kernel(params, self.X)[0]
+        self.K = self.kernel(params, self.X)[0]
 
         # learned variance from evidence maximization
         noise = np.identity(self.X.shape[0]) * self.sigma_eps
-        self.K_inv = np.linalg.solve(K + noise, np.identity(K.shape[0]))
-        self.betas = K @ self.y
+        self.K_inv = np.linalg.solve(self.K + noise, np.identity(self.K.shape[0]))
+        self.betas = self.K @ self.y
 
         # -------------------------------
         # TODO: Prob better, but autograd has no solve_triangular

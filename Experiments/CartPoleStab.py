@@ -48,7 +48,8 @@ logging.info('Start Experiment')
 
 # n_features in paper was 100
 # pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=100, Horizon=20,
-#               cost_function=cartpolebase_costfunc, target_state=[0, 0, -1, 0, 0])
-pilco = PILCO(env_name='CartpoleSwingShort-v0', seed=seed, n_features=2, Horizon=20,
-              cost_function=cartpolebase_costfunc, target_state=[0, 0, -1, 0, 0])
+#               cost_function=cartpolebase_costfunc, target_state=[0, 0, -1, 0, 0], max_episode_steps=150)
+# pilco.run(n_samples=100)
+pilco = PILCO(env_name='CartpoleSwingShort-v0', seed=seed, n_features=50, Horizon=40,
+              cost_function=cartpolebase_costfunc, target_state=[0, 0, -1, 0, 0], max_episode_steps=200)
 pilco.run(200)

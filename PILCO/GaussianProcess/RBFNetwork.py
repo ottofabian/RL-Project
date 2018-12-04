@@ -1,6 +1,4 @@
 import autograd.numpy as np
-from autograd import value_and_grad
-from scipy.optimize import minimize
 
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 
@@ -37,7 +35,7 @@ class RBFNetwork(GaussianProcess):
 
         return params
 
-    def compute_params(self):
+    def compute_matrices(self):
 
         params = self._wrap_kernel_hyperparams()
         K = self.kernel(params, self.X)[0]
@@ -67,7 +65,7 @@ class RBFNetwork(GaussianProcess):
     #     print(params)
     #
     #     # computes beta and K_inv for updated hyperparams
-    #     self.compute_params()
+    #     self.compute_matrices()
     #
     #     # returns cost of trajectory rollout
     #     cost = self.rollout(self, print=False)
@@ -77,24 +75,24 @@ class RBFNetwork(GaussianProcess):
     #
     #     return cost
 
-    def optimize(self):
-        params = self.wrap_policy_hyperparams()
-        options = {'maxiter': 150, 'disp': True}
-
-        try:
-            # res = minimize(value_and_grad(self._optimize_hyperparams), params, method='L-BFGS-B', jac=True,
-            #                options=options)
-            res = minimize(self._optimize_hyperparams, params, method='L-BFGS-B', jac=False,
-                           options=options)
-        except Exception:
-            res = minimize(value_and_grad(self._optimize_hyperparams), params, method='CG', jac=True,
-                           options=options)
-
-        # Make one more run for plots
-        self.rollout(self, print=True)
-
-        self.opt_ctr = 0
-        self.X, self.y, self.length_scales, self.sigma_eps = self.unwrap_params(res.x)
-        self.compute_params()
-
-        # self.logger.debug("Best Params: \n", self.X, self.y, self.length_scales)
+    # def optimize(self):
+    #     params = self.wrap_policy_hyperparams()
+    #     options = {'maxiter': 150, 'disp': True}
+    #
+    #     try:
+    #         # res = minimize(value_and_grad(self._optimize_hyperparams), params, method='L-BFGS-B', jac=True,
+    #         #                options=options)
+    #         res = minimize(self._optimize_hyperparams, params, method='L-BFGS-B', jac=False,
+    #                        options=options)
+    #     except Exception:
+    #         res = minimize(value_and_grad(self._optimize_hyperparams), params, method='CG', jac=True,
+    #                        options=options)
+    #
+    #     # Make one more run for plots
+    #     self.rollout(self, print=True)
+    #
+    #     self.opt_ctr = 0
+    #     self.X, self.y, self.length_scales, self.sigma_eps = self.unwrap_params(res.x)
+    #     self.compute_matrices()
+    #
+    #     # self.logger.debug("Best Params: \n", self.X, self.y, self.length_scales)

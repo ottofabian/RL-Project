@@ -32,7 +32,7 @@ class RBFController(MultivariateGP, Controller):
         # TODO this fits all X for all predictions, this does not matter for 1D actions
         MultivariateGP.fit(self, X, y)
         # compute K_inv and betas for later prediction
-        [gp.compute_params() for gp in self.gp_container]
+        [gp.compute_matrices() for gp in self.gp_container]
 
         # second X shape is for lengthscales
         # self.n_params = X.shape[0] * X.shape[1] + y.shape[0] * y.shape[1] + X.shape[0] + 1
@@ -44,49 +44,52 @@ class RBFController(MultivariateGP, Controller):
             action_mu, action_cov, input_output_cov = self.squash_action_dist(action_mu, action_cov, input_output_cov,
                                                                               bound)
         # prediction from GP of cross_cov is times inv(s)
-        return action_mu, action_cov, input_output_cov @ sigma
+        return action_mu, action_cov, sigma @ input_output_cov
 
     def optimize(self):
         # TODO make this working for n_actions > 1
-        params = np.array([gp.wrap_policy_hyperparams() for gp in self.gp_container])
+        params = np.array([gp.wrap_policy_hyperparams() for gp in self.gp_container]).flatten()
         options = {'maxiter': 150, 'disp': True}
 
         try:
-            # res = minimize(value_and_grad(self._optimize_hyperparams), params, method='L-BFGS-B', jac=True,
+            self.logger.info("Starting to optimize policy with L-BFGS-B.")
+            # res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B', jac=True,
             #                options=options)
-            res = minimize(self._optimize_hyperparams, params, method='L-BFGS-B', jac=False,
+            res = minimize(fun=self._optimize_hyperparams, x0=params, method='L-BFGS-B', jac=False,
                            options=options)
         except Exception:
-            res = minimize(value_and_grad(self._optimize_hyperparams), params, method='CG', jac=True,
+            self.logger.info("Starting to optimize policy with CG.")
+            res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='CG', jac=True,
                            options=options)
-
-        # Make one more run for plots
-        self.rollout(self, print=True)
-
         self.opt_ctr = 0
 
         # TODO make this working for n_actions > 1
         for gp in self.gp_container:
             gp.unwrap_params(res.x)
-            gp.compute_params()
+            gp.compute_matrices()
+
+        # Make one more run for plots
+        self.rollout(self, print_trajectory=True)
 
     def _optimize_hyperparams(self, params):
-        # TODO make this working for n_actions > 1
+
         self.opt_ctr += 1
 
+        # TODO make this working for n_actions > 1
         for gp in self.gp_container:
             gp.unwrap_params(params)
-
             # computes beta and K_inv for updated hyperparams
-            gp.compute_params()
+            gp.compute_matrices()
 
-        print(params)
+        self.logger.debug("Params as given from the optimization step:")
+        self.logger.debug(np.array2string(params if type(params) == np.ndarray else params._value))
 
         # returns cost of trajectory rollout
-        cost = self.rollout(self, print=False)
+        cost = self.rollout(self, print_trajectory=False)
 
         # print progress
-        self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, cost._value[0]))
+        self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, np.array2string(
+            cost if type(cost) == np.ndarray else cost._value)))
 
         return cost
 
@@ -94,6 +97,7 @@ class RBFController(MultivariateGP, Controller):
         """
         Rescales and squashes the distribution x with sin(x)
         See Deisenroth(2010) Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
+        :param bound:
         :param mu:
         :param sigma:
         :param input_output_cov:
@@ -117,4 +121,4 @@ class RBFController(MultivariateGP, Controller):
         input_output_cov_squashed = np.diag((bound * np.exp(-sigma / 2) * np.cos(mu)).flatten())
         input_output_cov_squashed = input_output_cov @ input_output_cov_squashed
 
-        return mu_squashed, sigma_squashed, input_output_cov_squashed.T
+        return mu_squashed, sigma_squashed, input_output_cov_squashed

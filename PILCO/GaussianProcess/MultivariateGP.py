@@ -21,7 +21,6 @@ class MultivariateGP(object):
 
         self.logger = logging.getLogger(__name__)
 
-
     def fit(self, X, y):
         """
         This is essentially used to compute the posterior of the GP, given the trainings samples
@@ -44,15 +43,19 @@ class MultivariateGP(object):
         :return: mu, sigma and inv(sigma) times input_output_cov
         """
 
+        mu = np.atleast_2d(mu)
+
         state_dim = self.X.shape[1]
         target_dim = self.y.shape[1]
+
+        [gp.compute_matrices() for gp in self.gp_container]
 
         # ----------------------------------------------------------------------------------------------------
         # Helper
 
         beta = np.vstack([gp.betas.T for gp in self.gp_container]).T
         length_scales = self.get_length_scales()
-        sigma_f = self.get_sigma_fs()
+        sigma_f = self.get_sigma_fs().reshape(self.n_targets)
 
         precision_inv = np.stack([np.diag(np.exp(-l)) for l in length_scales])
         precision_inv2 = np.stack([np.diag(np.exp(-2 * l)) for l in length_scales])
@@ -74,7 +77,7 @@ class MultivariateGP(object):
         scaled_beta = np.exp(-np.sum(zeta_a * t, axis=2) / 2) * beta.T
 
         # TODO: Why the fuck is the det(B) always negative at some point
-        coefficient = np.exp(2 * sigma_f.reshape(self.n_targets)) * np.linalg.det(B) ** -.5
+        coefficient = np.exp(2 * sigma_f) * np.linalg.det(B) ** -.5
 
         mean = np.sum(scaled_beta, axis=1) * coefficient
 
@@ -82,7 +85,6 @@ class MultivariateGP(object):
         zeta_b = np.matmul(t, precision_inv)
         input_output_cov = (np.transpose(zeta_b, [0, 2, 1]) @ np.expand_dims(scaled_beta, axis=2)).reshape(
             target_dim, state_dim).T * coefficient
-        # input_output_cov = input_output_cov
 
         # ----------------------------------------------------------------------------------------------------
         # compute predictive covariance
@@ -105,8 +107,8 @@ class MultivariateGP(object):
         # compute squared mahalanobis distance
         aQ = np.matmul(diff_a, R_inv / 2)
         bQ = np.matmul(-diff_b, R_inv / 2)
-        mahalanobis_dist = np.expand_dims(np.sum(aQ * diff_a, -1), -1) + np.expand_dims(
-            np.sum(bQ * -diff_b, -1), -2) - 2 * np.einsum('...ij, ...kj->...ik', aQ, -diff_b)
+        mahalanobis_dist = np.expand_dims(np.sum(aQ * diff_a, axis=-1), axis=-1) + np.expand_dims(
+            np.sum(bQ * -diff_b, axis=-1), axis=-2) - 2 * np.einsum('...ij, ...kj->...ik', aQ, -diff_b)
 
         # compute Q matrix
         Q = np.exp(k[:, np.newaxis, :, np.newaxis] + k[np.newaxis, :, np.newaxis, :] + mahalanobis_dist)
@@ -116,8 +118,7 @@ class MultivariateGP(object):
         else:
             cov = np.einsum('ji,iljk,kl->il', beta, Q, beta)
             trace = np.hstack([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)])
-            cov = (cov - np.diag(trace)) * scaling_factor + \
-                  np.diag(np.exp(2 * sigma_f.reshape(self.n_targets)))
+            cov = (cov - np.diag(trace)) * scaling_factor + np.diag(np.exp(2 * sigma_f))
 
         cov = cov - np.matmul(mean[:, np.newaxis], mean[np.newaxis, :])
 
@@ -169,7 +170,7 @@ class MultivariateGP(object):
 
         # calculate combined Expectation of all gps
         for i in range(self.n_targets):
-            mu_out[i] = self.gp_container[i].compute_params(mu, sigma)
+            mu_out[i] = self.gp_container[i].compute_matrices(mu, sigma)
 
         # The cov og e.g. delta x is not diagonal, therefor it is necessary to
         # compute the cross-cov between each output

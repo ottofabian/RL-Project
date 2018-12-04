@@ -4,8 +4,6 @@ import autograd.numpy as np
 import gym
 import matplotlib.pyplot as plt
 import quanser_robots
-from autograd.builtins import isinstance
-from autograd.numpy.numpy_boxes import ArrayBox
 
 from PILCO.Controller.RBFController import RBFController
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
@@ -15,8 +13,8 @@ from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 class PILCO(object):
 
     def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, cost_function: callable,
-                 T_inv: np.ndarray = None, target_state: np.ndarray = None, cost_width: np.ndarray = None, squash=True,
-                 p=.5):
+                 max_episode_steps: int = None, T_inv: np.ndarray = None, target_state: np.ndarray = None,
+                 cost_width: np.ndarray = None, squash=True, p=.5):
         """
 
         :param env_name: gym env to work with
@@ -41,7 +39,8 @@ class PILCO(object):
             # use the official gym env as default
             self.env = gym.make(self.env_name)
 
-        self.env._max_episode_steps = 250
+        if max_episode_steps is not None:
+            self.env._max_episode_steps = max_episode_steps
         self.env.seed(self.seed)
         self.state_names = ["x", "sin(theta)", "cos(theta)", "x_dot", "theta_dot"]
 
@@ -126,6 +125,7 @@ class PILCO(object):
             done = False
 
             while not done and i < n_init:
+                self.env.render()
                 action = self.env.action_space.sample()
                 state, reward, done, _ = self.env.step(action)
 
@@ -200,7 +200,7 @@ class PILCO(object):
 
         return l, sigma_f, sigma_eps
 
-    def rollout(self, policy, print=False):
+    def rollout(self, policy, print_trajectory=False):
 
         # TODO select good initial state dist
         # Currently this is taken from the CartPole Problem, Deisenroth (2010)
@@ -217,8 +217,14 @@ class PILCO(object):
         # state_cov = np.cov(X[:, :self.state_dim], rowvar=False
         # --------------------------------------------------------
 
-        mu_container = []
-        sigma_container = []
+        mu_state_container = []
+        sigma_state_container = []
+
+        mu_state_container.append(state_mu)
+        sigma_state_container.append(state_cov)
+
+        mu_action_container = []
+        sigma_action_container = []
 
         for t in range(0, self.T):
             # ------------------------------------------------
@@ -229,10 +235,15 @@ class PILCO(object):
                                                                                   squash=self.squash,
                                                                                   bound=self.env.action_space.high)
 
+            mu_action_container.append(action_mu)
+            sigma_action_container.append(action_cov)
+
             # ------------------------------------------------
             # get joint dist over successor state p(x,u)
-            state_action_mu, state_action_cov = self.get_joint_dist(state_mu, state_cov, action_mu.flatten(),
-                                                                    action_cov, action_input_output_cov)
+            state_action_mu, state_action_cov, state_action_input_output_cov = self.get_joint_dist(state_mu, state_cov,
+                                                                                                   action_mu.flatten(),
+                                                                                                   action_cov,
+                                                                                                   action_input_output_cov)
 
             # ------------------------------------------------
             # compute delta and build next state dist
@@ -241,23 +252,55 @@ class PILCO(object):
                                                                                                 state_action_cov)
 
             # cross cov is times inv(s), see matlab code
-            delta_input_output_cov = state_action_cov @ delta_input_output_cov
+            delta_input_output_cov = state_action_input_output_cov @ delta_input_output_cov
 
-            # sample over dist for debugging
-            x = np.random.multivariate_normal(state_action_mu._value, state_action_cov._value, size=1000)
-            pred = []
-            self.env.reset()
-            for elem in x:
-                self.env.env.state = elem[:-1]
-                s, r, d, _ = self.env.step(np.array([elem[-1]]))
-                pred.append(s)
+            # -----------------------------------------------------------------------------------------------------------
+            # Debugging code
 
-            pred = np.array(pred)
+            # try:
+            #     state_action_mu = state_action_mu._value
+            # except Exception:
+            #     state_action_mu = state_action_mu
+            #
+            # try:
+            #     state_action_cov = state_action_cov._value
+            # except Exception:
+            #     state_action_cov = state_action_cov
 
-            # pred = self.dynamics_model.predict(x).T
+            # sample over dist
+            # x = np.random.multivariate_normal(state_action_mu, state_action_cov, size=1000)
+            if np.any(np.isnan(state_action_cov)) or np.any(np.isnan(state_action_mu)):
+                print(state_action_cov)
+                print(state_action_mu)
+                print("nan")
 
-            delta_mu = np.mean(pred, axis=0)
-            delta_cov = np.cov(pred.T)
+            x = []
+            for _ in range(100):
+                # reparametrization trick
+                x.append(np.random.randn(len(state_action_mu)) @ state_action_cov + state_action_mu)
+            x = np.array(x)
+            # # use real env for dynamics
+            # pred = []
+            # self.env.reset()
+            # for elem in x:
+            #     print(elem)
+            #     if np.any(np.isnan(elem)):
+            #         continue
+            #     self.env.env.state = elem[:-1]
+            #     s, r, d, _ = self.env.step(np.array([elem[-1]])._value)
+            #     pred.append(s)
+            #
+            # pred = np.array(pred).T
+
+            # use deterministic prediction on samples one real GP dynamics
+            pred = self.dynamics_model.predict(x)
+
+            delta_mu = np.mean(pred, axis=1)
+            diff = pred - delta_mu[:, None]
+            delta_cov = 1 / (diff - 1) * diff @ diff.T
+
+            # delta_cov = np.cov(pred)
+
             # print("-" * 50)
             # print("Difference between sampling and Moment matching:")
             # print("Mean:\n{}".format(np.mean(pred, axis=1) - delta_mu._value))
@@ -268,33 +311,34 @@ class PILCO(object):
             # ------------------------------------------------
             # compute distribution over next state
 
-            # Cov(state, delta) is subset of Cov((state, action), delta)
-            state_input_output_cov = delta_input_output_cov.T[:, :self.state_dim]
-
-            state_next_mu = state_mu + delta_mu
-            state_next_cov = state_cov + delta_cov + state_input_output_cov + state_input_output_cov.T
+            state_next_mu = delta_mu + state_mu
+            state_next_cov = delta_cov + state_cov + delta_input_output_cov + delta_input_output_cov.T
 
             # compute value of current state prediction
             r, _, _ = self.cost_function(state_next_mu, state_next_cov)
             reward = reward + self.gamma ** t * r.flatten()
 
-            mu_container.append(state_next_mu)
-            sigma_container.append(state_next_cov)
+            mu_state_container.append(state_next_mu)
+            sigma_state_container.append(state_next_cov)
 
             state_mu = state_next_mu
             state_cov = state_next_cov
 
-        if print:
-            mu_container = np.array(mu_container)
-            sigma_container = np.array(sigma_container)
+        if print_trajectory:
+
+            # plot state trajectory
+            mu_state_container = np.array(mu_state_container)
+            sigma_state_container = np.array(sigma_state_container)
 
             for i in range(len(state_mu)):
-                m = mu_container[:, i]
-                s = sigma_container[:, i, i]
+                m = mu_state_container[:, i]
+                s = sigma_state_container[:, i, i]
 
-                if isinstance(m, ArrayBox):
+                # TODO: This is stupid and bad
+                try:
                     m = m._value
-
+                except Exception:
+                    m = m
                 try:
                     s = s._value
                 except Exception:
@@ -303,6 +347,24 @@ class PILCO(object):
                 plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
                 plt.title("Trajectory prediction for {}".format(self.state_names[i]))
                 plt.show()
+
+            # plot action trajectory
+            mu_action_container = np.array(mu_action_container)
+            sigma_action_container = np.array(sigma_action_container)
+
+            # TODO: This is stupid and bad
+            try:
+                m = mu_action_container._value
+            except Exception:
+                m = mu_action_container
+            try:
+                s = sigma_action_container._value
+            except Exception:
+                s = sigma_action_container
+
+            plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
+            plt.title("Trajectory prediction for actions")
+            plt.show()
 
         return reward
 
@@ -323,11 +385,11 @@ class PILCO(object):
         # Has shape
         # Σxt Σxt,ut
         # (Σxt,ut).T Σut
-        top = np.vstack((state_cov, input_output_cov))
-        bottom = np.vstack((input_output_cov.T, action_cov))
-        joint_cov = np.hstack((top, bottom))
+        top = np.hstack((state_cov, input_output_cov))
+        bottom = np.hstack((input_output_cov.T, action_cov))
+        joint_cov = np.vstack((top, bottom))
 
-        return joint_mu, joint_cov
+        return joint_mu, joint_cov, top
 
     def learn_policy(self, mu=0, sigma=0.1 ** 2, target_noise=0.1):
 
