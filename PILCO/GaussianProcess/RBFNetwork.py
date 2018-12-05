@@ -36,13 +36,10 @@ class RBFNetwork(GaussianProcess):
         return params
 
     def compute_matrices(self):
-
-        params = self._wrap_kernel_hyperparams()
-        K = self.kernel(params, self.X)[0]
-
-        # Interpreting the RBF network as deterministic GP, the inverse of K has to be eliminated
-        self.K_inv = np.zeros(K.shape)
-        self.betas = K @ self.y
+        # Interpreting the RBF network as deterministic GP, the inverse of K and is not relevant for the computation,
+        # therefore it is set to 0
+        super(RBFNetwork, self).compute_matrices()
+        self.K_inv = np.zeros(self.K.shape)
 
     def unwrap_params(self, params):
 

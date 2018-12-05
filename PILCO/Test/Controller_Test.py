@@ -26,7 +26,7 @@ def test_rbf():
     X0 = np.random.rand(100, state_dim)
     A = np.random.rand(state_dim, n_actions)
     Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(100, n_actions) - 0.5)  # Just something smooth
-    length_scales = np.ones((state_dim,))
+    length_scales = np.full((state_dim,), 5)
 
     rbf = RBFController(n_actions=n_actions, n_features=n_features, rollout=None, length_scales=length_scales)
     rbf.fit(X0, Y0)
@@ -36,10 +36,10 @@ def test_rbf():
     s = np.random.rand(state_dim, state_dim)
     s = s.dot(s.T)  # Make s positive semidefinite
 
-    M, S, V = compute_action_wrapper(rbf, m, s)
+    M, S, V = rbf.choose_action(m, s, False)
 
     # convert data to the struct expected by the MATLAB implementation
-    length_scales = rbf.get_length_scales()
+    length_scales = length_scales.reshape(n_actions, state_dim)
     sigma_f = rbf.get_sigma_fs()
     sigma_eps = rbf.get_sigma_eps()
 
@@ -55,7 +55,7 @@ def test_rbf():
     gpmodel.targets = Y0
 
     # Call gp0 in octave
-    M_mat, S_mat, V_mat = octave.gp2(gpmodel, m.T, s, nout=3)
+    M_mat, S_mat, V_mat = octave.gp2_debug(gpmodel, m.T, s, nout=3)
     M_mat = np.asarray([M_mat])
     S_mat = np.atleast_2d(S_mat)
     V_mat = np.asarray(V_mat)

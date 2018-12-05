@@ -101,7 +101,7 @@ class GaussianProcess(object):
     def predict(self, x):
         # K_trans = self.kernel(self._wrap_kernel_hyperparams(), x)
         # y_mean = K_trans.dot(self.betas)
-        return (np.mean(self.y, axis=0) + self.betas.T @ self.kernel(self._wrap_kernel_hyperparams(), x, self.X)[
+        return (np.mean(self.y, axis=0) + self.betas @ self.kernel(self._wrap_kernel_hyperparams(), x, self.X)[
             0]).flatten()
 
     def log_marginal_likelihood(self, hyp):
@@ -120,9 +120,13 @@ class GaussianProcess(object):
         self.K = self.kernel(params, self.X)[0]
 
         # learned variance from evidence maximization
-        noise = np.identity(self.X.shape[0]) * self.sigma_eps
-        self.K_inv = np.linalg.solve(self.K + noise, np.identity(self.K.shape[0]))
-        self.betas = self.K @ self.y
+
+        # noise is already added with WhiteNoiseKernel
+        # noise = np.identity(self.X.shape[0]) * self.sigma_eps
+        # self.K_inv = np.linalg.solve(self.K + noise, np.identity(self.K.shape[0]))
+
+        self.K_inv = np.linalg.solve(self.K, np.identity(self.K.shape[0]))
+        self.betas = np.linalg.solve(self.K, self.y).T
 
         # -------------------------------
         # TODO: Prob better, but autograd has no solve_triangular

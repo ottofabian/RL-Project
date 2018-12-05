@@ -53,13 +53,14 @@ class MultivariateGP(object):
         # ----------------------------------------------------------------------------------------------------
         # Helper
 
-        beta = np.vstack([gp.betas.T for gp in self.gp_container]).T
+        beta = np.vstack([gp.betas for gp in self.gp_container]).T
         length_scales = self.get_length_scales()
         sigma_f = self.get_sigma_fs().reshape(self.n_targets)
 
         precision_inv = np.stack([np.diag(np.exp(-l)) for l in length_scales])
         precision_inv2 = np.stack([np.diag(np.exp(-2 * l)) for l in length_scales])
 
+        # centralized inputs
         diff = self.X - mu
         diff_scaled = np.expand_dims(diff, axis=0) / np.expand_dims(np.exp(2 * length_scales), axis=1)
 
@@ -86,7 +87,7 @@ class MultivariateGP(object):
             target_dim, state_dim).T * coefficient
 
         # ----------------------------------------------------------------------------------------------------
-        # compute predictive covariance
+        # compute predictive covariance, non-central moments
 
         k = 2 * sigma_f.reshape(target_dim, 1) - np.sum(zeta_a ** 2, axis=2) * .5
 
@@ -113,12 +114,14 @@ class MultivariateGP(object):
         Q = np.exp(k[:, np.newaxis, :, np.newaxis] + k[np.newaxis, :, np.newaxis, :] + mahalanobis_dist)
 
         if self.is_policy:
+            # noise for numerical reasons
             cov = scaling_factor * np.einsum('ji,iljk,kl->il', beta, Q, beta) + 1e-6 * np.identity(target_dim)
         else:
             cov = np.einsum('ji,iljk,kl->il', beta, Q, beta)
             trace = np.hstack([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)])
             cov = (cov - np.diag(trace)) * scaling_factor + np.diag(np.exp(2 * sigma_f))
 
+        # Centralize moments
         cov = cov - mean[:, np.newaxis] @ mean[np.newaxis, :]
 
         return mean, cov, input_output_cov

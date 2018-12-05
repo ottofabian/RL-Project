@@ -125,7 +125,7 @@ class PILCO(object):
             done = False
 
             while not done and i < n_init:
-                # self.env.render()
+                self.env.render()
                 action = self.env.action_space.sample()
                 state, reward, done, _ = self.env.step(action)
 
@@ -272,16 +272,16 @@ class PILCO(object):
 
             # sample over dist
             # x = np.random.multivariate_normal(state_action_mu, state_action_cov, size=1000)
-            if np.any(np.isnan(state_action_cov)) or np.any(np.isnan(state_action_mu)):
-                print(state_action_cov)
-                print(state_action_mu)
-                print("nan")
+            # if np.any(np.isnan(state_action_cov)) or np.any(np.isnan(state_action_mu)):
+            #     print(state_action_cov)
+            #     print(state_action_mu)
+            #     print("nan")
 
-            x = []
-            for _ in range(100):
-                # reparametrization trick
-                x.append(np.random.randn(len(state_action_mu)) @ state_action_cov + state_action_mu)
-            x = np.array(x)
+            # x = []
+            # for _ in range(100):
+            #     # reparametrization trick
+            #     x.append(np.random.randn(len(state_action_mu)) @ state_action_cov + state_action_mu)
+            # x = np.array(x)
             # # use real env for dynamics
             # pred = []
             # self.env.reset()
@@ -296,11 +296,11 @@ class PILCO(object):
             # pred = np.array(pred).T
 
             # use deterministic prediction on samples one real GP dynamics
-            pred = self.dynamics_model.predict(x)
+            # pred = self.dynamics_model.predict(x)
 
-            delta_mu = np.mean(pred, axis=1)
-            diff = pred - delta_mu[:, None]
-            delta_cov = 1 / (diff - 1) * diff @ diff.T
+            # delta_mu = np.mean(pred, axis=1)
+            # diff = pred - delta_mu[:, None]
+            # delta_cov = 1 / (diff - 1) * diff @ diff.T
 
             # delta_cov = np.cov(pred)
 
