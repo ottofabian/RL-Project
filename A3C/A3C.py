@@ -87,16 +87,16 @@ class A3C(object):
         #     w.join()
 
         p = Process(target=test, args=(
-        self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed, self.T, 10000,
-        self.is_discrete, self.global_reward))
+            self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed, self.T, 10000,
+            self.is_discrete, self.global_reward))
         p.start()
         self.worker_pool.append(p)
 
         for rank in range(0, self.n_worker):
             p = Process(target=train, args=(
-            self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed, self.T, self.lr,
-            20, 200, .99, 1, .0001, .5, None, True, self.is_discrete,
-            self.global_reward))
+                self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed, self.T, self.lr,
+                20, 200, .99, 1, .0001, .5, None, True, self.is_discrete,
+                self.global_reward))
             p.start()
             self.worker_pool.append(p)
 

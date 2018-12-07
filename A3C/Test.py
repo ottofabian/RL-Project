@@ -2,6 +2,7 @@ import time
 
 import gym
 import numpy as np
+import math
 import ptan
 import torch
 from tensorboardX import SummaryWriter
@@ -134,7 +135,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
     state = torch.from_numpy(np.array(env.reset()))
 
     t = 0
-    iter = 0
+    iter_ = 0
 
     loss_container_critic = []
     loss_container_actor = []
@@ -154,161 +155,161 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         states = []
 
         # reward_sum = 0
-        with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
+        # with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
 
-            for step in range(n_steps):
-                t += 1
+        for step in range(n_steps):
+            t += 1
 
-                value = model_critic(Variable(state))
-                mu, sigma = model_actor(Variable(state))
+            value = model_critic(Variable(state))
+            mu, sigma = model_actor(Variable(state))
 
-                states.append(state)
+            states.append(state)
 
-                dist = torch.distributions.Normal(mu, sigma)
+            dist = torch.distributions.Normal(mu, sigma)
 
-                # ------------------------------------------
-                # # select action
-                # eps_v = Variable(torch.randn(mu.size()))
-                # action = (mu + sigma.sqrt() * eps_v).data
-                action = dist.sample().detach()
+            # ------------------------------------------
+            # # select action
+            eps_v = Variable(torch.randn(mu.size()))
+            action = (mu + sigma.sqrt() * eps_v).data
+            # action = dist.sample().detach()
 
-                # ------------------------------------------
-                # Compute statistics for loss
-                # exp_ = (-1 * (Variable(action) - mu).pow(2) / (2 * sigma)).exp()
-                # scale = 1 / (2 * sigma * math.pi).sqrt()
-                # log_prob = (exp_ * scale).log()
-                log_prob = dist.log_prob(action)
+            # ------------------------------------------
+            # Compute statistics for loss
+            exp_ = (-1 * (Variable(action) - mu).pow(2) / (2 * sigma)).exp()
+            scale = 1 / (2 * sigma * math.pi).sqrt()
+            log_prob = (exp_ * scale).log()
+            # log_prob = dist.log_prob(action)
 
-                # entropy = -0.5 * ((sigma + 2 * math.pi).log() + 1.)
-                entropy = dist.entropy()
+            # entropy = -0.5 * ((sigma + 2 * math.pi).log() + 1.)
+            entropy = dist.entropy()
 
-                # make selected move
-                state, reward, done, _ = env.step(action.numpy())
+            # make selected move
+            state, reward, done, _ = env.step(action.numpy())
 
-                done = done or t >= t_max
+            done = done or t >= t_max
 
-                with T.get_lock():
-                    T.value += 1
+            with T.get_lock():
+                T.value += 1
 
-                reward = min(max(-1, reward), 1)
+            reward = min(max(-1, reward), 1)
 
-                values.append(value)
-                log_probs.append(log_prob)
-                rewards.append(reward)
-                entropies.append(entropy)
+            values.append(value)
+            log_probs.append(log_prob)
+            rewards.append(reward)
+            entropies.append(entropy)
 
-                # reset env to beginning if done
-                if done:
-                    t = 0
-                    state = env.reset()
+            # reset env to beginning if done
+            if done:
+                t = 0
+                state = env.reset()
 
-                state = torch.from_numpy(np.array(state))
+            state = torch.from_numpy(np.array(state))
 
-                # end if terminal state or max episodes are reached
-                if done:
-                    break
+            # end if terminal state or max episodes are reached
+            if done:
+                break
 
-            # # TODO: Implement this correctly
-            # with global_reward.get_lock():
-            #     if global_reward.value == 0:
-            #         global_reward.value = sum(rewards)
-            #     else:
-            #         global_reward.value = global_reward.value * 0.99 + sum(rewards) * 0.01
+        # # TODO: Implement this correctly
+        # with global_reward.get_lock():
+        #     if global_reward.value == 0:
+        #         global_reward.value = sum(rewards)
+        #     else:
+        #         global_reward.value = global_reward.value * 0.99 + sum(rewards) * 0.01
 
-            R = torch.zeros(1, 1)
+        R = torch.zeros(1, 1)
 
-            # if non terminal state is present set R to be value of current state
-            if not done:
-                R = model_critic(Variable(state)).data
+        # if non terminal state is present set R to be value of current state
+        if not done:
+            R = model_critic(Variable(state)).data
 
-            values.append(Variable(R))
-            # compute loss and backprop
-            actor_loss = 0
-            critic_loss = 0
-            gae = torch.zeros(1, 1)
-            R = Variable(R)
+        values.append(Variable(R))
+        # compute loss and backprop
+        actor_loss = 0
+        critic_loss = 0
+        gae = torch.zeros(1, 1)
+        R = Variable(R)
 
-            # iterate over rewards from most recent to the starting one
-            for i in reversed(range(len(rewards))):
-                R = rewards[i] + R * gamma
-                advantage = R - values[i]
-                critic_loss = critic_loss + 0.5 * advantage.pow(2)
-                if use_gae:
-                    # Generalized Advantage Estimation
-                    delta_t = rewards[i] + gamma * values[i + 1].data - values[i].data
-                    gae = gae * gamma * tau + delta_t
-                    actor_loss = actor_loss - log_probs[i] * Variable(gae) - beta * entropies[i]
-                else:
-                    actor_loss = actor_loss - log_probs[i] * advantage.data - beta * entropies[i]
+        # iterate over rewards from most recent to the starting one
+        for i in reversed(range(len(rewards))):
+            R = rewards[i] + R * gamma
+            advantage = R - values[i]
+            critic_loss = critic_loss + 0.5 * advantage.pow(2)
+            if use_gae:
+                # Generalized Advantage Estimation
+                delta_t = rewards[i] + gamma * values[i + 1].data - values[i].data
+                gae = gae * gamma * tau + delta_t
+                actor_loss = actor_loss - log_probs[i] * Variable(gae) - beta * entropies[i]
+            else:
+                actor_loss = actor_loss - log_probs[i] * advantage.data - beta * entropies[i]
 
-            # zero grads to avoid computation issues in the next step
-            optimizer_critic.zero_grad()
-            optimizer_actor.zero_grad()
+        # zero grads to avoid computation issues in the next step
+        optimizer_critic.zero_grad()
+        optimizer_actor.zero_grad()
 
-            critic_loss.backward()
-            actor_loss.backward()
+        critic_loss.backward()
+        actor_loss.backward()
 
-            # compute combined loss of actor_loss and critic_loss
-            # avoid overfitting on value loss by scaling it down
-            # (actor_loss + value_loss_coef * critic_loss).backward()
-            # combined_loss.mean().backward()
-            # combined_loss.backward()
+        # compute combined loss of actor_loss and critic_loss
+        # avoid overfitting on value loss by scaling it down
+        # (actor_loss + value_loss_coef * critic_loss).backward()
+        # combined_loss.mean().backward()
+        # combined_loss.backward()
 
-            torch.nn.utils.clip_grad_norm_(model_critic.parameters(), 40)
-            torch.nn.utils.clip_grad_norm_(model_actor.parameters(), 40)
+        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), 40)
+        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), 40)
 
-            sync_grads(model_critic, shared_model_critic)
-            sync_grads(model_actor, shared_model_actor)
-            optimizer_critic.step()
-            optimizer_actor.step()
+        sync_grads(model_critic, shared_model_critic)
+        sync_grads(model_actor, shared_model_actor)
+        optimizer_critic.step()
+        optimizer_actor.step()
 
-            # loss_container_critic.append(critic_loss.data)
-            # loss_container_actor.append(actor_loss.data)
+        # loss_container_critic.append(critic_loss.data)
+        # loss_container_actor.append(actor_loss.data)
 
-            iter += 1
+        iter_ += 1
 
-            grads_critic = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                           for p in model_critic.parameters()
-                                           if p.grad is not None])
+        grads_critic = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                       for p in model_critic.parameters()
+                                       if p.grad is not None])
 
-            grads_actor = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                          for p in model_actor.parameters()
-                                          if p.grad is not None])
+        grads_actor = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                      for p in model_actor.parameters()
+                                      if p.grad is not None])
 
-            tb_tracker.track("values", np.mean([v.data for v in values]), iter)
-            tb_tracker.track("batch_rewards", np.mean(np.array(rewards)), iter)
-            tb_tracker.track("loss_policy", actor_loss, iter)
-            tb_tracker.track("loss_value", critic_loss, iter)
-            tb_tracker.track("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), iter)
-            tb_tracker.track("grad_max_actor", np.max(np.abs(grads_actor)), iter)
-            tb_tracker.track("grad_var_actor", np.var(grads_actor), iter)
-            tb_tracker.track("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), iter)
-            tb_tracker.track("grad_max_critic", np.max(np.abs(grads_critic)), iter)
-            tb_tracker.track("grad_var_critic", np.var(grads_critic), iter)
+        writer.add_scalar("values", np.mean([v.data for v in values]), iter_)
+        writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
+        writer.add_scalar("loss_policy", actor_loss, iter_)
+        writer.add_scalar("loss_value", critic_loss, iter_)
+        writer.add_scalar("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), iter_)
+        writer.add_scalar("grad_max_actor", np.max(np.abs(grads_actor)), iter_)
+        writer.add_scalar("grad_var_actor", np.var(grads_actor), iter_)
+        writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), iter_)
+        writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), iter_)
+        writer.add_scalar("grad_var_critic", np.var(grads_critic), iter_)
 
-            # if iter % 50 == 0:
-            #     loss_mean_actor.append(np.mean(np.array(loss_container_actor[-50])))
-            #     loss_mean_critic.append(np.mean(np.array(loss_container_critic[-50])))
-            #
-            #     plt.figure(0)
-            #     plt.plot(loss_container_critic)
-            #     plt.title("Critic Loss")
-            #
-            #     # plt.plot(np.arange(50, len(loss_container_critic)+1, 50), loss_mean_critic)
-            #     # plt.title("Critic Loss Mean over 50")
-            #
-            #     plt.figure(1)
-            #     plt.plot(loss_container_critic)
-            #     plt.title("Actor Loss")
-            #
-            #     # plt.plot(np.arange(50, len(loss_container_actor)+1, 50), loss_mean_actor)
-            #     # plt.title(, "Actor Loss Mean over 50")
-            #
-            #     plt.show()
+        # if iter % 50 == 0:
+        #     loss_mean_actor.append(np.mean(np.array(loss_container_actor[-50])))
+        #     loss_mean_critic.append(np.mean(np.array(loss_container_critic[-50])))
+        #
+        #     plt.figure(0)
+        #     plt.plot(loss_container_critic)
+        #     plt.title("Critic Loss")
+        #
+        #     # plt.plot(np.arange(50, len(loss_container_critic)+1, 50), loss_mean_critic)
+        #     # plt.title("Critic Loss Mean over 50")
+        #
+        #     plt.figure(1)
+        #     plt.plot(loss_container_critic)
+        #     plt.title("Actor Loss")
+        #
+        #     # plt.plot(np.arange(50, len(loss_container_actor)+1, 50), loss_mean_actor)
+        #     # plt.title(, "Actor Loss Mean over 50")
+        #
+        #     plt.show()
 
-            # model_critic.load_state_dict(shared_model_critic.state_dict())
-            #
-            # print("Value before training:")
-            # print([v.data for v in values])
-            # print("Value after training:")
-            # print(model_critic(torch.stack(states)))
+        # model_critic.load_state_dict(shared_model_critic.state_dict())
+        #
+        # print("Value before training:")
+        # print([v.data for v in values])
+        # print("Value after training:")
+        # print(model_critic(torch.stack(states)))

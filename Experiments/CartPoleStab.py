@@ -2,6 +2,7 @@ import logging
 
 import quanser_robots
 
+from A3C.A3C import A3C
 from Experiments.util.ColorLogger import enable_color_logging
 from PILCO.CostFunctions.CostFunctions import cartpolebase_costfunc
 from PILCO.PILCO import PILCO
@@ -43,13 +44,13 @@ logging.info('Start Experiment')
 # a2c.train()
 # a3c = A3C(n_worker=3, env_name='CartpoleStabShort-v0', lr=0.0001, is_discrete=False, seed=seed,
 #           optimizer_name='rmsprop')
-# a3c = A3C(n_worker=1, env_name='Pendulum-v0', lr=0.0001, is_discrete=False, seed=seed, optimizer_name='rmsprop')
-# a3c.run()
+a3c = A3C(n_worker=1, env_name='Pendulum-v0', lr=0.0001, is_discrete=False, seed=seed, optimizer_name='rmsprop')
+a3c.run()
 
 # n_features in paper was 100
 # pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=100, Horizon=20,
 #               cost_function=cartpolebase_costfunc, target_state=[0, 0, -1, 0, 0], max_episode_steps=150)
 # pilco.run(n_samples=100)
-pilco = PILCO(env_name='CartpoleSwingShort-v0', seed=seed, n_features=10, Horizon=20,
-              cost_function=cartpolebase_costfunc, target_state=[0, 0, -1, 0, 0], max_episode_steps=40)
-pilco.run(40)
+# pilco = PILCO(env_name='CartpoleSwingShort-v0', seed=seed, n_features=10, Horizon=20,
+#               cost_function=cartpolebase_costfunc, target_state=[0, 0, -1, 0, 0], max_episode_steps=40)
+# pilco.run(40)
