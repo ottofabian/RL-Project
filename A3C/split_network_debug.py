@@ -1,4 +1,5 @@
 import math
+import shutil
 import time
 
 import gym
@@ -12,6 +13,7 @@ from torch.optim import Optimizer
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
 from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
+from A3C.Worker import save_checkpoint
 
 
 def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
@@ -38,7 +40,8 @@ def normal(x, mu, sigma_sq):
 
 
 def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork, seed: int,
-         T: Value, t_max: int = 100000, is_discrete: bool = False, global_reward: Value = None):
+         T: Value, t_max: int = 100000, optimizer_actor: Optimizer = None,
+         optimizer_critic: Optimizer = None, is_discrete: bool = False, global_reward: Value = None):
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/_test.py
@@ -106,17 +109,29 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
                                                                                             rewards.mean(),
                                                                                             eps_len.mean(),
                                                                                             global_reward.value))
-        if 10000 % T.value == 0:
-            torch.save(model_actor, "./checkpoints/actor_T={}_global={}".format(T.value, global_reward.value))
+
+        save_checkpoint({
+            'epoch': T.value,
+            'state_dict': shared_model_actor.state_dict(),
+            'global_reward': global_reward.value,
+            'optimizer': optimizer_actor.state_dict() if optimizer_actor is not None else None,
+        }, filename="actor_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
+
+        save_checkpoint({
+            'epoch': T.value,
+            'state_dict': shared_model_critic.state_dict(),
+            'global_reward': global_reward.value,
+            'optimizer': optimizer_critic.state_dict() if optimizer_critic is not None else None,
+        }, filename="actor_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
 
         # delay _test run for 10s to give the network some time to train
         time.sleep(10)
 
 
 def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
-          seed: int, T: Value, lr: float = 1e-4, n_steps: int = 0, t_max: int = 100000, gamma: float = .99,
-          tau: float = 1, beta: float = .01, value_loss_coef: float = .5, optimizer: Optimizer = None,
-          use_gae: bool = True, is_discrete: bool = False, global_reward=None):
+          seed: int, T: Value, n_steps: int = 0, t_max: int = 100000, gamma: float = .99,
+          tau: float = 1, beta: float = .01, optimizer_actor: Optimizer = None,
+          optimizer_critic: Optimizer = None, use_gae: bool = True, is_discrete: bool = False, global_reward=None):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
@@ -133,9 +148,10 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
     model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
 
     # if no shared optimizer is provided use individual one
-    if optimizer is None:
-        optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=0.001)
+    if optimizer_actor is None:
         optimizer_actor = torch.optim.RMSprop(shared_model_actor.parameters(), lr=0.0001)
+    if optimizer_critic is None:
+        optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=0.001)
         # optimizer = torch.optim.Adam(global_model.parameters(), lr=lr)
 
     model_actor.train()

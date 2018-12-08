@@ -1,5 +1,6 @@
 import logging
 import math
+import shutil
 import time
 
 import gym
@@ -15,6 +16,7 @@ from torch.multiprocessing import Value, Process
 from torch.optim import Optimizer
 
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
+from Experiments.util.model_save import save_checkpoint
 
 pi = Variable(torch.FloatTensor([math.pi]))
 
@@ -132,7 +134,7 @@ class Worker(Process):
         # init local NN instance for worker thread
         model = ActorCriticNetwork(n_inputs=self.env.observation_space.shape[0],
                                    action_space=self.env.action_space,
-                                   n_hidden=200)
+                                   n_hidden=512)
         model.train()
 
         writer = SummaryWriter()
@@ -167,6 +169,7 @@ class Worker(Process):
 
                 # ------------------------------------------
                 # select action
+                # reparam trick
                 eps = Variable(torch.randn(mu.size()))
                 action = (mu + sigma.sqrt() * eps).data
                 # action = dist.rsample().detach()
@@ -192,7 +195,8 @@ class Worker(Process):
                 with self.T.get_lock():
                     self.T.value += 1
 
-                reward = min(max(-1, reward), 1)
+                # TODO evaluate if this supports the problem
+                # reward = min(max(-1, reward), 1)
 
                 values.append(value)
                 log_probs.append(log_prob)
@@ -317,7 +321,7 @@ class Worker(Process):
         # get an instance of the current global model state
         model = ActorCriticNetwork(n_inputs=self.env.observation_space.shape[0],
                                    action_space=self.env.action_space,
-                                   n_hidden=200)
+                                   n_hidden=512)
         model.eval()
 
         state = torch.from_numpy(np.array(self.env.reset()))
@@ -369,9 +373,13 @@ class Worker(Process):
                                                                                                 rewards.mean(),
                                                                                                 eps_len.mean(),
                                                                                                 self.global_reward.value))
-            if 1000 % self.T.value == 0:
-                torch.save(model, "./checkpoints/actor_T={}_global={}".format(self.T.value,
-                                                                              self.global_reward.value))
+            # if 1000 % self.T.value == 0:
+            save_checkpoint({
+                'epoch': self.T.value,
+                'state_dict': model.state_dict(),
+                'global_reward': self.global_reward.value,
+                'optimizer': self.optimizer.state_dict() if self.optimizer is not None else None,
+            }, filename="combined_T-{}_global-{}.pth.tar".format(self.T.value, self.global_reward.value))
 
             # delay _test run for 10s to give the network some time to train
             time.sleep(10)

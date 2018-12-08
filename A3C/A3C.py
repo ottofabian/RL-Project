@@ -60,7 +60,7 @@ class A3C(object):
 
         shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
                                           action_space=env.action_space,
-                                          n_hidden=200)
+                                          n_hidden=512)
 
         if self.optimizer_name == 'rmsprop':
             optimizer = SharedRMSProp(shared_model.parameters(), lr=self.lr)
@@ -74,8 +74,8 @@ class A3C(object):
 
         # start the test worker which is visualized to see how the current progress is
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, shared_model=shared_model,
-                   T=self.T, seed=self.seed, lr=0, n_steps=0, t_max=10000, gamma=0, tau=0,
-                   beta=0, value_loss_coef=0, optimizer=None, is_train=False, use_gae=True,
+                   T=self.T, seed=self.seed, lr=0, n_steps=0, t_max=5000, gamma=0, tau=0,
+                   beta=0, value_loss_coef=0, optimizer=optimizer, is_train=False, use_gae=True,
                    is_discrete=self.is_discrete, global_reward=self.global_reward)
         w.start()
         self.worker_pool.append(w)
@@ -84,7 +84,7 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, shared_model=shared_model, T=self.T,
-                       seed=self.seed, lr=self.lr, n_steps=10, t_max=5000, gamma=.9, tau=1,
+                       seed=self.seed, lr=0.001, n_steps=10, t_max=5000, gamma=.9, tau=1,
                        beta=.01, value_loss_coef=.5, optimizer=optimizer, is_train=True,
                        use_gae=False, is_discrete=self.is_discrete,
                        global_reward=self.global_reward)
@@ -109,17 +109,30 @@ class A3C(object):
         shared_model_critic.share_memory()
         shared_model_actor.share_memory()
 
+        if self.optimizer_name == 'rmsprop':
+            optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
+            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.001)
+            optimizer_actor.share_memory()
+            optimizer_critic.share_memory()
+        elif self.optimizer_name == 'adam':
+            optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=0.0001)
+            optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=0.001)
+            optimizer_actor.share_memory()
+            optimizer_critic.share_memory()
+        else:
+            optimizer_actor = None
+            optimizer_critic = None
+
         p = Process(target=test, args=(
             self.env_name, self.n_worker, shared_model_actor, shared_model_critic,
-            self.seed, self.T, 5000,
-            self.is_discrete, self.global_reward))
+            self.seed, self.T, 5000, optimizer_actor, optimizer_critic, self.is_discrete, self.global_reward))
         p.start()
         self.worker_pool.append(p)
 
         for rank in range(0, self.n_worker):
             p = Process(target=train, args=(
-                self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed, self.T, self.lr,
-                10, 5000, .9, 1, .01, .5, None, True, self.is_discrete,
+                self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed,
+                self.T, 10, 5000, .9, 1, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
                 self.global_reward))
             p.start()
             self.worker_pool.append(p)

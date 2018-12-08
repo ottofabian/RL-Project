@@ -100,7 +100,7 @@ class ActorCriticNetwork(torch.nn.Module):
 
         x = F.relu(self.input(inputs.float()))
         x = F.relu(self.hidden_1(x))
-        x = F.relu(self.hidden_2(x))
+        # x = F.relu(self.hidden_2(x))
         # x = F.relu(self.hidden_3(x))
 
         mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(x))

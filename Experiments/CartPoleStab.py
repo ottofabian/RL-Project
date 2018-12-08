@@ -43,8 +43,8 @@ logging.info('Start Experiment')
 # a3c = A3C(n_worker=3, env_name='CartpoleStabShort-v0', lr=0.0001, is_discrete=False, seed=seed,
 #           optimizer_name='rmsprop')
 a3c = A3C(n_worker=1, env_name='CartpoleStabShort-v0', is_discrete=False, seed=seed, optimizer_name='rmsprop')
-# a3c.run()
-a3c.run_debug()
+a3c.run()
+# a3c.run_debug()
 
 # n_features in paper was 100
 # pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=100, Horizon=20,
