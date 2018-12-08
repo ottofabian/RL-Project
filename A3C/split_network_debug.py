@@ -1,9 +1,8 @@
+import math
 import time
 
 import gym
 import numpy as np
-import math
-import ptan
 import torch
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable

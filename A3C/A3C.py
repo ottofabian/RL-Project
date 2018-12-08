@@ -5,7 +5,7 @@ from torch.multiprocessing import Value, Lock, Process
 
 from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
-from A3C.Test import test, train
+from A3C.split_network_debug import test, train
 
 
 class A3C(object):

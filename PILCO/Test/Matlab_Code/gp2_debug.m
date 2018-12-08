@@ -37,7 +37,7 @@
 % # Compute predictive covariance matrix, non - central moments
 % # Centralize moments
 
-function[K, iK, beta] = gp2_debug(gpmodel, m, s)
+function[B, T, c] = gp2(gpmodel, m, s)
 %% Code
 persistent iK oldX oldIn oldOut beta oldn;
 D = size(gpmodel.inputs, 2);    % number of examples and dimension of inputs

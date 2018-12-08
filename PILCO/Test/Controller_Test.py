@@ -37,6 +37,8 @@ def test_rbf():
     s = s.dot(s.T)  # Make s positive semidefinite
 
     M, S, V = rbf.choose_action(m, s, False)
+    # V is already multiplied with S, have to revert that to run positive test
+    V = np.linalg.solve(s, np.eye(s.shape[0])) @ V
 
     # convert data to the struct expected by the MATLAB implementation
     length_scales = length_scales.reshape(n_actions, state_dim)
@@ -55,7 +57,7 @@ def test_rbf():
     gpmodel.targets = Y0
 
     # Call gp0 in octave
-    M_mat, S_mat, V_mat = octave.gp2_debug(gpmodel, m.T, s, nout=3)
+    M_mat, S_mat, V_mat = octave.gp2(gpmodel, m.T, s, nout=3)
     M_mat = np.asarray([M_mat])
     S_mat = np.atleast_2d(S_mat)
     V_mat = np.asarray(V_mat)
@@ -63,9 +65,9 @@ def test_rbf():
     assert M.shape == M_mat.T.shape
     assert S.shape == S_mat.shape
     assert V.shape == V_mat.shape
-    np.testing.assert_allclose(M, M_mat.T, rtol=1e-4)
-    np.testing.assert_allclose(S, S_mat, rtol=1e-4)
-    np.testing.assert_allclose(V, V_mat, rtol=1e-4)
+    np.testing.assert_allclose(M, M_mat.T, rtol=1e-3)
+    np.testing.assert_allclose(S, S_mat, rtol=1e-3)
+    np.testing.assert_allclose(V, V_mat, rtol=1e-3)
 
 
 def test_squash():

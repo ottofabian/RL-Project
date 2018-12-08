@@ -70,26 +70,27 @@ class MultivariateGP(object):
         # The precision_inv cancels out later on
         zeta_a = diff @ precision_inv
 
-        B = precision_inv @ sigma @ precision_inv + np.identity(state_dim)
+        self.B = precision_inv @ sigma @ precision_inv + np.identity(state_dim)
 
-        # B is symmetric, so the T is not really necessary.
-        t = np.stack([np.linalg.solve(B[i].T, zeta_a[i].T).T for i in range(target_dim)])
+        # t = zeta_a / B
+        # B[i] is symmetric, so B[i].T=B[i]
+        self.t = np.stack([np.linalg.solve(self.B[i], zeta_a[i].T).T for i in range(target_dim)])
 
-        scaled_beta = np.exp(-np.sum(zeta_a * t, axis=2) / 2) * beta.T
+        scaled_beta = np.exp(-.5 * np.sum(zeta_a * self.t, axis=2)) * beta.T
 
-        coefficient = np.exp(2 * sigma_f) * np.linalg.det(B) ** -.5
+        self.coefficient = np.exp(2 * sigma_f) * np.linalg.det(self.B) ** -.5
 
-        mean = np.sum(scaled_beta, axis=1) * coefficient
+        mean = np.sum(scaled_beta, axis=1) * self.coefficient
 
         # compute cross cov between input and output times inv(S)
-        zeta_b = t @ precision_inv
+        zeta_b = self.t @ precision_inv
         input_output_cov = (np.transpose(zeta_b, [0, 2, 1]) @ np.expand_dims(scaled_beta, axis=2)).reshape(
-            target_dim, state_dim).T * coefficient
+            target_dim, state_dim).T * self.coefficient
 
         # ----------------------------------------------------------------------------------------------------
         # compute predictive covariance, non-central moments
 
-        k = 2 * sigma_f.reshape(target_dim, 1) - np.sum(zeta_a ** 2, axis=2) * .5
+        k = 2 * sigma_f.reshape(target_dim, 1) - .5 * np.sum(zeta_a ** 2, axis=2)
 
         diff_a = np.repeat(diff_scaled[:, np.newaxis, :, :], target_dim, axis=1)
         diff_b = -np.repeat(diff_scaled[np.newaxis, :, :, :], target_dim, axis=0)
