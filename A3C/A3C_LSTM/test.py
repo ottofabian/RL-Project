@@ -56,13 +56,14 @@ def test(rank, args, shared_model, T, global_reward):
                     _, mu, _, (hx, cx) = model((state, (hx, cx)))
 
                 action = mu
-                print(action)
+                if i == 0:
+                    print(action)
 
                 state, reward, done, _ = env.step(action.numpy()[0])
                 done = done or episode_length[i] >= args.t_max
                 reward_sum[i] += reward
 
-                state = torch.from_numpy(np.array(state).flatten())
+                state = torch.from_numpy(np.array(state)).view(1, env.observation_space.shape[0])
 
         print(
             "Total training time: {} -- T={}, FPS={:.0f} -- "

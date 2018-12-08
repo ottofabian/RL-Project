@@ -13,28 +13,26 @@ def init_weights(m):
 
 
 class ActorCriticNetwork(torch.nn.Module):
-    def __init__(self, n_inputs, action_space, is_discrete=False):
+    def __init__(self, n_inputs, action_space, n_hidden):
         super(ActorCriticNetwork, self).__init__()
 
-        self.is_discrete = is_discrete
         self.action_space = action_space
 
         self.n_outputs = action_space.shape[0]
         self.n_inputs = n_inputs
-
-        n_hidden = 200
+        self.n_hidden = n_hidden
 
         self.n_inputs = self.n_inputs
-        self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
-        self.hidden_action2 = nn.Linear(n_hidden, n_hidden)
-        self.hidden_action3 = nn.Linear(n_hidden, n_hidden)
-        self.mu = nn.Linear(n_hidden, self.n_outputs)
-        self.sigma = nn.Linear(n_hidden, self.n_outputs)
 
-        self.hidden_value1 = nn.Linear(self.n_inputs, n_hidden)
-        self.hidden_value2 = nn.Linear(n_hidden, n_hidden)
-        self.hidden_value3 = nn.Linear(n_hidden, n_hidden)
-        self.value = nn.Linear(n_hidden, 1)
+        self.input = nn.Linear(self.n_inputs, self.n_hidden)
+        self.hidden_1 = nn.Linear(self.n_hidden, self.n_hidden)
+        self.hidden_2 = nn.Linear(self.n_hidden, self.n_hidden)
+        self.hidden_3 = nn.Linear(self.n_hidden, self.n_hidden)
+
+        self.value = nn.Linear(self.n_hidden, 1)
+
+        self.mu = nn.Linear(self.n_hidden, self.n_outputs)
+        self.sigma = nn.Linear(self.n_hidden, self.n_outputs)
 
         self.apply(init_weights)
 
@@ -99,44 +97,15 @@ class ActorCriticNetwork(torch.nn.Module):
         :return: In the discrete case: value, policy
                  In the continuous case: value, mu, sigma
         """
-        # stem_out = self.stem(inputs)
 
-        # if self.is_discrete:
-        #     # x = self.fc1(inputs)
-        #     # x = F.relu6(x)
-        #     # x = F.relu(x)
-        #     # x = self.fc2(x)
-        #     # x = F.relu(x)
-        #
-        #     # return torch.tanh(self.critic_linear(x)), self.actor_linear(x)
-        #     return self.critic_value(stem_out), self.actor_policy(stem_out)
-        #
-        # else:
+        x = F.relu(self.hidden_1(inputs.float()))
+        x = F.relu(self.hidden_2(x))
+        x = F.relu(self.hidden_3(x))
 
-        # # x = self.fc1(inputs)
-        # # x = F.relu(x)
-        # bound = torch.from_numpy(self.action_space.high)
-        # # mu = bound * torch.tanh(self.mu(x))
-        # # print("Mu scaled:", mu.data)
-        # # sigma = F.softplus(self.sigma(x)) + 1e-5
-        # # return torch.tanh(self.critic_linear(x)), mu, sigma
-        # # value = torch.tanh(self.critic_linear(x))
-        # # value = self.critic_linear(F.relu6(self.fc2(inputs)))
-        # # return value, mu, sigma
-        #
-        # return self.critic_value(stem_out), bound * self.actor_mu(stem_out), self.actor_variance(stem_out)
+        mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(x))
+        sigma = F.softplus(self.sigma(x)) + 1e-5
 
-        inputs = inputs.float()
-        action_hidden = F.relu(self.hidden_action1(inputs))
-        # action_hidden = F.relu(self.hidden_action2(action_hidden))
-        # action_hidden = F.relu(self.hidden_action3(action_hidden))
-        mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(action_hidden))
-        sigma = F.softplus(self.sigma(action_hidden)) + 1e-5  # avoid 0
-
-        value_hidden = F.relu(self.hidden_value1(inputs))
-        # value_hidden = F.relu(self.hidden_value2(value_hidden))
-        # value_hidden = F.relu(self.hidden_value3(value_hidden))
-        value = self.value(value_hidden)
+        value = self.value(x)
 
         return value, mu, sigma
 

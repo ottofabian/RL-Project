@@ -160,16 +160,12 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         rewards = []
         entropies = []
 
-        states = []
-
         # reward_sum = 0
         for step in range(n_steps):
             t += 1
 
             value = model_critic(Variable(state))
             mu, sigma = model_actor(Variable(state))
-
-            states.append(state)
 
             dist = torch.distributions.Normal(mu, sigma)
 

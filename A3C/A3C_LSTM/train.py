@@ -98,7 +98,7 @@ def train(rank, args, shared_model, T, global_reward, optimizer=None):
                     writer.add_scalar("global_reward", global_reward.value, iter_)
                 episode_reward = 0
 
-            state = torch.from_numpy(np.array(state).flatten())
+            state = torch.from_numpy(np.array(state)).view(1, env.observation_space.shape[0])
 
             if done:
                 break
