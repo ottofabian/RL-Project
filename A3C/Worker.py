@@ -85,7 +85,7 @@ class Worker(Process):
         logging.debug('Environment {}'.format(self.env_name))
         logging.debug('Observation Space: {}'.format(self.env.observation_space))
         logging.debug('Action Space: {}'.format(self.env.action_space))
-        logging.debug('Action Range: [{:.3f}, {:.3f}]'.format(self.env.action_space.low, self.env.action_space.high))
+        logging.debug('Action Range: [{}, {}]'.format(self.env.action_space.low, self.env.action_space.high))
 
         # training params
         self.n_steps = n_steps
@@ -170,12 +170,6 @@ class Worker(Process):
                 eps = Variable(torch.randn(mu.size()))
                 action = (mu + sigma.sqrt() * eps).data
                 # action = dist.rsample().detach()
-
-                # assuming action space is in -high/high
-                # env is currently clipping internally
-                # high = np.asscalar(self.env.action_space.high)
-                # low = np.asscalar(self.env.action_space.low)
-                # action = np.clip(action, low, high)
 
                 # ------------------------------------------
                 # Compute statistics for loss

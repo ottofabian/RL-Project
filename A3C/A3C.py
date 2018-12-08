@@ -101,14 +101,17 @@ class A3C(object):
         else:
             env = gym.make(self.env_name)
 
-        shared_model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
-        shared_model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, self.is_discrete)
+        shared_model_critic = CriticNetwork(env.observation_space.shape[0],
+                                            env.action_space, self.is_discrete)
+        shared_model_actor = ActorNetwork(env.observation_space.shape[0],
+                                          env.action_space, self.is_discrete)
 
         shared_model_critic.share_memory()
         shared_model_actor.share_memory()
 
         p = Process(target=test, args=(
-            self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed, self.T, 10000,
+            self.env_name, self.n_worker, shared_model_actor, shared_model_critic,
+            self.seed, self.T, 5000,
             self.is_discrete, self.global_reward))
         p.start()
         self.worker_pool.append(p)
