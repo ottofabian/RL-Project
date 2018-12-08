@@ -44,7 +44,7 @@ logging.info('Start Experiment')
 # a2c.train()
 # a3c = A3C(n_worker=3, env_name='CartpoleStabShort-v0', lr=0.0001, is_discrete=False, seed=seed,
 #           optimizer_name='rmsprop')
-a3c = A3C(n_worker=1, env_name='Pendulum-v0', lr=0.0001, is_discrete=False, seed=seed, optimizer_name='rmsprop')
+a3c = A3C(n_worker=1, env_name='CartpoleStabShort-v0', lr=0.0001, is_discrete=False, seed=seed, optimizer_name='rmsprop')
 a3c.run()
 
 # n_features in paper was 100

@@ -106,6 +106,9 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
                                                                                             rewards.mean(),
                                                                                             eps_len.mean(),
                                                                                             global_reward.value))
+        if 10000 % T.value == 0:
+            torch.save(model_actor, "./checkpoints/actor_T={}_global={}".format(T.value, global_reward.value))
+
         # delay _test run for 10s to give the network some time to train
         time.sleep(10)
 
@@ -144,6 +147,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
     t = 0
     iter_ = 0
+    episode_reward = 0
 
     while True:
         # Get state of the global model
@@ -167,24 +171,30 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
             states.append(state)
 
+            dist = torch.distributions.Normal(mu, sigma)
+
             # ------------------------------------------
             # # select action
-            eps = Variable(torch.randn(mu.size()))
-            action = (mu + sigma.sqrt() * eps).data
+            # eps = Variable(torch.randn(mu.size()))
+            # action = (mu + sigma.sqrt() * eps).data
+            action = dist.rsample().detach()
 
             # ------------------------------------------
             # Compute statistics for loss
-            prob = normal(action, mu, sigma)
+            # prob = normal(action, mu, sigma)
 
-            entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
+            # entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
+            entropy = dist.entropy()
             entropies.append(entropy)
 
-            log_prob = prob.log()
+            # log_prob = prob.log()
+            log_prob = dist.log_prob(action)
 
             # make selected move
             state, reward, done, _ = env.step(action.numpy())
+            episode_reward += reward
 
-            reward = min(max(-1, reward), 1)
+            # reward = min(max(-1, reward), 1)
 
             done = done or t >= t_max
 
@@ -200,31 +210,33 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
                 t = 0
                 state = env.reset()
 
+                # keep track of the avg overall global reward
+                with global_reward.get_lock():
+                    if global_reward.value == 0:
+                        global_reward.value = episode_reward
+                    else:
+                        global_reward.value = .99 * global_reward.value + 0.01 * episode_reward
+                    writer.add_scalar("global_reward", global_reward.value, iter_)
+                episode_reward = 0
+
             state = torch.from_numpy(np.array(state))
 
             # end if terminal state or max episodes are reached
             if done:
                 break
 
-        # # TODO: Implement this correctly
-        with global_reward.get_lock():
-            if global_reward.value == 0:
-                global_reward.value = sum(rewards)
-            else:
-                global_reward.value = global_reward.value * 0.99 + sum(rewards) * 0.01
-
         R = torch.zeros(1, 1)
 
         # if non terminal state is present set R to be value of current state
         if not done:
-            R = model_critic(Variable(state)).data
+            R = model_critic(state).detach()
 
-        values.append(Variable(R))
+        R = Variable(R)
+        values.append(R)
         # compute loss and backprop
         actor_loss = 0
         critic_loss = 0
         gae = torch.zeros(1, 1)
-        R = Variable(R)
 
         # iterate over rewards from most recent to the starting one
         for i in reversed(range(len(rewards))):
