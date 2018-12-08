@@ -95,7 +95,7 @@ class A3C(object):
         for rank in range(0, self.n_worker):
             p = Process(target=train, args=(
                 self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed, self.T, self.lr,
-                20, 200, .99, 1, .0001, .5, None, True, self.is_discrete,
+                10, 200, .9, 1, .01, .5, None, True, self.is_discrete,
                 self.global_reward))
             p.start()
             self.worker_pool.append(p)

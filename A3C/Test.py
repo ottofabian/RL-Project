@@ -26,7 +26,16 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
     for param, shared_param in zip(model.parameters(), shared_model.parameters()):
         if shared_param.grad is not None:
             return
-        shared_param._grad = param.grad
+        shared_param._grad = param.grad  #
+
+
+pi = Variable(torch.Tensor([math.pi]))
+
+
+def normal(x, mu, sigma_sq):
+    a = (-1 * (Variable(x) - mu).pow(2) / (2 * sigma_sq)).exp()
+    b = 1 / (2 * sigma_sq * pi.expand_as(sigma_sq)).sqrt()
+    return a * b
 
 
 def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork, seed: int,
@@ -52,7 +61,7 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
     reward_sum = 0
 
     t = 0
-    done = True
+    done = False
 
     while True:
 
@@ -123,8 +132,8 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
     # if no shared optimizer is provided use individual one
     if optimizer is None:
-        optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=lr)
-        optimizer_actor = torch.optim.RMSprop(shared_model_actor.parameters(), lr=lr)
+        optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=0.001)
+        optimizer_actor = torch.optim.RMSprop(shared_model_actor.parameters(), lr=0.0001)
         # optimizer = torch.optim.Adam(global_model.parameters(), lr=lr)
 
     model_actor.train()
@@ -137,10 +146,6 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
     t = 0
     iter_ = 0
 
-    loss_container_critic = []
-    loss_container_actor = []
-    loss_mean_critic = []
-    loss_mean_actor = []
     while True:
         # Get state of the global model
         model_critic.load_state_dict(shared_model_critic.state_dict())
@@ -155,8 +160,6 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         states = []
 
         # reward_sum = 0
-        # with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
-
         for step in range(n_steps):
             t += 1
 
@@ -165,38 +168,33 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
             states.append(state)
 
-            dist = torch.distributions.Normal(mu, sigma)
-
             # ------------------------------------------
             # # select action
-            eps_v = Variable(torch.randn(mu.size()))
-            action = (mu + sigma.sqrt() * eps_v).data
-            # action = dist.sample().detach()
+            eps = Variable(torch.randn(mu.size()))
+            action = (mu + sigma.sqrt() * eps).data
 
             # ------------------------------------------
             # Compute statistics for loss
-            exp_ = (-1 * (Variable(action) - mu).pow(2) / (2 * sigma)).exp()
-            scale = 1 / (2 * sigma * math.pi).sqrt()
-            log_prob = (exp_ * scale).log()
-            # log_prob = dist.log_prob(action)
+            prob = normal(action, mu, sigma)
 
-            # entropy = -0.5 * ((sigma + 2 * math.pi).log() + 1.)
-            entropy = dist.entropy()
+            entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
+            entropies.append(entropy)
+
+            log_prob = prob.log()
 
             # make selected move
             state, reward, done, _ = env.step(action.numpy())
+
+            reward = min(max(-1, reward), 1)
 
             done = done or t >= t_max
 
             with T.get_lock():
                 T.value += 1
 
-            reward = min(max(-1, reward), 1)
-
             values.append(value)
             log_probs.append(log_prob)
             rewards.append(reward)
-            entropies.append(entropy)
 
             # reset env to beginning if done
             if done:
@@ -210,11 +208,11 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
                 break
 
         # # TODO: Implement this correctly
-        # with global_reward.get_lock():
-        #     if global_reward.value == 0:
-        #         global_reward.value = sum(rewards)
-        #     else:
-        #         global_reward.value = global_reward.value * 0.99 + sum(rewards) * 0.01
+        with global_reward.get_lock():
+            if global_reward.value == 0:
+                global_reward.value = sum(rewards)
+            else:
+                global_reward.value = global_reward.value * 0.99 + sum(rewards) * 0.01
 
         R = torch.zeros(1, 1)
 
@@ -263,9 +261,6 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         optimizer_critic.step()
         optimizer_actor.step()
 
-        # loss_container_critic.append(critic_loss.data)
-        # loss_container_actor.append(actor_loss.data)
-
         iter_ += 1
 
         grads_critic = np.concatenate([p.grad.data.cpu().numpy().flatten()
@@ -276,7 +271,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
                                       for p in model_actor.parameters()
                                       if p.grad is not None])
 
-        writer.add_scalar("values", np.mean([v.data for v in values]), iter_)
+        writer.add_scalar("mean_values", np.mean([v.data for v in values]), iter_)
         writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
         writer.add_scalar("loss_policy", actor_loss, iter_)
         writer.add_scalar("loss_value", critic_loss, iter_)
