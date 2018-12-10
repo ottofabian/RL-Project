@@ -84,7 +84,7 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, shared_model=shared_model, T=self.T,
-                       seed=self.seed, lr=0.001, n_steps=10, t_max=5000, gamma=.9, tau=1,
+                       seed=self.seed, lr=0.0001, n_steps=10, t_max=5000, gamma=.99, tau=1,
                        beta=.01, value_loss_coef=.5, optimizer=optimizer, is_train=True,
                        use_gae=False, is_discrete=self.is_discrete,
                        global_reward=self.global_reward)
