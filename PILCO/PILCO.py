@@ -160,7 +160,7 @@ class PILCO(object):
             length_scales = np.ones(self.state_dim)
 
             self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features,
-                                        rollout=self.compute_trajectory_cost,
+                                        compute_cost=self.compute_trajectory_cost,
                                         length_scales=length_scales)
             self.policy.fit(policy_X, policy_y)
 
@@ -214,9 +214,9 @@ class PILCO(object):
             state_mu = state_next_mu
             state_cov = state_next_cov
 
-            if print_trajectory:
-                self.print_trajectory(mu_state_container, sigma_state_container, mu_action_container,
-                                      sigma_action_container)
+        if print_trajectory:
+            self.print_trajectory(mu_state_container, sigma_state_container, mu_action_container,
+                                  sigma_action_container)
 
         return cost
 

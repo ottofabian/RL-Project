@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import autograd.numpy as np
 
 from PILCO.Kernels.Kernels import Kernel
 

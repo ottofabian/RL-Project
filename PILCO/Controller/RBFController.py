@@ -41,7 +41,7 @@ def squash_action_dist(mu, sigma, input_output_cov, bound):
 class RBFController(MultivariateGP, Controller):
     """RBF Controller/Policy"""
 
-    def __init__(self, n_actions, n_features, rollout, length_scales, ridge=1e-6):
+    def __init__(self, n_actions, n_features, compute_cost, length_scales, ridge=1e-6):
         # sigma_f is fixed for the RBF Controller, if it is seen as deterministic GP
         # sigma_eps is .01 to ensure a numerical stable computation
         sigma_f = np.log(1)
@@ -50,13 +50,10 @@ class RBFController(MultivariateGP, Controller):
         MultivariateGP.__init__(self, length_scales=length_scales, n_targets=n_actions, sigma_f=sigma_f,
                                 sigma_eps=sigma_eps, container=RBFNetwork, is_policy=True)
 
-        # for gp in self.gp_container:
-        #     gp.set_rollout(rollout)
-
         self.length_scales = None
         self.ridge = ridge
         self.n_features = n_features
-        self.rollout = rollout
+        self.compute_cost = compute_cost
         self.opt_ctr = 0
 
     def fit(self, X, y):
@@ -78,14 +75,16 @@ class RBFController(MultivariateGP, Controller):
     def optimize(self):
         # TODO make this working for n_actions > 1
         params = np.array([gp.wrap_policy_hyperparams() for gp in self.gp_container]).flatten()
-        options = {'maxiter': 150, 'disp': True}
+        options = {'maxiter': 200, 'disp': True}
 
         try:
             self.logger.info("Starting to optimize policy with L-BFGS-B.")
-            # res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B', jac=True,
-            #                options=options)
-            res = minimize(fun=self._optimize_hyperparams, x0=params, method='L-BFGS-B', jac=False,
+            res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B', jac=True,
                            options=options)
+
+            # numerical grad
+            # res = minimize(fun=self._optimize_hyperparams, x0=params, method='L-BFGS-B', jac=False,
+            #                options=options)
         except Exception:
             self.logger.info("Starting to optimize policy with CG.")
             res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='CG', jac=True,
@@ -98,7 +97,7 @@ class RBFController(MultivariateGP, Controller):
             gp.compute_matrices()
 
         # Make one more run for plots
-        self.rollout(self, print_trajectory=True)
+        # self.compute_cost(self, print_trajectory=True)
 
     def _optimize_hyperparams(self, params):
 
@@ -114,7 +113,7 @@ class RBFController(MultivariateGP, Controller):
         self.logger.debug(np.array2string(params if type(params) == np.ndarray else params._value))
 
         # returns cost of trajectory rollout
-        cost = self.rollout(self, print_trajectory=False)
+        cost = self.compute_cost(self, print_trajectory=False)
 
         # print progress
         self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, np.array2string(

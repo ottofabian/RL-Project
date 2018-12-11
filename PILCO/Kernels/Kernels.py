@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import autograd.numpy as np
 
 
 # From: https://github.com/cryscan/pilco-learner/blob/c0444d02c5df8358ee3358b5d36f79b4224ea2d3/pilco/gp.py
