@@ -18,9 +18,9 @@ def compute_action_wrapper(controller, m, s, squash=False):
 
 def test_rbf():
     np.random.seed(0)
-    state_dim = 5  # Input dimension
-    n_actions = 1  # Number of outputs
-    n_features = 1  # basis functions
+    state_dim = 5
+    n_actions = 1
+    n_features = 1
 
     # Training Dataset
     X0 = np.random.rand(100, state_dim)
@@ -56,7 +56,6 @@ def test_rbf():
     gpmodel.inputs = X0
     gpmodel.targets = Y0
 
-    # Call gp0 in octave
     M_mat, S_mat, V_mat = octave.gp2(gpmodel, m.T, s, nout=3)
     M_mat = np.asarray([M_mat])
     S_mat = np.atleast_2d(S_mat)
@@ -65,9 +64,9 @@ def test_rbf():
     assert M.shape == M_mat.T.shape
     assert S.shape == S_mat.shape
     assert V.shape == V_mat.shape
-    np.testing.assert_allclose(M, M_mat.T, rtol=1e-3)
-    np.testing.assert_allclose(S, S_mat, rtol=1e-3)
-    np.testing.assert_allclose(V, V_mat, rtol=1e-3)
+    np.testing.assert_allclose(M, M_mat.T, rtol=1e-9)
+    np.testing.assert_allclose(S, S_mat, rtol=1e-9)
+    np.testing.assert_allclose(V, V_mat, rtol=1e-9)
 
 
 def test_squash():

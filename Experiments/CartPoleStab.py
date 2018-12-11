@@ -1,9 +1,12 @@
 import logging
 
+import gym
 import quanser_robots
 
 from A3C.A3C import A3C
 from Experiments.util.ColorLogger import enable_color_logging
+from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
+from PILCO.PILCO import PILCO
 
 quanser_robots
 
@@ -43,13 +46,17 @@ logging.info('Start Experiment')
 # a3c = A3C(n_worker=3, env_name='CartpoleStabShort-v0', lr=0.0001, is_discrete=False, seed=seed,
 #           optimizer_name='rmsprop')
 a3c = A3C(n_worker=1, env_name='CartpoleStabShort-v0', is_discrete=False, seed=seed, optimizer_name='rmsprop')
-a3c.run()
-# a3c.run_debug()
+# a3c.run()
+a3c.run_debug()
 
 # n_features in paper was 100
 # pilco = PILCO(env_name='CartpoleStabShort-v0', seed=seed, n_features=100, Horizon=20,
 #               cost_function=cartpolebase_costfunc, target_state=[0, 0, -1, 0, 0], max_episode_steps=150)
 # pilco.run(n_samples=100)
-# pilco = PILCO(env_name='CartpoleSwingShort-v0', seed=seed, n_features=10, Horizon=20,
-#               cost_function=cartpolebase_costfunc, target_state=[0, 0, -1, 0, 0], max_episode_steps=40)
-# pilco.run(40)
+
+env = gym.make('CartpoleSwingShort-v0')
+
+loss = SaturatedLoss(state_dim=env.observation_space.shape[0], target_state=[0, 0, -1, 0, 0])
+pilco = PILCO(env_name='CartpoleSwingShort-v0', seed=seed, n_features=10, Horizon=20,
+              loss=loss, max_episode_steps=40)
+pilco.run(40)

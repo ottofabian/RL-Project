@@ -6,22 +6,22 @@ import matplotlib.pyplot as plt
 import quanser_robots
 
 from PILCO.Controller.RBFController import RBFController
+from PILCO.CostFunctions.Loss import Loss
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 
 
 class PILCO(object):
 
-    def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, cost_function: callable,
-                 max_episode_steps: int = None, T_inv: np.ndarray = None, target_state: np.ndarray = None,
-                 cost_width: np.ndarray = None, squash=True, p=.5):
+    def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss,
+                 max_episode_steps: int = None, squash=True):
         """
 
         :param env_name: gym env to work with
         :param seed: random seed for reproduceability
         :param n_features: Amount of features for RBF Controller
         :param Horizon: number of steps for trajectory rollout, also defined as horizon
-        :param cost_function: Function handle which defines the cost for the given environment.
+        :param loss: loss object which defines the cost for the given environment.
                               This function is used for policy optimization.
         """
 
@@ -70,21 +70,10 @@ class PILCO(object):
         # If the cose comes from the environment and is not known,
         #  the cost function has to be learn with a GP or the like.
 
-        # known cost function
-        # self.cost_function = cost_function
-
         # -----------------------------------------------------
-        # saturated cost function
-        self.cost_function = self.saturated_cost
-        # weight matrix
-        self.T_inv = np.identity(self.state_dim) if T_inv is None else T_inv
-        # set target state to all zeros if not other specified
-        self.target_state = np.zeros(self.state_dim) if target_state is None else target_state
-
-        # -----------------------------------------------------
-        # This is only useful if we have any penalties etc.
-        self.cost_width = np.array([1]) if cost_width is None else cost_width
-        self.p = p
+        # loss object for improving the policy
+        # known loss function
+        self.loss = loss
 
         # -----------------------------------------------------
         # Container for collected experience
@@ -101,10 +90,12 @@ class PILCO(object):
         self.sample_inital_data_set(n_init=n_samples)
 
         for _ in range(n_steps):
-            self.learn_dynamics_model(self.state_action_pairs, self.state_delta)
+            self.learn_dynamics_model()
             self.learn_policy()
 
             X_test, y_test, reward_test = self.execute_test_run()
+
+            # add test history to training data set
             self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
             self.state_delta = np.append(self.state_delta, y_test, axis=0)
             self.rewards = np.append(self.rewards, reward_test)
@@ -136,69 +127,43 @@ class PILCO(object):
                 self.state_action_pairs[i] = np.concatenate([state_prev, action])
 
                 # TODO maybe add some noise to the delta
-                # noise = np.random.multivariate_normal(np.ones(state.shape), self.var_eps * np.identity(state.shape[0]))
+                # noise = np.random.multivariate_normal(np.ones(state.shape),
+                #  self.var_eps * np.identity(state.shape[0]))
                 self.state_delta[i] = state - state_prev
 
                 self.rewards[i] = reward
                 state_prev = state
                 i += 1
 
-    def learn_dynamics_model(self, X, y):
+    def learn_dynamics_model(self):
+
         if self.dynamics_model is None:
-            l, sigma_f, sigma_eps = self.get_init_hyperparams(X, y)
-            self.dynamics_model = MultivariateGP(length_scales=l, n_targets=y.shape[1], sigma_f=sigma_f,
+            l, sigma_f, sigma_eps = self.get_init_hyperparams()
+            self.dynamics_model = MultivariateGP(length_scales=l, n_targets=self.state_dim, sigma_f=sigma_f,
                                                  sigma_eps=sigma_eps, container=GaussianProcess)
-        self.dynamics_model.fit(X, y)
+
+        self.dynamics_model.fit(self.state_action_pairs, self.state_delta)
         self.dynamics_model.optimize()
 
-    def execute_test_run(self):
+    def learn_policy(self, mu=0, sigma=0.1 ** 2, target_noise=0.1):
 
-        X = []
-        y = []
-        rewards = []
+        # initialize policy if we do not already have one
+        if self.policy is None:
+            # init model params
+            policy_X = np.random.multivariate_normal(np.full(self.state_dim, mu), sigma * np.identity(self.state_dim),
+                                                     size=(self.n_features,))
+            policy_y = target_noise * np.random.randn(self.n_features, self.n_actions)
 
-        state_prev = self.env.reset()
-        done = False
-        t = 0
-        while not done:
-            self.env.render()
-            t += 1
-            state_prev = np.array(state_prev)
+            # augmented states would be initialized with .7, but we already have sin and cos given
+            # and do not need to compute this with gaussian_trig
+            length_scales = np.ones(self.state_dim)
 
-            # no uncertainty during testing required
-            action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), squash=True,
-                                                     bound=self.env.action_space.high)
+            self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features, rollout=self.rollout,
+                                        length_scales=length_scales)
+            self.policy.fit(policy_X, policy_y)
 
-            state, reward, done, _ = self.env.step(action)
-
-            # create history and new training instance
-            X.append(np.append(state_prev, action))
-
-            # TODO potentially add some noise
-            # epsilon = np.random.normal(0, self.var_eps)
-            # y.append(state - state_prev + epsilon)
-
-            y.append(state - state_prev)
-
-            rewards.append(reward)
-            state_prev = state
-
-        print("reward={}, episode_len={}".format(np.sum(rewards), t))
-        return np.array(X), np.array(y), np.array(rewards)
-
-    def get_init_hyperparams(self, X, y):
-        """
-        Compute hyperparams for GPR
-        :param i:
-        :param X: training vector containing values for [x,u]^T
-        :param y: target vector containing deltas of states
-        :return:
-        """
-        l = np.log(np.std(X, axis=0))
-        sigma_f = np.log(np.std(y))
-        sigma_eps = np.log(np.std(y / 10))
-
-        return l, sigma_f, sigma_eps
+        self.policy.optimize()
+        print()
 
     def rollout(self, policy, print_trajectory=False):
 
@@ -231,9 +196,8 @@ class PILCO(object):
 
         for t in range(0, self.T):
             # ------------------------------------------------
-            # get mean and covar over next action, optionally with squashing
+            # get mean and covar of next action, optionally with squashing and scaling towards an action bound
             # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
-            # TODO check if this is working properly, the successor state is never changing over time. Maybe wrong actions is applied
             action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
                                                                                   squash=self.squash,
                                                                                   bound=self.env.action_space.high)
@@ -250,7 +214,6 @@ class PILCO(object):
 
             # ------------------------------------------------
             # compute delta and build next state dist
-            # TODO check if this is working properly, the successor state is never changing over time. See plots
             delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
                                                                                                 state_action_cov)
 
@@ -318,7 +281,7 @@ class PILCO(object):
             state_next_cov = delta_cov + state_cov + delta_input_output_cov + delta_input_output_cov.T
 
             # compute value of current state prediction
-            r, _, _ = self.cost_function(state_next_mu, state_next_cov)
+            r, _, _ = self.loss.compute_loss(state_next_mu, state_next_cov)
             reward = reward + self.gamma ** t * r.flatten()
 
             mu_state_container.append(state_next_mu)
@@ -327,49 +290,96 @@ class PILCO(object):
             state_mu = state_next_mu
             state_cov = state_next_cov
 
-        if print_trajectory:
-
-            # plot state trajectory
-            mu_state_container = np.array(mu_state_container)
-            sigma_state_container = np.array(sigma_state_container)
-
-            for i in range(len(state_mu)):
-                m = mu_state_container[:, i]
-                s = sigma_state_container[:, i, i]
-
-                # TODO: This is stupid and bad
-                try:
-                    m = m._value
-                except Exception:
-                    m = m
-                try:
-                    s = s._value
-                except Exception:
-                    s = s
-
-                plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
-                plt.title("Trajectory prediction for {}".format(self.state_names[i]))
-                plt.show()
-
-            # plot action trajectory
-            mu_action_container = np.array(mu_action_container)
-            sigma_action_container = np.array(sigma_action_container)
-
-            # TODO: This is stupid and bad
-            try:
-                m = mu_action_container._value
-            except Exception:
-                m = mu_action_container
-            try:
-                s = sigma_action_container._value
-            except Exception:
-                s = sigma_action_container
-
-            plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
-            plt.title("Trajectory prediction for actions")
-            plt.show()
+            if print_trajectory:
+                self.print_trajectory(mu_state_container, sigma_state_container, mu_action_container,
+                                      sigma_action_container)
 
         return reward
+
+    def rollout_debug(self, policy, state_mu, state_cov, bound):
+
+        mu_state_container = []
+        sigma_state_container = []
+
+        mu_state_container.append(state_mu)
+        sigma_state_container.append(state_cov)
+
+        mu_action_container = []
+        sigma_action_container = []
+
+        for t in range(0, self.T):
+            # ------------------------------------------------
+            # get mean and covar of next action, optionally with squashing and scaling towards an action bound
+            # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
+            action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
+                                                                                  squash=self.squash,
+                                                                                  bound=bound)
+
+            mu_action_container.append(action_mu)
+            sigma_action_container.append(action_cov)
+
+            # ------------------------------------------------
+            # get joint dist over successor state p(x,u)
+            state_action_mu, state_action_cov, state_action_input_output_cov = self.get_joint_dist(state_mu, state_cov,
+                                                                                                   action_mu.flatten(),
+                                                                                                   action_cov,
+                                                                                                   action_input_output_cov)
+
+            # ------------------------------------------------
+            # compute delta and build next state dist
+            delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
+                                                                                                state_action_cov)
+
+            # cross cov is times inv(s), see matlab code
+            delta_input_output_cov = state_action_input_output_cov @ delta_input_output_cov
+
+            # ------------------------------------------------
+            # compute distribution over next state
+            state_next_mu = delta_mu + state_mu
+            state_next_cov = delta_cov + state_cov + delta_input_output_cov + delta_input_output_cov.T
+
+            mu_state_container.append(state_next_mu)
+            sigma_state_container.append(state_next_cov)
+
+            state_mu = state_next_mu
+            state_cov = state_next_cov
+
+        return mu_state_container, sigma_state_container
+
+    def execute_test_run(self):
+
+        X = []
+        y = []
+        rewards = []
+
+        state_prev = self.env.reset()
+        done = False
+        t = 0
+        while not done:
+            self.env.render()
+            t += 1
+            state_prev = np.array(state_prev)
+
+            # no uncertainty during testing required
+            action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), squash=True,
+                                                     bound=self.env.action_space.high)
+
+            state, reward, done, _ = self.env.step(action)
+
+            # create history and new training instance
+            X.append(np.append(state_prev, action))
+
+            # TODO potentially add some noise
+            # epsilon = np.random.normal(0, self.var_eps)
+            # y.append(state - state_prev + epsilon)
+
+            y.append(state - state_prev)
+
+            rewards.append(reward)
+            state_prev = state
+
+        print("reward={}, episode_len={}".format(np.sum(rewards), t))
+        return np.array(X), np.array(y), np.array(rewards)
 
     def get_joint_dist(self, state_mu, state_cov, action_mu, action_cov, input_output_cov):
         """
@@ -394,60 +404,58 @@ class PILCO(object):
 
         return joint_mu, joint_cov, top
 
-    def learn_policy(self, mu=0, sigma=0.1 ** 2, target_noise=0.1):
+    def get_init_hyperparams(self):
+        """
+        Compute hyperparams for GPR
+        :param i:
+        :param X: training vector containing values for [x,u]^T
+        :param y: target vector containing deltas of states
+        :return:
+        """
+        l = np.log(np.std(self.state_action_pairs, axis=0))
+        sigma_f = np.log(np.std(self.state_delta))
+        sigma_eps = np.log(np.std(self.state_delta / 10))
 
-        # initialize policy if we do not already have one
-        if self.policy is None:
-            # init model params
-            policy_X = np.random.multivariate_normal(np.full(self.state_dim, mu), sigma * np.identity(self.state_dim),
-                                                     size=(self.n_features,))
-            policy_y = target_noise * np.random.randn(self.n_features, self.n_actions)
-            # A = np.random.rand(self.state_dim, self.n_actions)
-            # policy_y = np.sin(policy_X).dot(A) + policy_y - 0.5)
+        return l, sigma_f, sigma_eps
 
-            # augmented states would be initialized with .7, but we already have sin and cos given
-            # and do not need to compute this with gaussian_trig
-            length_scales = np.ones(self.state_dim)
+    def print_trajectory(self, mu_states, sigma_states, mu_actions, sigma_actions):
 
-            self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features, rollout=self.rollout,
-                                        length_scales=length_scales)
-            self.policy.fit(policy_X, policy_y)
+        # plot state trajectory
+        mu_states = np.array(mu_states)
+        sigma_states = np.array(sigma_states)
 
-        self.policy.optimize()
-        print()
+        for i in range(self.state_dim):
+            m = mu_states[:, i]
+            s = sigma_states[:, i, i]
 
-    def saturated_cost(self, mu, sigma):
-        mu = np.atleast_2d(mu)
-        self.target_state = np.atleast_2d(self.target_state)
+            # TODO: This is stupid and bad
+            try:
+                m = m._value
+            except Exception:
+                m = m
+            try:
+                s = s._value
+            except Exception:
+                s = s
 
-        sigma_T_inv = np.dot(sigma, self.T_inv)
-        S1 = np.linalg.solve((np.identity(self.state_dim) + sigma_T_inv).T, self.T_inv.T).T
-        diff = mu - self.target_state
+            plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
+            plt.title("Trajectory prediction for {}".format(self.state_names[i]))
+            plt.show()
 
-        # compute expected cost
-        mean = -np.exp(-diff @ S1 @ diff.T / 2) * ((np.linalg.det(np.identity(self.state_dim) + sigma_T_inv)) ** -.5)
+        # plot action trajectory
+        mu_actions = np.array(mu_actions)
+        sigma_actions = np.array(sigma_actions)
 
-        # compute variance of cost
-        S2 = np.linalg.solve((np.identity(self.state_dim) + 2 * sigma_T_inv).T, self.T_inv.T).T
-        r2 = np.exp(-diff @ S2 @ diff.T) * ((np.linalg.det(np.identity(self.state_dim) + 2 * sigma_T_inv)) ** -.5)
-        cov = r2 - mean ** 2
+        # TODO: This is stupid and bad
+        try:
+            m = mu_actions._value
+        except Exception:
+            m = mu_actions
+        try:
+            s = sigma_actions._value
+        except Exception:
+            s = sigma_actions
 
-        # for numeric reasons set to 0
-        if np.all(cov < 1e-12):
-            cov = np.zeros(cov.shape)
-
-        t = np.dot(self.T_inv, self.target_state.T) - S1 @ (np.dot(sigma_T_inv, self.target_state.T) + mu.T)
-
-        cross_cov = sigma @ (mean * t)
-
-        # bring cost to the interval [0,1]
-        return 1 + mean, cov, cross_cov
-
-    def saturated_loss(self, mu, sigma):
-        # TODO: Ask supervisors if we need to do this.
-        # We do not have information about the env for penalties or the like.
-        cost = 0
-        for w in self.cost_width:
-            mu, _, _ = self.saturated_cost(mu, sigma)
-            cost = cost + mu
-        return cost / len(w)
+        plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
+        plt.title("Trajectory prediction for actions")
+        plt.show()
