@@ -33,8 +33,8 @@ for k = 1:size(m0,2);
   for t = 1:H
     % Modified to avoid passing function handles
     [m, S] = propagate(m, S, plant, dynmodel, policy);	     % get next state
-    [L(k,t), d1, d2, v] = cost.fcn(cost, m, S);              % compute cost
+    [L(k,t), d1, d2, v] = lossSat(cost, m, S);              % compute cost
     s(k,t) = sqrt(v);
   end
 end
-L = mean(L,1); s = mean(s,1); 
+L = sum(L,1); s = sum(s,1);

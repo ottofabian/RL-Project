@@ -13,7 +13,7 @@ from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 
 class PILCO(object):
 
-    def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss,
+    def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, gamma=.99,
                  max_episode_steps: int = None, squash=True):
         """
 
@@ -50,7 +50,7 @@ class PILCO(object):
 
         # -----------------------------------------------------
         # training params
-        self.gamma = .99  # discount factor
+        self.gamma = gamma  # discount factor
 
         # -----------------------------------------------------
         # dynamics
@@ -63,6 +63,7 @@ class PILCO(object):
         self.n_features = n_features
         # TODO: increase by 25% when successful
         self.T = Horizon
+        self.bound = self.env.action_space.high
 
         # -----------------------------------------------------
         # Value calc
@@ -158,23 +159,25 @@ class PILCO(object):
             # and do not need to compute this with gaussian_trig
             length_scales = np.ones(self.state_dim)
 
-            self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features, rollout=self.rollout,
+            self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features,
+                                        rollout=self.compute_trajectory_cost,
                                         length_scales=length_scales)
             self.policy.fit(policy_X, policy_y)
 
         self.policy.optimize()
         print()
 
-    def rollout(self, policy, print_trajectory=False):
+    def compute_trajectory_cost(self, policy, print_trajectory=False):
 
-        # TODO select good initial state dist
+        # TODO: Make this dynamic, would als be better for tests
         # Currently this is taken from the CartPole Problem, Deisenroth (2010)
         state_mu = np.zeros((self.state_dim,))
         state_cov = 1e-2 * np.identity(self.state_dim)
-        # Make s positive semidefinite
+        # TODO: avoid bad initialization
+        # Make state_cov positive semidefinite
         state_cov = state_cov.dot(state_cov.T)
 
-        reward = 0
+        cost = 0
 
         # --------------------------------------------------------
         # Alternatives:
@@ -195,97 +198,18 @@ class PILCO(object):
         sigma_action_container = []
 
         for t in range(0, self.T):
-            # ------------------------------------------------
-            # get mean and covar of next action, optionally with squashing and scaling towards an action bound
-            # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
-            action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
-                                                                                  squash=self.squash,
-                                                                                  bound=self.env.action_space.high)
 
-            mu_action_container.append(action_mu)
-            sigma_action_container.append(action_cov)
-
-            # ------------------------------------------------
-            # get joint dist over successor state p(x,u)
-            state_action_mu, state_action_cov, state_action_input_output_cov = self.get_joint_dist(state_mu, state_cov,
-                                                                                                   action_mu.flatten(),
-                                                                                                   action_cov,
-                                                                                                   action_input_output_cov)
-
-            # ------------------------------------------------
-            # compute delta and build next state dist
-            delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
-                                                                                                state_action_cov)
-
-            # cross cov is times inv(s), see matlab code
-            delta_input_output_cov = state_action_input_output_cov @ delta_input_output_cov
-
-            # -----------------------------------------------------------------------------------------------------------
-            # Debugging code
-
-            # try:
-            #     state_action_mu = state_action_mu._value
-            # except Exception:
-            #     state_action_mu = state_action_mu
-            #
-            # try:
-            #     state_action_cov = state_action_cov._value
-            # except Exception:
-            #     state_action_cov = state_action_cov
-
-            # sample over dist
-            # x = np.random.multivariate_normal(state_action_mu, state_action_cov, size=1000)
-            # if np.any(np.isnan(state_action_cov)) or np.any(np.isnan(state_action_mu)):
-            #     print(state_action_cov)
-            #     print(state_action_mu)
-            #     print("nan")
-
-            # x = []
-            # for _ in range(100):
-            #     # reparametrization trick
-            #     x.append(np.random.randn(len(state_action_mu)) @ state_action_cov + state_action_mu)
-            # x = np.array(x)
-            # # use real env for dynamics
-            # pred = []
-            # self.env.reset()
-            # for elem in x:
-            #     print(elem)
-            #     if np.any(np.isnan(elem)):
-            #         continue
-            #     self.env.env.state = elem[:-1]
-            #     s, r, d, _ = self.env.step(np.array([elem[-1]])._value)
-            #     pred.append(s)
-            #
-            # pred = np.array(pred).T
-
-            # use deterministic prediction on samples one real GP dynamics
-            # pred = self.dynamics_model.predict(x)
-
-            # delta_mu = np.mean(pred, axis=1)
-            # diff = pred - delta_mu[:, None]
-            # delta_cov = 1 / (diff - 1) * diff @ diff.T
-
-            # delta_cov = np.cov(pred)
-
-            # print("-" * 50)
-            # print("Difference between sampling and Moment matching:")
-            # print("Mean:\n{}".format(np.mean(pred, axis=1) - delta_mu._value))
-            # print("Mean ratio:\n {}".format((np.mean(pred, axis=1) - delta_mu._value) / delta_mu._value))
-            # print("Covariance:\n{}".format(np.cov(pred) - delta_cov._value))
-            # print("Covariance ratio:\n{}".format((np.cov(pred) - delta_cov._value) / delta_cov._value))
-
-            # ------------------------------------------------
-            # compute distribution over next state
-
-            state_next_mu = delta_mu + state_mu
-            state_next_cov = delta_cov + state_cov + delta_input_output_cov + delta_input_output_cov.T
+            state_next_mu, state_next_cov, action_mu, action_cov = self.rollout(policy, state_mu, state_cov)
 
             # compute value of current state prediction
-            r, _, _ = self.loss.compute_loss(state_next_mu, state_next_cov)
-            reward = reward + self.gamma ** t * r.flatten()
+            l = self.loss.compute_loss(state_next_mu, state_next_cov)
+            cost = cost + self.gamma ** t * l.flatten()
 
             mu_state_container.append(state_next_mu)
             sigma_state_container.append(state_next_cov)
+
+            mu_action_container.append(action_mu)
+            sigma_action_container.append(sigma_action_container)
 
             state_mu = state_next_mu
             state_cov = state_next_cov
@@ -294,57 +218,82 @@ class PILCO(object):
                 self.print_trajectory(mu_state_container, sigma_state_container, mu_action_container,
                                       sigma_action_container)
 
-        return reward
+        return cost
 
-    def rollout_debug(self, policy, state_mu, state_cov, bound):
+    def rollout(self, policy, state_mu, state_cov):
 
-        mu_state_container = []
-        sigma_state_container = []
+        # ------------------------------------------------
+        # get mean and covar of next action, optionally with squashing and scaling towards an action bound
+        # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
+        action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
+                                                                              squash=self.squash,
+                                                                              bound=self.bound)
 
-        mu_state_container.append(state_mu)
-        sigma_state_container.append(state_cov)
+        # ------------------------------------------------
+        # get joint dist p(x,u)
+        state_action_mu, state_action_cov, state_action_input_output_cov = self.get_joint_dist(state_mu, state_cov,
+                                                                                               action_mu.flatten(),
+                                                                                               action_cov,
+                                                                                               action_input_output_cov)
 
-        mu_action_container = []
-        sigma_action_container = []
+        # -----------------------------------------------------------------------------------------------------------
+        # Debugging code
 
-        for t in range(0, self.T):
-            # ------------------------------------------------
-            # get mean and covar of next action, optionally with squashing and scaling towards an action bound
-            # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
-            action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
-                                                                                  squash=self.squash,
-                                                                                  bound=bound)
+        # sample over dist
+        # x = np.random.multivariate_normal(state_action_mu, state_action_cov, size=1000)
+        # if np.any(np.isnan(state_action_cov)) or np.any(np.isnan(state_action_mu)):
+        #     print(state_action_cov)
+        #     print(state_action_mu)
+        #     print("nan")
 
-            mu_action_container.append(action_mu)
-            sigma_action_container.append(action_cov)
+        # x = []
+        # for _ in range(100):
+        #     # reparametrization trick
+        #     x.append(np.random.randn(len(state_action_mu)) @ state_action_cov + state_action_mu)
+        # x = np.array(x)
+        # # use real env for dynamics
+        # pred = []
+        # self.env.reset()
+        # for elem in x:
+        #     print(elem)
+        #     if np.any(np.isnan(elem)):
+        #         continue
+        #     self.env.env.state = elem[:-1]
+        #     s, r, d, _ = self.env.step(np.array([elem[-1]])._value)
+        #     pred.append(s)
+        #
+        # pred = np.array(pred).T
 
-            # ------------------------------------------------
-            # get joint dist over successor state p(x,u)
-            state_action_mu, state_action_cov, state_action_input_output_cov = self.get_joint_dist(state_mu, state_cov,
-                                                                                                   action_mu.flatten(),
-                                                                                                   action_cov,
-                                                                                                   action_input_output_cov)
+        # use deterministic prediction on samples one real GP dynamics
+        # pred = self.dynamics_model.predict(x)
 
-            # ------------------------------------------------
-            # compute delta and build next state dist
-            delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
-                                                                                                state_action_cov)
+        # delta_mu = np.mean(pred, axis=1)
+        # diff = pred - delta_mu[:, None]
+        # delta_cov = 1 / (diff - 1) * diff @ diff.T
 
-            # cross cov is times inv(s), see matlab code
-            delta_input_output_cov = state_action_input_output_cov @ delta_input_output_cov
+        # delta_cov = np.cov(pred)
 
-            # ------------------------------------------------
-            # compute distribution over next state
-            state_next_mu = delta_mu + state_mu
-            state_next_cov = delta_cov + state_cov + delta_input_output_cov + delta_input_output_cov.T
+        # print("-" * 50)
+        # print("Difference between sampling and Moment matching:")
+        # print("Mean:\n{}".format(np.mean(pred, axis=1) - delta_mu._value))
+        # print("Mean ratio:\n {}".format((np.mean(pred, axis=1) - delta_mu._value) / delta_mu._value))
+        # print("Covariance:\n{}".format(np.cov(pred) - delta_cov._value))
+        # print("Covariance ratio:\n{}".format((np.cov(pred) - delta_cov._value) / delta_cov._value))
 
-            mu_state_container.append(state_next_mu)
-            sigma_state_container.append(state_next_cov)
+        # ------------------------------------------------
+        # compute delta and build next state dist
+        delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
+                                                                                            state_action_cov)
 
-            state_mu = state_next_mu
-            state_cov = state_next_cov
+        # cross cov is times inv(s), see matlab code
+        delta_input_output_cov = state_action_input_output_cov @ delta_input_output_cov
 
-        return mu_state_container, sigma_state_container
+        # ------------------------------------------------
+        # compute distribution over next state
+        state_next_mu = delta_mu + state_mu
+        state_next_cov = delta_cov + state_cov + delta_input_output_cov + delta_input_output_cov.T
+
+        return state_next_mu, state_next_cov, state_action_mu, state_action_cov
 
     def execute_test_run(self):
 
@@ -362,7 +311,7 @@ class PILCO(object):
 
             # no uncertainty during testing required
             action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), squash=True,
-                                                     bound=self.env.action_space.high)
+                                                     bound=self.bound)
 
             state, reward, done, _ = self.env.step(action)
 

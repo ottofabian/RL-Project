@@ -20,7 +20,7 @@ def test_predictions():
     X0 = np.random.rand(100, state_dim)
     A = np.random.rand(state_dim, n_targets)
     Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(100, n_targets) - 0.5)  # Just something smooth
-    length_scales = np.full((state_dim,), 5)
+    length_scales = np.random.rand(state_dim)
 
     mgpr = MultivariateGP(length_scales=length_scales, n_targets=n_targets, container=GaussianProcess)
     mgpr.fit(X0, Y0)
@@ -32,9 +32,9 @@ def test_predictions():
     s = np.random.rand(state_dim, state_dim)
     s = s.dot(s.T)  # Make s positive semidefinite
 
-    M, S, V = mgpr.predict_from_dist(m, s)
+    _ = mgpr.predict_from_dist(m, s)
 
-    # Change the dataset and predict again. Just to make sure that we don't cache something we shouldn't.
+    # Change the dataset to avoid any caching issues for K and beta
     X0 = 5 * np.random.rand(100, state_dim)
     mgpr.fit(X0, Y0)
 

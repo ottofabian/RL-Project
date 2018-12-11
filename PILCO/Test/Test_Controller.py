@@ -20,13 +20,13 @@ def test_rbf():
     np.random.seed(0)
     state_dim = 5
     n_actions = 1
-    n_features = 1
+    n_features = 10
 
     # Training Dataset
-    X0 = np.random.rand(100, state_dim)
+    X0 = np.random.rand(n_features, state_dim)
     A = np.random.rand(state_dim, n_actions)
-    Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(100, n_actions) - 0.5)  # Just something smooth
-    length_scales = np.full((state_dim,), 5)
+    Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(n_features, n_actions) - 0.5)
+    length_scales = np.random.rand(state_dim)
 
     rbf = RBFController(n_actions=n_actions, n_features=n_features, rollout=None, length_scales=length_scales)
     rbf.fit(X0, Y0)
@@ -64,17 +64,21 @@ def test_rbf():
     assert M.shape == M_mat.T.shape
     assert S.shape == S_mat.shape
     assert V.shape == V_mat.shape
-    np.testing.assert_allclose(M, M_mat.T, rtol=1e-9)
-    np.testing.assert_allclose(S, S_mat, rtol=1e-9)
-    np.testing.assert_allclose(V, V_mat, rtol=1e-9)
+
+    print(M)
+    print(M_mat.T)
+
+    np.testing.assert_allclose(M, M_mat.T, rtol=1e-5)
+    np.testing.assert_allclose(S, S_mat, rtol=1e-5)
+    np.testing.assert_allclose(V, V_mat, rtol=1e-5)
 
 
 def test_squash():
     np.random.seed(0)
-    d = 1  # Control dimensions
+    n_actions = 1
 
-    mu = np.random.rand(1, d)  # But MATLAB defines it as m'
-    sigma = np.random.rand(d, d)
+    mu = np.random.rand(1, n_actions)  # But MATLAB defines it as m'
+    sigma = np.random.rand(n_actions, n_actions)
     sigma = sigma.dot(sigma.T)
     i_o_cov = np.ones(mu.T.shape)
     e = np.array([7.0])
@@ -90,9 +94,9 @@ def test_squash():
     assert S.shape == S_mat.shape
     assert V.shape == V_mat.shape
 
-    np.testing.assert_allclose(M, M_mat.T, rtol=1e-9)
-    np.testing.assert_allclose(S, S_mat, rtol=1e-9)
-    np.testing.assert_allclose(V, V_mat, rtol=1e-9)
+    np.testing.assert_allclose(M, M_mat.T, rtol=1e-5)
+    np.testing.assert_allclose(S, S_mat, rtol=1e-5)
+    np.testing.assert_allclose(V, V_mat, rtol=1e-5)
 
 
 if __name__ == '__main__':

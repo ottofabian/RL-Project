@@ -110,16 +110,13 @@ class GaussianProcess(object):
         L = np.linalg.cholesky(K)
         alpha = np.linalg.solve(K, self.y)
 
-        return 0.5 * self.X.shape[0] * self.n_targets * np.log(2 * np.pi) + 0.5 * np.dot(self.y.flatten(order="F"),
-                                                                                         alpha) + \
-               np.sum(np.log(np.diag(L)))
+        return 0.5 * self.X.shape[0] * self.n_targets * np.log(2 * np.pi) \
+               + 0.5 * np.dot(self.y.flatten(order="F"), alpha) + np.sum(np.log(np.diag(L)))
 
     def compute_matrices(self):
 
         params = self._wrap_kernel_hyperparams()
-        self.K = self.kernel(params, self.X)[0]
-
-        # learned variance from evidence maximization
+        self.K = self.kernel(params, self.X)[0]  # [1,n,n]
 
         # noise is already added with WhiteNoiseKernel
         # noise = np.identity(self.X.shape[0]) * self.sigma_eps
