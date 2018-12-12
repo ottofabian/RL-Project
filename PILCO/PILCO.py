@@ -41,6 +41,7 @@ class PILCO(object):
 
         if max_episode_steps is not None:
             self.env._max_episode_steps = max_episode_steps
+
         self.env.seed(self.seed)
         self.state_names = ["x", "sin(theta)", "cos(theta)", "x_dot", "theta_dot"]
 
@@ -114,7 +115,16 @@ class PILCO(object):
         i = 0
         while i < n_init:
             state_prev = self.env.reset()
+            print(state_prev.shape)
+            if self.env_name == "Pendulum-v0":
+                self.env.env.state = [np.pi, 0]
+                state_prev = np.array([-1., 0., 0.])
+            elif self.env_name == "Pendulum-v0":
+                self.env.env.state = [0, 0, 0, 0]
+                state_prev = np.array([0., 0., 1., 0., 0.])
             done = False
+
+            print(state_prev.shape)
 
             while not done and i < n_init:
                 self.env.render()
@@ -171,7 +181,12 @@ class PILCO(object):
 
         # TODO: Make this dynamic, would als be better for tests
         # Currently this is taken from the CartPole Problem, Deisenroth (2010)
-        state_mu = np.zeros((self.state_dim,))
+        if self.env_name == "Pendulum-v0":
+            # first dim is cosine
+            state_mu = np.array([-1, 0, 0])
+        elif self.env_name == "CartpoleStab-v0":
+            state_mu = np.array([0., 0., -1., 0., 0.])
+
         state_cov = 1e-2 * np.identity(self.state_dim)
         # TODO: avoid bad initialization
         # Make state_cov positive semidefinite
@@ -198,7 +213,6 @@ class PILCO(object):
         sigma_action_container = []
 
         for t in range(0, self.T):
-
             state_next_mu, state_next_cov, action_mu, action_cov = self.rollout(policy, state_mu, state_cov)
 
             # compute value of current state prediction
@@ -215,6 +229,7 @@ class PILCO(object):
             state_cov = state_next_cov
 
         if print_trajectory:
+            # TODO this throws an exception
             self.print_trajectory(mu_state_container, sigma_state_container, mu_action_container,
                                   sigma_action_container)
 
@@ -302,18 +317,20 @@ class PILCO(object):
         rewards = []
 
         state_prev = self.env.reset()
+        # [1,3] is returned and is reduced to 1D
+        state_prev = np.array(state_prev).flatten()
         done = False
         t = 0
         while not done:
             self.env.render()
             t += 1
-            state_prev = np.array(state_prev)
 
             # no uncertainty during testing required
             action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), squash=True,
                                                      bound=self.bound)
 
             state, reward, done, _ = self.env.step(action)
+            state = np.array(state).flatten()
 
             # create history and new training instance
             X.append(np.append(state_prev, action))

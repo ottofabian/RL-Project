@@ -128,7 +128,8 @@ class MultivariateGP(object):
         return mean, cov, input_output_cov
 
     def optimize(self):
-        for gp in self.gp_container:
+        for i, gp in enumerate(self.gp_container):
+            self.logger.info("Optimization for GP (output={}) started.".format(i))
             gp.optimize()
 
     def predict(self, x):

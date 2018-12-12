@@ -75,7 +75,7 @@ class RBFController(MultivariateGP, Controller):
     def optimize(self):
         # TODO make this working for n_actions > 1
         params = np.array([gp.wrap_policy_hyperparams() for gp in self.gp_container]).flatten()
-        options = {'maxiter': 200, 'disp': True}
+        options = {'maxiter': 100, 'maxfun': 100, 'disp': True}
 
         try:
             self.logger.info("Starting to optimize policy with L-BFGS-B.")
@@ -97,6 +97,7 @@ class RBFController(MultivariateGP, Controller):
             gp.compute_matrices()
 
         # Make one more run for plots
+        # TODO Plotting causes an exception, fix that
         # self.compute_cost(self, print_trajectory=True)
 
     def _optimize_hyperparams(self, params):

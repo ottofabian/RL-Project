@@ -125,14 +125,14 @@ class A3C(object):
 
         p = Process(target=test, args=(
             self.env_name, self.n_worker, shared_model_actor, shared_model_critic,
-            self.seed, self.T, 5000, optimizer_actor, optimizer_critic, self.is_discrete, self.global_reward))
+            self.seed, self.T, 500, optimizer_actor, optimizer_critic, self.is_discrete, self.global_reward))
         p.start()
         self.worker_pool.append(p)
 
         for rank in range(0, self.n_worker):
             p = Process(target=train, args=(
                 self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed,
-                self.T, 10, 5000, .9, 1, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
+                self.T, 10, 500, .9, 1, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
                 self.global_reward))
             p.start()
             self.worker_pool.append(p)
