@@ -11,6 +11,7 @@ from A3C.Optimizers.SharedAdam import SharedAdam
 from A3C.Optimizers.SharedRMSProp import SharedRMSProp
 from A3C.Worker import Worker
 from A3C.split_network_debug import test, train
+from Experiments.util.model_save import load_saved_model
 
 
 class A3C(object):
@@ -94,7 +95,7 @@ class A3C(object):
         for w in self.worker_pool:
             w.join()
 
-    def run_debug(self):
+    def run_debug(self, path_actor=None, path_critic=None):
 
         if "RR" in self.env_name:
             env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
@@ -123,16 +124,29 @@ class A3C(object):
             optimizer_actor = None
             optimizer_critic = None
 
+        if path_actor is not None:
+            if optimizer_actor is not None:
+
+                load_saved_model(shared_model_actor, path_actor, optimizer_actor)
+            else:
+                load_saved_model(shared_model_actor, path_actor)
+
+        if path_critic is not None:
+            if optimizer_critic is not None:
+                load_saved_model(shared_model_critic, path_critic, optimizer_critic)
+            else:
+                load_saved_model(shared_model_critic, path_critic)
+
         p = Process(target=test, args=(
             self.env_name, self.n_worker, shared_model_actor, shared_model_critic,
-            self.seed, self.T, 500, optimizer_actor, optimizer_critic, self.is_discrete, self.global_reward))
+            self.seed, self.T, 5000, optimizer_actor, optimizer_critic, self.is_discrete, self.global_reward))
         p.start()
         self.worker_pool.append(p)
 
         for rank in range(0, self.n_worker):
             p = Process(target=train, args=(
                 self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed,
-                self.T, 10, 500, .9, 1, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
+                self.T, 10, 5000, .9, 1, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
                 self.global_reward))
             p.start()
             self.worker_pool.append(p)

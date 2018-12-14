@@ -17,8 +17,8 @@ quanser_robots
 
 seed = 1
 # env_name = "Pendulum-v0"
-# env_name = "CartpoleStabShort-v0"
-env_name = "CartpoleSwingShort-v0"
+env_name = "CartpoleStabShort-v0"
+# env_name = "CartpoleSwingShort-v0"
 
 enable_color_logging(debug_lvl=logging.DEBUG)
 logging.info('Start Experiment')

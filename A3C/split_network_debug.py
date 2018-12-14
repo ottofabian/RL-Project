@@ -115,14 +115,14 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
             'state_dict': shared_model_actor.state_dict(),
             'global_reward': global_reward.value,
             'optimizer': optimizer_actor.state_dict() if optimizer_actor is not None else None,
-        }, filename="actor_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
+        }, filename="./checkpoints/actor_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
 
         save_checkpoint({
             'epoch': T.value,
             'state_dict': shared_model_critic.state_dict(),
             'global_reward': global_reward.value,
             'optimizer': optimizer_critic.state_dict() if optimizer_critic is not None else None,
-        }, filename="critic_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
+        }, filename="./checkpoints/critic_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
 
         # delay _test run for 10s to give the network some time to train
         time.sleep(10)
