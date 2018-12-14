@@ -97,8 +97,7 @@ class RBFController(MultivariateGP, Controller):
             gp.compute_matrices()
 
         # Make one more run for plots
-        # TODO Plotting causes an exception, fix that
-        # self.compute_cost(self, print_trajectory=True)
+        self.compute_cost(self, print_trajectory=True)
 
     def _optimize_hyperparams(self, params):
 
@@ -117,6 +116,7 @@ class RBFController(MultivariateGP, Controller):
         cost = self.compute_cost(self, print_trajectory=False)
 
         # print progress
+        # ToDo make this a callback
         self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, np.array2string(
             cost if type(cost) == np.ndarray else cost._value)))
 

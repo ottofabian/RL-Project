@@ -43,7 +43,11 @@ class PILCO(object):
             self.env._max_episode_steps = max_episode_steps
 
         self.env.seed(self.seed)
-        self.state_names = ["x", "sin(theta)", "cos(theta)", "x_dot", "theta_dot"]
+        if self.env_name == "Pendulum-v0":
+            self.state_names = ["cos($\\theta$)", "sin($\\theta$)", "$\\dot{\\theta}$"]
+        elif "Cartpole" in self.env_name:
+            # self.state_names = self.env.observation_space.labels
+            self.state_names = ["x", "sin($\\theta$)", "cos($\\theta$)", "$\\dot{x}$", "$\\dot{\\theta}$"]
 
         # get the number of available action from the environment
         self.state_dim = self.env.observation_space.shape[0]
@@ -115,16 +119,15 @@ class PILCO(object):
         i = 0
         while i < n_init:
             state_prev = self.env.reset()
-            print(state_prev.shape)
             if self.env_name == "Pendulum-v0":
-                self.env.env.state = [np.pi, 0]
-                state_prev = np.array([-1., 0., 0.])
-            elif self.env_name == "Pendulum-v0":
-                self.env.env.state = [0, 0, 0, 0]
-                state_prev = np.array([0., 0., 1., 0., 0.])
-            done = False
+                theta = .1
+                self.env.env.state = [theta, 0]
+                state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
+            elif self.env_name == "CartpoleStabShort-v0":
+                self.env.env._state = [0, -np.pi, 0, 0]
+                state_prev = np.array([0., 0., -1., 0., 0.])
 
-            print(state_prev.shape)
+            done = False
 
             while not done and i < n_init:
                 self.env.render()
@@ -138,9 +141,8 @@ class PILCO(object):
                 self.state_action_pairs[i] = np.concatenate([state_prev, action])
 
                 # TODO maybe add some noise to the delta
-                # noise = np.random.multivariate_normal(np.ones(state.shape),
-                #  self.var_eps * np.identity(state.shape[0]))
-                self.state_delta[i] = state - state_prev
+                noise = np.random.multivariate_normal(np.ones(state.shape), 1e-6 * np.identity(state.shape[0]))
+                self.state_delta[i] = state - state_prev + noise
 
                 self.rewards[i] = reward
                 state_prev = state
@@ -175,7 +177,6 @@ class PILCO(object):
             self.policy.fit(policy_X, policy_y)
 
         self.policy.optimize()
-        print()
 
     def compute_trajectory_cost(self, policy, print_trajectory=False):
 
@@ -183,21 +184,22 @@ class PILCO(object):
         # Currently this is taken from the CartPole Problem, Deisenroth (2010)
         if self.env_name == "Pendulum-v0":
             # first dim is cosine
-            state_mu = np.array([-1, 0, 0])
-        elif self.env_name == "CartpoleStab-v0":
+            theta = .1
+            state_mu = np.array([np.cos(theta), np.sin(theta), 0])
+        elif self.env_name == "CartpoleStabShort-v0":
             state_mu = np.array([0., 0., -1., 0., 0.])
+        elif self.env_name == "CartpoleSwingShort-v0":
+            state_mu = np.array([0., 0., 1., 0., 0.])
 
         state_cov = 1e-2 * np.identity(self.state_dim)
         # TODO: avoid bad initialization
         # Make state_cov positive semidefinite
-        state_cov = state_cov.dot(state_cov.T)
+        # state_cov = state_cov.dot(state_cov.T)
 
         cost = 0
 
         # --------------------------------------------------------
         # Alternatives:
-        # state_mu = X[:, :self.state_dim].mean(axis=0)
-        # state_mu = np.array([0., 0., 0., np.pi, np.pi])
 
         # state_cov = X[:, :self.state_dim].std(axis=0)
         # state_cov = np.cov(X[:, :self.state_dim], rowvar=False
@@ -223,13 +225,12 @@ class PILCO(object):
             sigma_state_container.append(state_next_cov)
 
             mu_action_container.append(action_mu)
-            sigma_action_container.append(sigma_action_container)
+            sigma_action_container.append(action_cov)
 
             state_mu = state_next_mu
             state_cov = state_next_cov
 
         if print_trajectory:
-            # TODO this throws an exception
             self.print_trajectory(mu_state_container, sigma_state_container, mu_action_container,
                                   sigma_action_container)
 
@@ -308,7 +309,7 @@ class PILCO(object):
         state_next_mu = delta_mu + state_mu
         state_next_cov = delta_cov + state_cov + delta_input_output_cov + delta_input_output_cov.T
 
-        return state_next_mu, state_next_cov, state_action_mu, state_action_cov
+        return state_next_mu, state_next_cov, action_mu, action_cov
 
     def execute_test_run(self):
 
@@ -319,6 +320,15 @@ class PILCO(object):
         state_prev = self.env.reset()
         # [1,3] is returned and is reduced to 1D
         state_prev = np.array(state_prev).flatten()
+
+        if self.env_name == "Pendulum-v0":
+            theta = .1
+            self.env.env.state = [theta, 0]
+            state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
+        elif self.env_name == "CartpoleStabShort-v0":
+            self.env.env._state = [0, -np.pi, 0, 0]
+            state_prev = np.array([0., 0., -1., 0., 0.])
+
         done = False
         t = 0
         while not done:

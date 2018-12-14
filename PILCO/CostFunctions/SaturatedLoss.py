@@ -34,18 +34,19 @@ class SaturatedLoss(Loss):
         # compute variance of cost
         S2 = np.linalg.solve((np.identity(self.state_dim) + 2 * sigma_T_inv).T, self.T_inv.T).T
         r2 = np.exp(-diff @ S2 @ diff.T) * ((np.linalg.det(np.identity(self.state_dim) + 2 * sigma_T_inv)) ** -.5)
-        cov = r2 - mean ** 2
+        variance = r2 - mean ** 2
 
         # for numeric reasons set to 0
-        if np.all(cov < 1e-12):
-            cov = np.zeros(cov.shape)
+        # TODO: Do we need this? See matlab code
+        # if variance < 1e-12:
+        #     variance = 0
 
         t = np.dot(self.T_inv, self.target_state.T) - S1 @ (np.dot(sigma_T_inv, self.target_state.T) + mu.T)
 
         cross_cov = sigma @ (mean * t)
 
         # bring cost to the interval [0,1]
-        return 1 + mean, cov, cross_cov
+        return 1 + mean, variance, cross_cov
 
     def compute_loss(self, mu, sigma):
         # TODO: Ask supervisors if we need to do this.
