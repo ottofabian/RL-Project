@@ -52,7 +52,7 @@ class A3C(object):
 
         self.optimizer_name = optimizer_name
 
-    def run(self):
+    def run(self, path):
         # torch.manual_seed(self.seed)
         if "RR" in self.env_name:
             env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
@@ -72,6 +72,12 @@ class A3C(object):
         else:
             optimizer = None
             # raise Exception('Unexpected optimizer_name: %s' % self.optimizer_name)
+
+        if path is not None:
+            if optimizer is not None:
+                load_saved_model(shared_model, path, optimizer)
+            else:
+                load_saved_model(shared_model, path)
 
         # start the test worker which is visualized to see how the current progress is
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, shared_model=shared_model,
@@ -146,7 +152,7 @@ class A3C(object):
         for rank in range(0, self.n_worker):
             p = Process(target=train, args=(
                 self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed,
-                self.T, 10, 5000, .9, 1, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
+                self.T, 50, 5000, .995, 1, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
                 self.global_reward))
             p.start()
             self.worker_pool.append(p)
