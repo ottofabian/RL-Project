@@ -75,9 +75,9 @@ class A3C(object):
 
         if path is not None:
             if optimizer is not None:
-                load_saved_model(shared_model, path, optimizer)
+                load_saved_model(shared_model, path, self.T, self.global_reward, optimizer)
             else:
-                load_saved_model(shared_model, path)
+                load_saved_model(shared_model, path, self.T, self.global_reward)
 
         # start the test worker which is visualized to see how the current progress is
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, shared_model=shared_model,
@@ -133,15 +133,15 @@ class A3C(object):
         if path_actor is not None:
             if optimizer_actor is not None:
 
-                load_saved_model(shared_model_actor, path_actor, optimizer_actor)
+                load_saved_model(shared_model_actor, path_actor, self.T, self.global_reward, optimizer_actor)
             else:
-                load_saved_model(shared_model_actor, path_actor)
+                load_saved_model(shared_model_actor, path_actor, self.T, self.global_reward)
 
         if path_critic is not None:
             if optimizer_critic is not None:
-                load_saved_model(shared_model_critic, path_critic, optimizer_critic)
+                load_saved_model(shared_model_critic, path_critic, self.T, self.global_reward, optimizer_critic)
             else:
-                load_saved_model(shared_model_critic, path_critic)
+                load_saved_model(shared_model_critic, path_critic, self.T, self.global_reward)
 
         p = Process(target=test, args=(
             self.env_name, self.n_worker, shared_model_actor, shared_model_critic,
@@ -149,16 +149,16 @@ class A3C(object):
         p.start()
         self.worker_pool.append(p)
 
-        for rank in range(0, self.n_worker):
-            p = Process(target=train, args=(
-                self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed,
-                self.T, 50, 5000, .995, 1, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
-                self.global_reward))
-            p.start()
-            self.worker_pool.append(p)
-
-        for p in self.worker_pool:
-            p.join()
+        # for rank in range(0, self.n_worker):
+        #     p = Process(target=train, args=(
+        #         self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed,
+        #         self.T, 5000, 50, .995, .5, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
+        #         self.global_reward))
+        #     p.start()
+        #     self.worker_pool.append(p)
+        #
+        # for p in self.worker_pool:
+        #     p.join()
 
     def stop(self):
         self.worker_pool = []

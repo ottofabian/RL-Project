@@ -4,6 +4,7 @@ import time
 
 import gym
 import numpy as np
+import quanser_robots
 import torch
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable
@@ -40,7 +41,7 @@ def normal(x, mu, sigma_sq):
 
 
 def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork, seed: int,
-         T: Value, t_max: int = 100000, optimizer_actor: Optimizer = None,
+         T: Value, max_episodes: int = 100000, optimizer_actor: Optimizer = None,
          optimizer_critic: Optimizer = None, is_discrete: bool = False, global_reward: Value = None):
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
@@ -49,7 +50,11 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
     """
     torch.manual_seed(seed + worker_id)
 
-    env = gym.make(env_name)
+    if "RR" in env_name:
+        env = quanser_robots.GentlyTerminating(gym.make(env_name))
+    else:
+        env = gym.make(env_name)
+
     env.seed(seed + worker_id)
 
     # get an instance of the current global model state
@@ -89,7 +94,10 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
                     action = mu.data
 
                 state, reward, done, _ = env.step(action.numpy())
-                done = done or t >= t_max
+                # TODO: check if this is better
+                reward += t / max_episodes
+                # reward -= np.array(state)[0]
+                done = done or t >= max_episodes
                 reward_sum += reward
 
                 if done:
@@ -129,7 +137,7 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
 
 
 def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
-          seed: int, T: Value, n_steps: int = 0, t_max: int = 100000, gamma: float = .99,
+          seed: int, T: Value, max_episodes: int = 10, t_max: int = 100000, gamma: float = .99,
           tau: float = 1, beta: float = .01, optimizer_actor: Optimizer = None,
           optimizer_critic: Optimizer = None, use_gae: bool = True, is_discrete: bool = False, global_reward=None):
     """
@@ -177,7 +185,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         entropies = []
 
         # reward_sum = 0
-        for step in range(n_steps):
+        for step in range(t_max):
             t += 1
 
             value = model_critic(Variable(state))
@@ -204,11 +212,14 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
             # make selected move
             state, reward, done, _ = env.step(action.numpy())
+            # TODO: check if this is better
+            # reward += t / max_episodes
+            # reward -= np.array(state)[0]
             episode_reward += reward
 
             # reward = min(max(-1, reward), 1)
 
-            done = done or t >= t_max
+            done = done or t >= max_episodes
 
             with T.get_lock():
                 T.value += 1
@@ -304,30 +315,3 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), iter_)
         writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), iter_)
         writer.add_scalar("grad_var_critic", np.var(grads_critic), iter_)
-
-        # if iter % 50 == 0:
-        #     loss_mean_actor.append(np.mean(np.array(loss_container_actor[-50])))
-        #     loss_mean_critic.append(np.mean(np.array(loss_container_critic[-50])))
-        #
-        #     plt.figure(0)
-        #     plt.plot(loss_container_critic)
-        #     plt.title("Critic Loss")
-        #
-        #     # plt.plot(np.arange(50, len(loss_container_critic)+1, 50), loss_mean_critic)
-        #     # plt.title("Critic Loss Mean over 50")
-        #
-        #     plt.figure(1)
-        #     plt.plot(loss_container_critic)
-        #     plt.title("Actor Loss")
-        #
-        #     # plt.plot(np.arange(50, len(loss_container_actor)+1, 50), loss_mean_actor)
-        #     # plt.title(, "Actor Loss Mean over 50")
-        #
-        #     plt.show()
-
-        # model_critic.load_state_dict(shared_model_critic.state_dict())
-        #
-        # print("Value before training:")
-        # print([v.data for v in values])
-        # print("Value after training:")
-        # print(model_critic(torch.stack(states)))
