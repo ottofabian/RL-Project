@@ -118,12 +118,12 @@ class A3C(object):
 
         if self.optimizer_name == 'rmsprop':
             optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
-            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.001)
+            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0001)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         elif self.optimizer_name == 'adam':
             optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=0.0001)
-            optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=0.001)
+            optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=0.0001)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         else:
@@ -149,16 +149,17 @@ class A3C(object):
         p.start()
         self.worker_pool.append(p)
 
-        # for rank in range(0, self.n_worker):
-        #     p = Process(target=train, args=(
-        #         self.env_name, self.n_worker, shared_model_actor, shared_model_critic, self.seed,
-        #         self.T, 5000, 50, .995, .5, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
-        #         self.global_reward))
-        #     p.start()
-        #     self.worker_pool.append(p)
-        #
-        # for p in self.worker_pool:
-        #     p.join()
+        if "RR" not in self.env_name:
+            for rank in range(0, self.n_worker):
+                p = Process(target=train, args=(
+                    self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
+                    self.T, 5000, 50, .99, .5, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
+                    self.global_reward))
+                p.start()
+                self.worker_pool.append(p)
+
+            for p in self.worker_pool:
+                p.join()
 
     def stop(self):
         self.worker_pool = []

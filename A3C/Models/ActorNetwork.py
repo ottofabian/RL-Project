@@ -39,8 +39,9 @@ class ActorNetwork(torch.nn.Module):
         action_hidden = F.relu(self.hidden_action1(inputs))
         # action_hidden = F.relu(self.hidden_action2(action_hidden))
         # action_hidden = F.relu(self.hidden_action3(action_hidden))
-        mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(action_hidden))
-        # mu = 2 * torch.tanh(self.mu(action_hidden))
+        # TODO work only between [.5, 5] for cartopole
+        # mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(action_hidden))
+        mu = 5 * torch.tanh(self.mu(action_hidden))
         sigma = F.softplus(self.sigma(action_hidden)) + 1e-5  # avoid 0
 
         return mu, sigma

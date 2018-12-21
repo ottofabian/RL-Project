@@ -95,7 +95,6 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
 
                 state, reward, done, _ = env.step(action.numpy())
                 # TODO: check if this is better
-                reward += t / max_episodes
                 # reward -= np.array(state)[0]
                 done = done or t >= max_episodes
                 reward_sum += reward
@@ -146,6 +145,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
     :return: self
     """
     torch.manual_seed(seed + worker_id)
+    print(f"Training Worker {worker_id} started")
 
     env = gym.make(env_name)
     # ensure different seed for each worker thread
@@ -213,7 +213,6 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
             # make selected move
             state, reward, done, _ = env.step(action.numpy())
             # TODO: check if this is better
-            # reward += t / max_episodes
             # reward -= np.array(state)[0]
             episode_reward += reward
 
@@ -239,6 +238,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
                         global_reward.value = episode_reward
                     else:
                         global_reward.value = .99 * global_reward.value + 0.01 * episode_reward
+                if worker_id == 0:
                     writer.add_scalar("global_reward", global_reward.value, iter_)
                 episode_reward = 0
 
@@ -278,8 +278,8 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         optimizer_critic.zero_grad()
         optimizer_actor.zero_grad()
 
-        critic_loss.backward()
-        actor_loss.backward()
+        critic_loss.mean().backward()
+        actor_loss.mean().backward()
 
         # compute combined loss of actor_loss and critic_loss
         # avoid overfitting on value loss by scaling it down
@@ -297,21 +297,22 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
         iter_ += 1
 
-        grads_critic = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                       for p in model_critic.parameters()
-                                       if p.grad is not None])
+        if worker_id == 0:
+            grads_critic = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                           for p in model_critic.parameters()
+                                           if p.grad is not None])
 
-        grads_actor = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                      for p in model_actor.parameters()
-                                      if p.grad is not None])
+            grads_actor = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                          for p in model_actor.parameters()
+                                          if p.grad is not None])
 
-        writer.add_scalar("mean_values", np.mean([v.data for v in values]), iter_)
-        writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
-        writer.add_scalar("loss_policy", actor_loss, iter_)
-        writer.add_scalar("loss_value", critic_loss, iter_)
-        writer.add_scalar("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), iter_)
-        writer.add_scalar("grad_max_actor", np.max(np.abs(grads_actor)), iter_)
-        writer.add_scalar("grad_var_actor", np.var(grads_actor), iter_)
-        writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), iter_)
-        writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), iter_)
-        writer.add_scalar("grad_var_critic", np.var(grads_critic), iter_)
+            writer.add_scalar("mean_values", np.mean([v.data for v in values]), iter_)
+            writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
+            writer.add_scalar("loss_policy", actor_loss, iter_)
+            writer.add_scalar("loss_value", critic_loss, iter_)
+            writer.add_scalar("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), iter_)
+            writer.add_scalar("grad_max_actor", np.max(np.abs(grads_actor)), iter_)
+            writer.add_scalar("grad_var_actor", np.var(grads_actor), iter_)
+            writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), iter_)
+            writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), iter_)
+            writer.add_scalar("grad_var_critic", np.var(grads_critic), iter_)
