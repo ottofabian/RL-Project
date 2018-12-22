@@ -10,11 +10,11 @@ Source:\
 ### CartpoleStabShort:  
 
 - lr: 
-    - Actor: .0001
-    - Critic: .001
-- backprop after n steps: 10
-- max epsisode steps: 50000
-- gamma: .9
+    - Actor: .00001
+    - Critic: .0001
+- t_max/batch size: 128
+- max episode steps: 5000
+- gamma: .99
 - tau: 1
 - beta: .01
     
@@ -24,23 +24,22 @@ TODO
 - lr: 
     - Actor: .0001
     - Critic: .001
-- backprop after n steps: 10
-- max epsisode steps: 50000
+- t_max/batch size: 128
+- max episode steps: 5000
 - gamma: .9
 - tau: 1
 - beta: .01
 
 ### CartpoleSwingShort:  
-TODO
 
 - lr: 
-    - Actor: .0001
-    - Critic: .001
-- backprop after n steps: 10
-- max epsisode steps: 50000
-- gamma: .9
+    - Actor: .00001
+    - Critic: .0001
+- t_max/batch size: 256
+- max episode steps: 5000
+- gamma: .995
 - tau: 1
-- beta: .01
+- beta: .05
 
 ### CartpoleSwingLong:  
 TODO
@@ -48,8 +47,8 @@ TODO
 - lr: 
     - Actor: .0001
     - Critic: .001
-- backprop after n steps: 10
-- max epsisode steps: 50000
+- t_max/batch size: 128
+- max episode steps: 5000
 - gamma: .9
 - tau: 1
 - beta: .01
@@ -60,8 +59,8 @@ TODO
 - lr: 
     - Actor: .0001
     - Critic: .001
-- backprop after n steps: 10
-- max epsisode steps: 50000
+- t_max/batch size: 128
+- max episode steps: 5000
 - gamma: .9
 - tau: 1
 - beta: .01

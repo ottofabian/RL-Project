@@ -117,12 +117,12 @@ class A3C(object):
         shared_model_actor.share_memory()
 
         if self.optimizer_name == 'rmsprop':
-            optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
+            optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.00001)
             optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0001)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         elif self.optimizer_name == 'adam':
-            optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=0.0001)
+            optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=0.00001)
             optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=0.0001)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
@@ -153,7 +153,7 @@ class A3C(object):
             for rank in range(0, self.n_worker):
                 p = Process(target=train, args=(
                     self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-                    self.T, 5000, 50, .99, .5, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
+                    self.T, 5000, 128, .999, .5, .1, optimizer_actor, optimizer_critic, True, self.is_discrete,
                     self.global_reward))
                 p.start()
                 self.worker_pool.append(p)

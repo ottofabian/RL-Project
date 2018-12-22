@@ -295,6 +295,8 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         optimizer_critic.step()
         optimizer_actor.step()
 
+
+
         iter_ += 1
 
         if worker_id == 0:

@@ -17,8 +17,8 @@ quanser_robots
 
 seed = 1
 # env_name = "Pendulum-v0"
-env_name = "CartpoleStabShort-v0"
-# env_name = "CartpoleSwingShort-v0"
+# env_name = "CartpoleStabShort-v0"
+env_name = "CartpoleSwingShort-v0"
 # env_name = "CartpoleStabRR-v0"
 # env_name = "Qube-v0"
 
