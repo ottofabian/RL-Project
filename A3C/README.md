@@ -35,11 +35,14 @@ TODO
 - lr: 
     - Actor: .00001
     - Critic: .0001
-- t_max/batch size: 256
+- t_max/batch size: 128
 - max episode steps: 5000
-- gamma: .995
+- gamma: .999
 - tau: 1
-- beta: .05
+- beta: .1
+
+- actor network: 
+    - 2 hidden layer 200 nodes
 
 ### CartpoleSwingLong:  
 TODO

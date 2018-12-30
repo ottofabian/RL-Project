@@ -123,9 +123,10 @@ class PILCO(object):
                 theta = .1
                 self.env.env.state = [theta, 0]
                 state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
-            elif self.env_name == "CartpoleStabShort-v0":
-                self.env.env._state = [0, -np.pi, 0, 0]
-                state_prev = np.array([0., 0., -1., 0., 0.])
+            # elif self.env_name == "CartpoleStabShort-v0":
+            #     theta = -np.pi + .1
+            #     self.env.env._state = [0, theta, 0, 0]
+            #     state_prev = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
 
             done = False
 
@@ -140,9 +141,8 @@ class PILCO(object):
                 # state-action pair as input
                 self.state_action_pairs[i] = np.concatenate([state_prev, action])
 
-                # TODO maybe add some noise to the delta
-                noise = np.random.multivariate_normal(np.ones(state.shape), 1e-6 * np.identity(state.shape[0]))
-                self.state_delta[i] = state - state_prev + noise
+                state_prev += np.random.multivariate_normal(np.ones(state.shape), 1e-6 * np.identity(state.shape[0]))
+                self.state_delta[i] = state - state_prev
 
                 self.rewards[i] = reward
                 state_prev = state
@@ -181,13 +181,13 @@ class PILCO(object):
     def compute_trajectory_cost(self, policy, print_trajectory=False):
 
         # TODO: Make this dynamic, would als be better for tests
-        # Currently this is taken from the CartPole Problem, Deisenroth (2010)
         if self.env_name == "Pendulum-v0":
             # first dim is cosine
             theta = .1
             state_mu = np.array([np.cos(theta), np.sin(theta), 0])
         elif self.env_name == "CartpoleStabShort-v0":
-            state_mu = np.array([0., 0., -1., 0., 0.])
+            theta = -np.pi + .1
+            state_mu = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
         elif self.env_name == "CartpoleSwingShort-v0":
             state_mu = np.array([0., 0., 1., 0., 0.])
 
@@ -325,9 +325,9 @@ class PILCO(object):
             theta = .1
             self.env.env.state = [theta, 0]
             state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
-        elif self.env_name == "CartpoleStabShort-v0":
-            self.env.env._state = [0, -np.pi, 0, 0]
-            state_prev = np.array([0., 0., -1., 0., 0.])
+        # elif self.env_name == "CartpoleStabShort-v0":
+        #     self.env.env._state = [0, -np.pi, 0, 0]
+        #     state_prev = np.array([0., 0., -1., 0., 0.])
 
         done = False
         t = 0
@@ -338,6 +338,7 @@ class PILCO(object):
             # no uncertainty during testing required
             action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), squash=True,
                                                      bound=self.bound)
+            action = action.flatten()
 
             state, reward, done, _ = self.env.step(action)
             state = np.array(state).flatten()
@@ -345,9 +346,8 @@ class PILCO(object):
             # create history and new training instance
             X.append(np.append(state_prev, action))
 
-            # TODO potentially add some noise
-            # epsilon = np.random.normal(0, self.var_eps)
-            # y.append(state - state_prev + epsilon)
+            # TODO check if this is better
+            state_prev += np.random.normal(0, 1e-6)
 
             y.append(state - state_prev)
 

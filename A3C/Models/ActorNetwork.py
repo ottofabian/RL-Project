@@ -11,6 +11,25 @@ def init_weights(m):
         nn.init.normal_(m.weight.data, 0, .1)
         m.bias.data.fill_(0)
 
+# for loading stab policy:
+
+# init:
+#         n_hidden = 200
+#
+#         self.n_inputs = self.n_inputs
+#         self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
+#         self.hidden_action2 = nn.Linear(n_hidden, n_hidden)
+#         self.mu = nn.Linear(n_hidden, self.n_outputs)
+#         self.sigma = nn.Linear(n_hidden, self.n_outputs)
+#
+#         self.apply(init_weights)
+#         self.train()
+
+# forward:
+# action_hidden = F.relu(self.hidden_action1(inputs))
+# mu = 5 * torch.tanh(self.mu(action_hidden))
+# sigma = F.softplus(self.sigma(action_hidden)) + 1e-5
+
 
 class ActorNetwork(torch.nn.Module):
     def __init__(self, n_inputs, action_space, is_discrete=False):
@@ -22,7 +41,7 @@ class ActorNetwork(torch.nn.Module):
         self.n_outputs = action_space.shape[0]
         self.n_inputs = n_inputs
 
-        n_hidden = 200
+        n_hidden = 300
 
         self.n_inputs = self.n_inputs
         self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
@@ -37,11 +56,11 @@ class ActorNetwork(torch.nn.Module):
     def forward(self, inputs):
         inputs = inputs.float()
         action_hidden = F.relu(self.hidden_action1(inputs))
-        # action_hidden = F.relu(self.hidden_action2(action_hidden))
+        action_hidden = F.relu(self.hidden_action2(action_hidden))
         # action_hidden = F.relu(self.hidden_action3(action_hidden))
         # TODO work only between [-5, 5] for cartpole
         # mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(action_hidden))
-        mu = 10 * torch.tanh(self.mu(action_hidden))
+        mu = 5 * torch.tanh(self.mu(action_hidden))
         sigma = F.softplus(self.sigma(action_hidden)) + 1e-5  # avoid 0
 
         return mu, sigma

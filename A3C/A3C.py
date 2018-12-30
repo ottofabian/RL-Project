@@ -52,19 +52,21 @@ class A3C(object):
 
         self.optimizer_name = optimizer_name
 
-    def run(self, path):
-        # torch.manual_seed(self.seed)
+    def run(self, path=None):
         if "RR" in self.env_name:
             env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
         else:
             env = gym.make(self.env_name)
 
+        max_action = 10
+
         shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
                                           action_space=env.action_space,
-                                          n_hidden=512)
+                                          n_hidden=200,
+                                          max_action=max_action)
 
         if self.optimizer_name == 'rmsprop':
-            optimizer = SharedRMSProp(shared_model.parameters(), lr=self.lr)
+            optimizer = SharedRMSProp(shared_model.parameters(), lr=0.001)
             optimizer.share_memory()
         elif self.optimizer_name == 'adam':
             optimizer = SharedAdam(shared_model.parameters(), lr=self.lr)
@@ -81,9 +83,9 @@ class A3C(object):
 
         # start the test worker which is visualized to see how the current progress is
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, shared_model=shared_model,
-                   T=self.T, seed=self.seed, lr=0, n_steps=0, t_max=5000, gamma=0, tau=0,
+                   T=self.T, seed=self.seed, lr=0, max_episodes=5000, t_max=0, gamma=0, tau=0,
                    beta=0, value_loss_coef=0, optimizer=optimizer, is_train=False, use_gae=True,
-                   is_discrete=self.is_discrete, global_reward=self.global_reward)
+                   is_discrete=self.is_discrete, global_reward=self.global_reward, max_action=max_action)
         w.start()
         self.worker_pool.append(w)
 
@@ -91,10 +93,10 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, shared_model=shared_model, T=self.T,
-                       seed=self.seed, lr=0.0001, n_steps=10, t_max=5000, gamma=.99, tau=1,
+                       seed=self.seed, lr=self.lr, max_episodes=5000, t_max=128, gamma=.995, tau=1,
                        beta=.01, value_loss_coef=.5, optimizer=optimizer, is_train=True,
                        use_gae=False, is_discrete=self.is_discrete,
-                       global_reward=self.global_reward)
+                       global_reward=self.global_reward, max_action=max_action)
             w.start()
             self.worker_pool.append(w)
 
@@ -117,13 +119,13 @@ class A3C(object):
         shared_model_actor.share_memory()
 
         if self.optimizer_name == 'rmsprop':
-            optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.00001)
-            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0001)
+            optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.000001)
+            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.00005)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         elif self.optimizer_name == 'adam':
-            optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=0.00001)
-            optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=0.0001)
+            optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=0.01)
+            optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=0.01)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         else:

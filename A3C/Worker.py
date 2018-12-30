@@ -47,15 +47,16 @@ class Worker(Process):
     values_training = []
 
     def __init__(self, env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: int, T: Value,
-                 lr: float = 1e-4, n_steps: int = 0, t_max: int = 100000, gamma: float = .99,
+                 lr: float = 1e-4, max_episodes: int = 10, t_max: int = 100000, gamma: float = .99,
                  tau: float = 1, beta: float = .01, value_loss_coef: float = .5,
                  optimizer: Optimizer = None, is_train: bool = True, use_gae: bool = True,
-                 is_discrete: bool = False, global_reward=None) -> None:
+                 is_discrete: bool = False, global_reward=None, max_action=None) -> None:
         """
         Initialize Worker thread for A3C algorithm
+        :param max_episodes: maximum episodes for training
         :param global_reward: global shared running reward
         :param use_gae: use Generalize Advantage Estimate
-        :param t_max: maximum episodes for training
+        :param t_max: max steps before making an update
         :param env_name: gym environment name
         :param worker_id: number of workers
         :param T: global shared counter
@@ -66,7 +67,6 @@ class Worker(Process):
         :param shared_model: shared global model to get the parameters from
         :param seed: seed to ensure reproducibility
         :param lr: learning rate for the workers NN
-        :param n_steps: amount of steps for training
         :param value_loss_coef: factor for scaling the value loss
         """
         super(Worker, self).__init__()
@@ -83,14 +83,16 @@ class Worker(Process):
             # use the official gym env as default
             self.env = gym.make(self.env_name)
 
+        self.env.seed(seed + worker_id)
+
         # DEBUG information about the environment
-        logging.debug('Environment {}'.format(self.env_name))
-        logging.debug('Observation Space: {}'.format(self.env.observation_space))
-        logging.debug('Action Space: {}'.format(self.env.action_space))
-        logging.debug('Action Range: [{}, {}]'.format(self.env.action_space.low, self.env.action_space.high))
+        # logging.debug('Environment {}'.format(self.env_name))
+        # logging.debug('Observation Space: {}'.format(self.env.observation_space))
+        # logging.debug('Action Space: {}'.format(self.env.action_space))
+        # logging.debug('Action Range: [{}, {}]'.format(self.env.action_space.low, self.env.action_space.high))
 
         # training params
-        self.n_steps = n_steps
+        self.max_episodes = max_episodes
         self.tau = tau
         self.discount = gamma
         self.beta = beta
@@ -102,6 +104,7 @@ class Worker(Process):
         self.lr = lr
         self.t_max = t_max
         self.is_train = is_train
+        self.max_action = max_action if max_action is not None else np.asscalar(self.env.action_space.high)
 
         # shared params
         self.optimizer = optimizer
@@ -127,28 +130,30 @@ class Worker(Process):
         :return: self
         """
 
-        # ensure different seed for each worker thread
         torch.manual_seed(self.seed + self.worker_id)
-        self.env.seed(self.seed + self.worker_id)
 
         # init local NN instance for worker thread
         model = ActorCriticNetwork(n_inputs=self.env.observation_space.shape[0],
                                    action_space=self.env.action_space,
-                                   n_hidden=512)
-        model.train()
-
-        writer = SummaryWriter()
+                                   n_hidden=self.global_model.n_hidden,
+                                   max_action=self.max_action)
+        # max_action=self.action_space.high)
 
         # if no shared optimizer is provided use individual one
         if self.optimizer is None:
-            self.optimizer = torch.optim.RMSprop(self.global_model.parameters(), lr=self.lr)
-            # self.optimizer = torch.optim.Adam(self.global_model.parameters(), lr=self.lr)
+            self.optimizer = torch.optim.RMSprop(self.global_model.parameters(), lr=0.0001)
+            # optimizer = torch.optim.Adam(global_model.parameters(), lr=lr)
+
+        model.train()
+
+        writer = SummaryWriter()
 
         state = torch.from_numpy(np.array(self.env.reset()))
 
         t = 0
         iter_ = 0
         episode_reward = 0
+
         while True:
             # Get state of the global model
             model.load_state_dict(self.global_model.state_dict())
@@ -159,57 +164,49 @@ class Worker(Process):
             rewards = []
             entropies = []
 
-            for step in range(self.n_steps):
+            # reward_sum = 0
+            for step in range(self.t_max):
                 t += 1
 
                 value, mu, sigma = model(Variable(state))
-                # print("Training worker {} -- mu: {} -- sigma: {}".format(self.worker_id, mu, sigma))
 
-                # dist = torch.distributions.Normal(mu, sigma)
+                dist = torch.distributions.Normal(mu, sigma)
 
                 # ------------------------------------------
-                # select action
-                # reparam trick
-                eps = Variable(torch.randn(mu.size()))
-                action = (mu + sigma.sqrt() * eps).data
-                # action = dist.rsample().detach()
+                # # select action
+                # eps = Variable(torch.randn(mu.size()))
+                # action = (mu + sigma.sqrt() * eps).data
+                action = dist.rsample().detach()
 
                 # ------------------------------------------
                 # Compute statistics for loss
+                # prob = normal(action, mu, sigma)
 
-                prob = normal(action, mu, sigma)
-
-                entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
-                # entropy = dist.entropy()
+                # entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
+                entropy = dist.entropy()
                 entropies.append(entropy)
 
-                log_prob = prob.log()
-                # log_prob = dist.log_prob(action)
+                # log_prob = prob.log()
+                log_prob = dist.log_prob(action)
 
                 # make selected move
                 state, reward, done, _ = self.env.step(action.numpy())
+                # TODO: check if this is better
+                # reward -= np.array(state)[0]
                 episode_reward += reward
 
-                done = done or t >= self.t_max
+                # reward = min(max(-1, reward), 1)
+
+                done = done or t >= self.max_episodes
 
                 with self.T.get_lock():
                     self.T.value += 1
-
-                # TODO evaluate if this supports the problem
-                # reward = min(max(-1, reward), 1)
 
                 values.append(value)
                 log_probs.append(log_prob)
                 rewards.append(reward)
 
-                # reset env to ensure to get latest state
-                if done:
-                    t = 0
-                    state = self.env.reset()
-
-                state = torch.from_numpy(np.array(state))
-
-                # end if terminal state or max episodes are reached
+                # reset env to beginning if done
                 if done:
                     t = 0
                     state = self.env.reset()
@@ -220,6 +217,7 @@ class Worker(Process):
                             self.global_reward.value = episode_reward
                         else:
                             self.global_reward.value = .99 * self.global_reward.value + 0.01 * episode_reward
+                    if self.worker_id == 0:
                         writer.add_scalar("global_reward", self.global_reward.value, iter_)
                     episode_reward = 0
 
@@ -233,12 +231,11 @@ class Worker(Process):
 
             # if non terminal state is present set R to be value of current state
             if not done:
-                value, _, _ = model(state)
-                R = value.detach()
+                v, _, _ = model(state)
+                R = v.detach()
 
             R = Variable(R)
             values.append(R)
-
             # compute loss and backprop
             actor_loss = 0
             critic_loss = 0
@@ -257,16 +254,13 @@ class Worker(Process):
                 else:
                     actor_loss = actor_loss - log_probs[i] * advantage.data - self.beta * entropies[i]
 
-            # zero grads to remove all previous grads
+            # zero grads to avoid computation issues in the next step
             self.optimizer.zero_grad()
 
             # compute combined loss of actor_loss and critic_loss
             # avoid overfitting on value loss by scaling it down
-            combined_loss = actor_loss + self.value_loss_coef * critic_loss
-            # combined_loss.mean().backward()
-            combined_loss.backward()
+            (actor_loss + self.value_loss_coef * critic_loss).mean().backward()
 
-            # TODO: evaluate if this is helpful/needed
             torch.nn.utils.clip_grad_norm_(model.parameters(), 40)
 
             sync_grads(model, self.global_model)
@@ -274,39 +268,21 @@ class Worker(Process):
 
             iter_ += 1
 
-            grads = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                    for p in model.parameters()
-                                    if p.grad is not None])
+            if self.worker_id == 0:
+                grads = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                        for p in model.parameters()
+                                        if p.grad is not None])
 
-            writer.add_scalar("mean_values", np.mean([v.data for v in values]), iter_)
-            writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
-            writer.add_scalar("loss_policy", actor_loss, iter_)
-            writer.add_scalar("loss_value", critic_loss, iter_)
-            writer.add_scalar("grad_l2", np.sqrt(np.mean(np.square(grads))), iter_)
-            writer.add_scalar("grad_max", np.max(np.abs(grads)), iter_)
-            writer.add_scalar("grad_variance", np.var(grads), iter_)
-
-    def _compute_loss(self, R: torch.tensor, rewards: list, values: list, log_probs: list, entropies: list,
-                      model: ActorCriticNetwork):
-        # compute loss and backprop
-        actor_loss = 0
-        critic_loss = 0
-        gae = torch.zeros(1, 1)
-
-        # iterate over rewards from most recent to the starting one
-        for i in reversed(range(len(rewards))):
-            R = rewards[i] + R * self.discount
-            advantage = R - values[i]
-            critic_loss = critic_loss + 0.5 * advantage.pow(2)
-            if self.use_gae:
-                # Generalized Advantage Estimation
-                delta_t = rewards[i] + self.discount * values[i + 1].data - values[i].data
-                gae = gae * self.discount * self.tau + delta_t
-                actor_loss = actor_loss - log_probs[i] * Variable(gae) - self.beta * entropies[i]
-            else:
-                actor_loss = actor_loss - log_probs[i] * advantage.data - self.beta * entropies[i]
-
-        return actor_loss, critic_loss
+                valuelist = [v.data for v in values]
+                writer.add_scalar("mean_values", np.mean(valuelist), iter_)
+                writer.add_scalar("min_values", np.min(valuelist), iter_)
+                writer.add_scalar("max_values", np.max(valuelist), iter_)
+                writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
+                writer.add_scalar("loss_policy", actor_loss, iter_)
+                writer.add_scalar("loss_value", critic_loss, iter_)
+                writer.add_scalar("grad_l2", np.sqrt(np.mean(np.square(grads))), iter_)
+                writer.add_scalar("grad_max", np.max(np.abs(grads)), iter_)
+                writer.add_scalar("grad_var", np.var(grads), iter_)
 
     def _test(self):
         """
@@ -321,7 +297,8 @@ class Worker(Process):
         # get an instance of the current global model state
         model = ActorCriticNetwork(n_inputs=self.env.observation_space.shape[0],
                                    action_space=self.env.action_space,
-                                   n_hidden=512)
+                                   n_hidden=self.global_model.n_hidden,
+                                   max_action=self.max_action)
         model.eval()
 
         state = torch.from_numpy(np.array(self.env.reset()))
@@ -349,11 +326,11 @@ class Worker(Process):
                     with torch.no_grad():
                         # select mean of normal dist as action --> Expectation
                         _, mu, _ = model(Variable(state))
-                        action = mu.data
+                        action = mu.detach()
 
                     # make selected move
                     state, reward, done, _ = self.env.step(action.numpy())
-                    done = done or t >= self.t_max
+                    done = done or t >= self.max_episodes
                     reward_sum += reward
 
                     if done:
@@ -373,13 +350,12 @@ class Worker(Process):
                                                                                                 rewards.mean(),
                                                                                                 eps_len.mean(),
                                                                                                 self.global_reward.value))
-            # if 1000 % self.T.value == 0:
             save_checkpoint({
                 'epoch': self.T.value,
                 'state_dict': model.state_dict(),
                 'global_reward': self.global_reward.value,
                 'optimizer': self.optimizer.state_dict() if self.optimizer is not None else None,
-            }, filename="combined_T-{}_global-{}.pth.tar".format(self.T.value, self.global_reward.value))
+            }, filename="./checkpoints/critic_T-{}_global-{}.pth.tar".format(self.T.value, self.global_reward.value))
 
             # delay _test run for 10s to give the network some time to train
             time.sleep(10)
