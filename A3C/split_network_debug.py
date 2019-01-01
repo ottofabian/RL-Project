@@ -254,7 +254,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         if not done:
             R = model_critic(state).detach()
 
-        R = Variable(R)
+        # R = Variable(R)
         values.append(R)
         # compute loss and backprop
         actor_loss = 0
