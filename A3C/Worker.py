@@ -49,8 +49,8 @@ class Worker(Process):
     def __init__(self, env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: int, T: Value,
                  lr: float = 1e-4, max_episodes: int = 10, t_max: int = 100000, gamma: float = .99,
                  tau: float = 1, beta: float = .01, value_loss_coef: float = .5,
-                 optimizer: Optimizer = None, is_train: bool = True, use_gae: bool = True,
-                 is_discrete: bool = False, global_reward=None, max_action=None) -> None:
+                 optimizer: Optimizer = None, scheduler: torch.optim.lr_scheduler = None, is_train: bool = True,
+                 use_gae: bool = True, is_discrete: bool = False, global_reward=None, max_action=None):
         """
         Initialize Worker thread for A3C algorithm
         :param max_episodes: maximum episodes for training
@@ -98,6 +98,7 @@ class Worker(Process):
         self.beta = beta
         self.value_loss_coef = value_loss_coef
         self.use_gae = use_gae
+        self.scheduler = scheduler
 
         # training and testing params
         self.seed = seed
@@ -219,6 +220,7 @@ class Worker(Process):
                             self.global_reward.value = .99 * self.global_reward.value + 0.01 * episode_reward
                     if self.worker_id == 0:
                         writer.add_scalar("global_reward", self.global_reward.value, iter_)
+                        self.scheduler.step()
                     episode_reward = 0
 
                 state = torch.from_numpy(np.array(state))
@@ -234,7 +236,7 @@ class Worker(Process):
                 v, _, _ = model(state)
                 R = v.detach()
 
-            R = Variable(R)
+            # R = Variable(R)
             values.append(R)
             # compute loss and backprop
             actor_loss = 0
@@ -261,7 +263,7 @@ class Worker(Process):
             # avoid overfitting on value loss by scaling it down
             (actor_loss + self.value_loss_coef * critic_loss).mean().backward()
 
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 40)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), .5)
 
             sync_grads(model, self.global_model)
             self.optimizer.step()

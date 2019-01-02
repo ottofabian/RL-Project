@@ -287,8 +287,8 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         # combined_loss.mean().backward()
         # combined_loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), 40)
-        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), 40)
+        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), .5)
+        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), .5)
 
         sync_grads(model_critic, shared_model_critic)
         sync_grads(model_actor, shared_model_actor)

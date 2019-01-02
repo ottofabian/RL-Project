@@ -59,18 +59,18 @@ class A3C(object):
         else:
             env = gym.make(self.env_name)
 
-        max_action = 10
+        max_action = 5
 
         shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
                                           action_space=env.action_space,
-                                          n_hidden=200,
+                                          n_hidden=300,
                                           max_action=max_action)
 
         if self.optimizer_name == 'rmsprop':
-            optimizer = SharedRMSProp(shared_model.parameters(), lr=0.001)
+            optimizer = SharedRMSProp(shared_model.parameters(), lr=0.00001)
             optimizer.share_memory()
         elif self.optimizer_name == 'adam':
-            optimizer = SharedAdam(shared_model.parameters(), lr=self.lr)
+            optimizer = SharedAdam(shared_model.parameters(), lr=0.00001)
             optimizer.share_memory()
         else:
             optimizer = None
@@ -82,10 +82,12 @@ class A3C(object):
             else:
                 load_saved_model(shared_model, path, self.T, self.global_reward)
 
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+
         # start the test worker which is visualized to see how the current progress is
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, shared_model=shared_model,
                    T=self.T, seed=self.seed, lr=0, max_episodes=5000, t_max=0, gamma=0, tau=0,
-                   beta=0, value_loss_coef=0, optimizer=optimizer, is_train=False, use_gae=True,
+                   beta=0, value_loss_coef=0, optimizer=optimizer, scheduler=scheduler, is_train=False, use_gae=True,
                    is_discrete=self.is_discrete, global_reward=self.global_reward, max_action=max_action)
         w.start()
         self.worker_pool.append(w)
@@ -94,8 +96,8 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, shared_model=shared_model, T=self.T,
-                       seed=self.seed, lr=self.lr, max_episodes=5000, t_max=128, gamma=.995, tau=1,
-                       beta=.01, value_loss_coef=.5, optimizer=optimizer, is_train=True,
+                       seed=self.seed, lr=None, max_episodes=5000, t_max=10, gamma=.995, tau=1,
+                       beta=.01, value_loss_coef=.5, optimizer=optimizer, scheduler=scheduler, is_train=True,
                        use_gae=False, is_discrete=self.is_discrete,
                        global_reward=self.global_reward, max_action=max_action)
             w.start()
@@ -123,7 +125,7 @@ class A3C(object):
 
         if self.optimizer_name == 'rmsprop':
             optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
-            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.001)
+            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0005)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         elif self.optimizer_name == 'adam':
@@ -158,7 +160,7 @@ class A3C(object):
             for rank in range(0, self.n_worker):
                 p = Process(target=train, args=(
                     self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-                    self.T, 5000, 128, .995, .5, .01, optimizer_actor, optimizer_critic, True, self.is_discrete,
+                    self.T, 5000, 32, .995, .5, .05, optimizer_actor, optimizer_critic, True, self.is_discrete,
                     self.global_reward))
                 p.start()
                 self.worker_pool.append(p)
