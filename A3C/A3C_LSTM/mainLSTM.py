@@ -38,9 +38,9 @@ parser.add_argument('--seed', type=int, default=1,
                     help='random seed (default: 1)')
 parser.add_argument('--num-processes', type=int, default=2,
                     help='how many training processes to use (default: 2)')
-parser.add_argument('--num-steps', type=int, default=10,
+parser.add_argument('--t-max', type=int, default=10,
                     help='number of forward steps in A3C (default: 10)')
-parser.add_argument('--t-max', type=int, default=1000000,
+parser.add_argument('--max-episode-length', type=int, default=1000000,
                     help='maximum length of an episode (default: 1000000)')
 parser.add_argument('--env-name', default='CartpoleStabShort-v0',
                     help='environment to train on (default: CartpoleStabShort-v0)')

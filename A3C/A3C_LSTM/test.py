@@ -56,11 +56,9 @@ def test(rank, args, shared_model, T, global_reward):
                     _, mu, _, (hx, cx) = model((state, (hx, cx)))
 
                 action = mu
-                if i == 0:
-                    print(action)
 
                 state, reward, done, _ = env.step(action.numpy()[0])
-                done = done or episode_length[i] >= args.t_max
+                done = done or episode_length[i] >= args.max_episode_length
                 reward_sum[i] += reward
 
                 state = torch.from_numpy(np.array(state)).view(1, env.observation_space.shape[0])
