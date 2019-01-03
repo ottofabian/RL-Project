@@ -180,7 +180,7 @@ class A2C(A3C):
                 if done is False:
                     R = values[-1]
 
-                states_v = torch.Tensor(np.array(states_v))
+                states_v = torch.Tensor(states_v)
                 q_vals_v = torch.Tensor(np.array(q_vals_v))
                 #actions_t = torch.tensor((np.array(actions_t, dtype=np.long)), dtype=torch.int32)
                 #log_prob_v = torch.Tensor(np.array(log_prob_v))

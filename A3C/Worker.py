@@ -193,7 +193,7 @@ class Worker(Process):
                 # make selected move
                 state, reward, done, _ = self.env.step(action.numpy())
                 # TODO: check if this is better
-                # reward -= np.array(state)[0]
+                # reward -= state[0]
                 episode_reward += reward
 
                 # reward = min(max(-1, reward), 1)
@@ -223,7 +223,7 @@ class Worker(Process):
                         self.scheduler.step()
                     episode_reward = 0
 
-                state = torch.from_numpy(np.array(state))
+                state = torch.from_numpy(state)
 
                 # end if terminal state or max episodes are reached
                 if done:
@@ -345,7 +345,7 @@ class Worker(Process):
 
                         state = self.env.reset()
 
-                    state = torch.from_numpy(np.array(state))
+                    state = torch.from_numpy(state)
                 done = False
 
             print("T={} -- mean reward={} -- mean episode length={} -- global reward={}".format(self.T.value,
