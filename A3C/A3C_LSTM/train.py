@@ -38,7 +38,7 @@ def train(rank, args, shared_model, T, global_reward, optimizer=None):
     writer = SummaryWriter()
 
     state = env.reset()
-    state = torch.from_numpy(np.array(state))
+    state = torch.from_numpy(state)
     done = True
 
     iter_ = 0
@@ -72,7 +72,7 @@ def train(rank, args, shared_model, T, global_reward, optimizer=None):
             entropy = dist.entropy()
             entropies.append(entropy)
 
-            state, reward, done, _ = env.step(action.detach().numpy()[0])
+            state, reward, done, _ = env.step(action.detach().numpy().flatten())
             done = done or episode_length >= args.max_episode_length
             episode_reward += reward
 
@@ -99,7 +99,7 @@ def train(rank, args, shared_model, T, global_reward, optimizer=None):
                     writer.add_scalar("global_reward", global_reward.value, iter_)
                 episode_reward = 0
 
-            state = torch.from_numpy(np.array(state)).view(1, env.observation_space.shape[0])
+            state = torch.from_numpy(state).view(1, env.observation_space.shape[0])
 
             if done:
                 break

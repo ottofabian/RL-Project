@@ -61,8 +61,6 @@ class ActorCriticNetworkLSTM(torch.nn.Module):
         self.mu = nn.Linear(self.n_hidden, self.n_outputs)
         self.sigma = nn.Linear(self.n_hidden, self.n_outputs)
 
-        # self.apply(init_weights)
-
         self.apply(init_weights)
 
         self.mu.weight.data = normalized_columns_initializer(self.mu.weight.data, 0.01)

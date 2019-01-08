@@ -135,8 +135,8 @@ class PILCO(object):
                 action = self.env.action_space.sample()
                 state, reward, done, _ = self.env.step(action)
 
-                state = np.array(state)
-                state_prev = np.array(state_prev)
+                state = state
+                state_prev = state_prev
 
                 # state-action pair as input
                 self.state_action_pairs[i] = np.concatenate([state_prev, action])
@@ -319,7 +319,7 @@ class PILCO(object):
 
         state_prev = self.env.reset()
         # [1,3] is returned and is reduced to 1D
-        state_prev = np.array(state_prev).flatten()
+        state_prev = state_prev.flatten()
 
         if self.env_name == "Pendulum-v0":
             theta = .1
@@ -341,7 +341,7 @@ class PILCO(object):
             action = action.flatten()
 
             state, reward, done, _ = self.env.step(action)
-            state = np.array(state).flatten()
+            state = state.flatten()
 
             # create history and new training instance
             X.append(np.append(state_prev, action))

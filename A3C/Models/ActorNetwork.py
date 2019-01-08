@@ -42,7 +42,7 @@ class ActorNetwork(torch.nn.Module):
         self.n_outputs = action_space.shape[0]
         self.n_inputs = n_inputs
 
-        n_hidden = 300
+        n_hidden = 200
 
         self.n_inputs = self.n_inputs
         self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
