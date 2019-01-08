@@ -59,7 +59,7 @@ class A3C(object):
         else:
             env = gym.make(self.env_name)
 
-        max_action = 5
+        max_action = 10
 
         shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
                                           action_space=env.action_space,
@@ -67,7 +67,7 @@ class A3C(object):
                                           max_action=max_action)
 
         if self.optimizer_name == 'rmsprop':
-            optimizer = SharedRMSProp(shared_model.parameters(), lr=0.00001)
+            optimizer = SharedRMSProp(shared_model.parameters(), lr=0.01)
             optimizer.share_memory()
         elif self.optimizer_name == 'adam':
             optimizer = SharedAdam(shared_model.parameters(), lr=0.00001)
@@ -96,8 +96,8 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, shared_model=shared_model, T=self.T,
-                       seed=self.seed, lr=None, max_episodes=5000, t_max=10, gamma=.995, tau=1,
-                       beta=.01, value_loss_coef=.5, optimizer=optimizer, scheduler=scheduler, is_train=True,
+                       seed=self.seed, lr=None, max_episodes=5000, t_max=128, gamma=.99, tau=1,
+                       beta=.1, value_loss_coef=.5, optimizer=optimizer, scheduler=scheduler, is_train=True,
                        use_gae=False, is_discrete=self.is_discrete,
                        global_reward=self.global_reward, max_action=max_action)
             w.start()
@@ -125,7 +125,7 @@ class A3C(object):
 
         if self.optimizer_name == 'rmsprop':
             optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
-            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0005)
+            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0001)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         elif self.optimizer_name == 'adam':
@@ -160,7 +160,7 @@ class A3C(object):
             for rank in range(0, self.n_worker):
                 p = Process(target=train, args=(
                     self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-                    self.T, 5000, 32, .995, .5, .05, optimizer_actor, optimizer_critic, True, self.is_discrete,
+                    self.T, 5000, 128, .9975, 1, .05, optimizer_actor, optimizer_critic, True, self.is_discrete,
                     self.global_reward))
                 p.start()
                 self.worker_pool.append(p)

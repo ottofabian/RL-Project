@@ -287,15 +287,13 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         # combined_loss.mean().backward()
         # combined_loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), .5)
-        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), .5)
+        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), 40)
+        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), 40)
 
         sync_grads(model_critic, shared_model_critic)
         sync_grads(model_actor, shared_model_actor)
         optimizer_critic.step()
         optimizer_actor.step()
-
-
 
         iter_ += 1
 
@@ -308,7 +306,11 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
                                           for p in model_actor.parameters()
                                           if p.grad is not None])
 
-            writer.add_scalar("mean_values", np.mean([v.data for v in values]), iter_)
+            valuelist = [v.data for v in values]
+
+            writer.add_scalar("mean_values", np.mean(valuelist), iter_)
+            writer.add_scalar("min_values", np.min(valuelist), iter_)
+            writer.add_scalar("max_values", np.max(valuelist), iter_)
             writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
             writer.add_scalar("loss_policy", actor_loss, iter_)
             writer.add_scalar("loss_value", critic_loss, iter_)

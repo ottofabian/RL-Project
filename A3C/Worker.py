@@ -203,6 +203,10 @@ class Worker(Process):
                 with self.T.get_lock():
                     self.T.value += 1
 
+                if self.scheduler is not None and self.worker_id == 0 and self.T.value % 500000 and iter_ != 0:
+                    # TODO improve the call frequency
+                    self.scheduler.step(self.T.value / 500000)
+
                 values.append(value)
                 log_probs.append(log_prob)
                 rewards.append(reward)
@@ -220,7 +224,6 @@ class Worker(Process):
                             self.global_reward.value = .99 * self.global_reward.value + 0.01 * episode_reward
                     if self.worker_id == 0:
                         writer.add_scalar("global_reward", self.global_reward.value, iter_)
-                        self.scheduler.step()
                     episode_reward = 0
 
                 state = torch.from_numpy(np.array(state))
@@ -250,9 +253,9 @@ class Worker(Process):
                 critic_loss = critic_loss + 0.5 * advantage.pow(2)
                 if self.use_gae:
                     # Generalized Advantage Estimation
-                    delta_t = rewards[i] + self.discount * values[i + 1].data - values[i].data
+                    delta_t = rewards[i] + self.discount * values[i + 1] - values[i]
                     gae = gae * self.discount * self.tau + delta_t
-                    actor_loss = actor_loss - log_probs[i] * Variable(gae) - self.beta * entropies[i]
+                    actor_loss = actor_loss - log_probs[i] * gae.detach() - self.beta * entropies[i]
                 else:
                     actor_loss = actor_loss - log_probs[i] * advantage.data - self.beta * entropies[i]
 
@@ -263,7 +266,7 @@ class Worker(Process):
             # avoid overfitting on value loss by scaling it down
             (actor_loss + self.value_loss_coef * critic_loss).mean().backward()
 
-            torch.nn.utils.clip_grad_norm_(model.parameters(), .5)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 40)
 
             sync_grads(model, self.global_model)
             self.optimizer.step()
@@ -285,6 +288,8 @@ class Worker(Process):
                 writer.add_scalar("grad_l2", np.sqrt(np.mean(np.square(grads))), iter_)
                 writer.add_scalar("grad_max", np.max(np.abs(grads)), iter_)
                 writer.add_scalar("grad_var", np.var(grads), iter_)
+                for param_group in self.optimizer.param_groups:
+                    writer.add_scalar("lr", param_group['lr'], iter_)
 
     def _test(self):
         """
