@@ -109,6 +109,7 @@ def train(rank, args, shared_model, T, global_reward, optimizer=None):
             value, _, _, _ = model((state, (hx, cx)))
             R = value.detach()
 
+        R = Variable(R)
         values.append(R)
         policy_loss = 0
         critic_loss = 0

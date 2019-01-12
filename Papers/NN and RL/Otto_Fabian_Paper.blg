@@ -1,0 +1,49 @@
+This is BibTeX, Version 0.99d (TeX Live 2017/Debian)
+Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
+The top-level auxiliary file: Otto_Fabian_Paper.aux
+The style file: spmpsci.bst
+Database file #1: library.bib.bib
+Warning--I didn't find a database entry for "RefB"
+Warning--I didn't find a database entry for "RefJ"
+You've used 19 entries,
+            2945 wiz_defined-function locations,
+            763 strings with 9925 characters,
+and the built_in function-call counts, 11999 in all, are:
+= -- 995
+> -- 460
+< -- 10
++ -- 185
+- -- 166
+* -- 773
+:= -- 1573
+add.period$ -- 46
+call.type$ -- 19
+change.case$ -- 159
+chr.to.int$ -- 0
+cite$ -- 19
+duplicate$ -- 997
+empty$ -- 1006
+format.name$ -- 182
+if$ -- 2576
+int.to.chr$ -- 0
+int.to.str$ -- 19
+missing$ -- 231
+newline$ -- 103
+num.names$ -- 42
+pop$ -- 422
+preamble$ -- 1
+purify$ -- 116
+quote$ -- 0
+skip$ -- 303
+stack$ -- 0
+substring$ -- 588
+swap$ -- 580
+text.length$ -- 10
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 74
+warning$ -- 0
+while$ -- 80
+width$ -- 21
+write$ -- 243
+(There were 2 warnings)
