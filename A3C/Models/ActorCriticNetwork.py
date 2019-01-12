@@ -47,10 +47,10 @@ class ActorCriticNetwork(torch.nn.Module):
                  In the continuous case: value, mu, sigma
         """
 
-        x = F.leaky_relu(self.input(inputs.float()), .2)
-        x = F.leaky_relu(self.hidden_1(x), .2)
-        x = F.leaky_relu(self.hidden_2(x), .2)
-        x = F.leaky_relu(self.hidden_3(x), .2)
+        x = F.leaky_relu(self.input(inputs.float()), .0)
+        x = F.leaky_relu(self.hidden_1(x), .0)
+        x = F.leaky_relu(self.hidden_2(x), .0)
+        x = F.leaky_relu(self.hidden_3(x), .0)
 
         mu = self.max_action * torch.tanh(self.mu(x))
         sigma = F.softplus(self.sigma(x)) + 1e-5

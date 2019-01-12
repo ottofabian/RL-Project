@@ -138,7 +138,9 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
 def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
           seed: int, T: Value, max_episodes: int = 10, t_max: int = 100000, gamma: float = .99,
           tau: float = 1, beta: float = .01, optimizer_actor: Optimizer = None,
-          optimizer_critic: Optimizer = None, use_gae: bool = True, is_discrete: bool = False, global_reward=None):
+          optimizer_critic: Optimizer = None, scheduler_actor: torch.optim.lr_scheduler = None,
+          scheduler_critic: torch.optim.lr_scheduler = None, use_gae: bool = True, is_discrete: bool = False,
+          global_reward=None):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
@@ -222,6 +224,14 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
             with T.get_lock():
                 T.value += 1
+
+            if worker_id == 0 and T.value % 500000 and iter_ != 0:
+                if scheduler_actor is not None:
+                    # TODO improve the call frequency
+                    scheduler_actor.step(T.value / 500000)
+                if scheduler_critic is not None:
+                    # TODO improve the call frequency
+                    scheduler_critic.step(T.value / 500000)
 
             values.append(value)
             log_probs.append(log_prob)
@@ -320,3 +330,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
             writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), iter_)
             writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), iter_)
             writer.add_scalar("grad_var_critic", np.var(grads_critic), iter_)
+            for param_group in optimizer_actor.param_groups:
+                writer.add_scalar("lr_actor", param_group['lr'], iter_)
+            for param_group in optimizer_critic.param_groups:
+                writer.add_scalar("lr_critic", param_group['lr'], iter_)

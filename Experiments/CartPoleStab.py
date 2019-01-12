@@ -25,10 +25,10 @@ env_name = "CartpoleSwingShort-v0"
 enable_color_logging(debug_lvl=logging.DEBUG)
 logging.info('Start Experiment')
 a3c = A3C(n_worker=6, env_name=env_name, is_discrete=False, seed=seed, optimizer_name='rmsprop')
-a3c.run()
+# a3c.run()
 # a3c.run_debug(path_actor="./best_models/Stabilization/actor_T-6722137_global-6995.186679900222.pth.tar",
 #               path_critic="./best_models/Stabilization/critic_T-6722140_global-6995.186679900222.pth.tar")
-# a3c.run_debug()
+a3c.run_debug()
 
 # env = gym.make(env_name)
 # max_episode_steps = 200
