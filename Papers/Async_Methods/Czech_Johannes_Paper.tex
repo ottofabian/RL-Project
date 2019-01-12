@@ -100,25 +100,27 @@
         This paper aims to address the issue of often high computational requirements for Reinforcement Learning application by validating techniques introduced by asynchronous methods.
         First go over the general principle and the motivation behind asynchronous methods. Brief history when asynchronous where used for RL the first time. Next cover the theory of techniques of shared weight updates.Taking technical challenges into account such as process communication and memory requirements.  Description and discussion of the superlinearity phenomena when using asynchronous methods. Discuss application areas for asynchronous methods and advantages and potential problems when using them.
         
-        \keywords{Reinforcement Learning \and Asynchronism \and Super-linearity}]
+        \keywords{Reinforcement Learning \and Asynchronism \and Super-linearity}
         %\keywords{First keyword \and Second keyword \and More}
         % \PACS{PACS code1 \and PACS code2 \and more}
         % \subclass{MSC code1 \and MSC code2 \and more}
     \end{abstract}
 
-Introduction
-
-
-Try to give proof for this phenomena otherwise rely on empirical experiments
-
-
-
-
 
     \section{Introduction}
     \label{intro}
-    From a historical perspective asynchronous have appeared very early in the research. One of the earliest use cases of asynchronous methods for RL was in the context of Dynamic Programming with a technique called Prioritized Sweeping -> Reference.
-    \textit{-> shortly go over Dynamic Programming}
+    From a historical perspective asynchronous have appeared very early in the research. One of the earliest use cases of asynchronous methods for RL was in the context of Dynamic Programming (Bertsekas and Tsitsiklis 1989 -> reference).
+    Later this technique was built upon in an algorithm called Prioritized Sweeping  -> reference which is acts the same way as the Gauss Seidel algorithm for Dynamic Programming but concentrates all computational effort on the most "interesting" parts of the system.
+    \textit{-> shortly go over Dynamic Programming (Bellman 1957)}
+    -> \textit{Bellman's optimality equation}
+    
+    An important result from the theory of Markov decision tasks tells us that there always exists at least one policy which is \textit{optimal} in the following  sense. For every state, the expected discounted reward-to-go using an optimal policy is no worse than that from any other policy" (S.14, "Prioritized Sweeping").
+    Makes use of heuristic, introducing a hyperparameter 
+    -> Question: What is the main application of asynchronous methods here?
+    
+    
+    Moreover Dimitri P. Bertsekas extended his ideas in a "Distributed Asynchronous Policy Iteration in Dynamic Programming" 2010. -> reference,
+   "Asynchronous Methods for Deep Reinforcement Learning" 2016 -> reference
     
     
     
@@ -128,10 +130,16 @@ Try to give proof for this phenomena otherwise rely on empirical experiments
     Theory
     Mathematical Formulation
     
+    
+    The revival of asynchronous methods has been started by DeepMind
+    Massively Parallel Methods for Deep Reinforcement Learning -> reference
+    
     \section{Superlinearity phenomena}
     \label{sec:1}
     Text with citations \cite{RefB} and \cite{RefJ}.
-    \subsection{Applications}
+    Try to give proof for this phenomena otherwise rely on empirical experiments
+        
+    \section{Applications}
     \label{sec:2}
     Describe application areas
     Asynchronous learning with multiple agents
@@ -139,6 +147,37 @@ Try to give proof for this phenomena otherwise rely on empirical experiments
     
     as required. Don't forget to give each section
     and subsection a unique label (see Sect.~\ref{sec:1}).
+    
+    Reference: Deep Reinforcement Learning for Robotic Manipulation with
+    Asynchronous Off-Policy Updates
+    
+    * Addresses problem of high sample complexity for reinforcement learning tasks
+    * Makes use of off-policy training of deep Q-functions
+    * Learning of complex control tasks without prior demonstration, from their knowledge the first use case of this
+    * Speed up learning by using asynchronous methods
+    * usage of Deep Deterministic Policy Gradient algorithm (DDPG) and Normalized Advantage Function algorithm (NAF) achieve training times suitable for real robotic systems
+    * introduction of new asynchronous variant of NAF
+    * focuses on model-free	RL
+    * "The
+    goals of this prior work are fundamentally different from
+    ours: while prior asynchronous deep reinforcement learning
+    work seeks to reduce overall training time, under the as-
+    sumption that simulation time is inexpensive and the training
+    is dominated by neural network computations, our work
+    instead seeks to minimize the training time when training
+    on real physical robots, where experience is expensive and
+    computing neural network backward passes is comparatively
+    cheap."
+    * don't make use of replay buffer but asynchronous updates instead collecting experience across multiple robotic platforms
+    * achieved significant speedup in overall training time
+    
+    
+    Collective Robot Reinforcement Learning with Distributed
+    Asynchronous Guided Policy Search
+    * making use of asynchronous updates to have greater quantity and diversity of experience
+    * task visual-based door opening task
+    * guided policy search simultaneously trained with a repay buffer of the latest trajectory samples
+    
     \paragraph{Paragraph headings} Use paragraph headings as needed.
     \begin{equation}
         a^2+b^2=c^2
