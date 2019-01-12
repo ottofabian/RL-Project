@@ -59,15 +59,15 @@ class A3C(object):
         else:
             env = gym.make(self.env_name)
 
-        max_action = 5
+        max_action = 10
 
         shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
                                           action_space=env.action_space,
-                                          n_hidden=300,
+                                          n_hidden=64,
                                           max_action=max_action)
 
         if self.optimizer_name == 'rmsprop':
-            optimizer = SharedRMSProp(shared_model.parameters(), lr=0.00001)
+            optimizer = SharedRMSProp(shared_model.parameters(), lr=0.001)
             optimizer.share_memory()
         elif self.optimizer_name == 'adam':
             optimizer = SharedAdam(shared_model.parameters(), lr=0.00001)
@@ -82,7 +82,8 @@ class A3C(object):
             else:
                 load_saved_model(shared_model, path, self.T, self.global_reward)
 
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+        # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+        scheduler = None
 
         # start the test worker which is visualized to see how the current progress is
         w = Worker(env_name=self.env_name, worker_id=self.n_worker, shared_model=shared_model,
@@ -96,8 +97,8 @@ class A3C(object):
         for wid in range(0, self.n_worker):
             self.logger.info("Worker {} created".format(wid))
             w = Worker(env_name=self.env_name, worker_id=wid, shared_model=shared_model, T=self.T,
-                       seed=self.seed, lr=None, max_episodes=5000, t_max=10, gamma=.995, tau=1,
-                       beta=.01, value_loss_coef=.5, optimizer=optimizer, scheduler=scheduler, is_train=True,
+                       seed=self.seed, lr=None, max_episodes=5000, t_max=32, gamma=.995, tau=1,
+                       beta=.1, value_loss_coef=.5, optimizer=optimizer, scheduler=scheduler, is_train=True,
                        use_gae=False, is_discrete=self.is_discrete,
                        global_reward=self.global_reward, max_action=max_action)
             w.start()
@@ -123,6 +124,14 @@ class A3C(object):
         shared_model_critic.share_memory()
         shared_model_actor.share_memory()
 
+        # okish swing up:
+        # optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
+        # optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0005)
+        # p = Process(target=train, args=(
+        #     self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
+        #     self.T, 5000, 128, .9975, 1, .05, optimizer_actor, optimizer_critic, scheduler_actor,
+        #     scheduler_critic, True, self.is_discrete,
+
         if self.optimizer_name == 'rmsprop':
             optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
             optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0005)
@@ -136,6 +145,11 @@ class A3C(object):
         else:
             optimizer_actor = None
             optimizer_critic = None
+
+        # scheduler_critic = torch.optim.lr_scheduler.ExponentialLR(optimizer_critic, gamma=0.95)
+        # scheduler_actor = torch.optim.lr_scheduler.ExponentialLR(optimizer_actor, gamma=0.95)
+        scheduler_actor = None
+        scheduler_critic = None
 
         if path_actor is not None:
             if optimizer_actor is not None:
@@ -160,8 +174,8 @@ class A3C(object):
             for rank in range(0, self.n_worker):
                 p = Process(target=train, args=(
                     self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-                    self.T, 5000, 32, .995, .5, .05, optimizer_actor, optimizer_critic, True, self.is_discrete,
-                    self.global_reward))
+                    self.T, 5000, 128, .995, 1, .1, optimizer_actor, optimizer_critic, scheduler_actor,
+                    scheduler_critic, True, self.is_discrete, self.global_reward))
                 p.start()
                 self.worker_pool.append(p)
 

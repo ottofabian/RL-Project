@@ -31,7 +31,7 @@ def test(rank, args, shared_model, T, global_reward):
         for i in range(10):
 
             state = env.reset()
-            state = torch.from_numpy(np.array(state))
+            state = torch.from_numpy(state)
             done = False
 
             # Sync with the shared model
@@ -57,11 +57,11 @@ def test(rank, args, shared_model, T, global_reward):
 
                 action = mu
 
-                state, reward, done, _ = env.step(action.numpy()[0])
+                state, reward, done, _ = env.step(action.numpy().flatten())
                 done = done or episode_length[i] >= args.max_episode_length
                 reward_sum[i] += reward
 
-                state = torch.from_numpy(np.array(state)).view(1, env.observation_space.shape[0])
+                state = torch.from_numpy(state).view(1, env.observation_space.shape[0])
 
         print(
             "Total training time: {} -- T={}, FPS={:.0f} -- "

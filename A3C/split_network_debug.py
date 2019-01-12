@@ -95,7 +95,7 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
 
                 state, reward, done, _ = env.step(action.numpy())
                 # TODO: check if this is better
-                # reward -= np.array(state)[0]
+                # reward -= state[0]
                 done = done or t >= max_episodes
                 reward_sum += reward
 
@@ -109,7 +109,7 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
 
                     state = env.reset()
 
-                state = torch.from_numpy(np.array(state))
+                state = torch.from_numpy(state)
             done = False
 
         print("T={} -- mean reward={} -- mean episode length={} -- global reward={}".format(T.value,
@@ -138,7 +138,9 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
 def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
           seed: int, T: Value, max_episodes: int = 10, t_max: int = 100000, gamma: float = .99,
           tau: float = 1, beta: float = .01, optimizer_actor: Optimizer = None,
-          optimizer_critic: Optimizer = None, use_gae: bool = True, is_discrete: bool = False, global_reward=None):
+          optimizer_critic: Optimizer = None, scheduler_actor: torch.optim.lr_scheduler = None,
+          scheduler_critic: torch.optim.lr_scheduler = None, use_gae: bool = True, is_discrete: bool = False,
+          global_reward=None):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
@@ -191,29 +193,29 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
             value = model_critic(Variable(state))
             mu, sigma = model_actor(Variable(state))
 
-            dist = torch.distributions.Normal(mu, sigma)
+            # dist = torch.distributions.Normal(mu, sigma)
 
             # ------------------------------------------
             # # select action
-            # eps = Variable(torch.randn(mu.size()))
-            # action = (mu + sigma.sqrt() * eps).data
-            action = dist.rsample().detach()
+            eps = Variable(torch.randn(mu.size()))
+            action = (mu + sigma.sqrt() * eps).data
+            # action = dist.rsample().detach()
 
             # ------------------------------------------
             # Compute statistics for loss
-            # prob = normal(action, mu, sigma)
+            prob = normal(action, mu, sigma)
 
-            # entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
-            entropy = dist.entropy()
+            entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
+            # entropy = dist.entropy()
             entropies.append(entropy)
 
-            # log_prob = prob.log()
-            log_prob = dist.log_prob(action)
+            log_prob = prob.log()
+            # log_prob = dist.log_prob(action)
 
             # make selected move
             state, reward, done, _ = env.step(action.numpy())
             # TODO: check if this is better
-            # reward -= np.array(state)[0]
+            # reward -= state[0]
             episode_reward += reward
 
             # reward = min(max(-1, reward), 1)
@@ -222,6 +224,14 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
             with T.get_lock():
                 T.value += 1
+
+            if worker_id == 0 and T.value % 500000 and iter_ != 0:
+                if scheduler_actor is not None:
+                    # TODO improve the call frequency
+                    scheduler_actor.step(T.value / 500000)
+                if scheduler_critic is not None:
+                    # TODO improve the call frequency
+                    scheduler_critic.step(T.value / 500000)
 
             values.append(value)
             log_probs.append(log_prob)
@@ -242,7 +252,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
                     writer.add_scalar("global_reward", global_reward.value, iter_)
                 episode_reward = 0
 
-            state = torch.from_numpy(np.array(state))
+            state = torch.from_numpy(state)
 
             # end if terminal state or max episodes are reached
             if done:
@@ -287,15 +297,13 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         # combined_loss.mean().backward()
         # combined_loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), .5)
-        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), .5)
+        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), 40)
+        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), 40)
 
         sync_grads(model_critic, shared_model_critic)
         sync_grads(model_actor, shared_model_actor)
         optimizer_critic.step()
         optimizer_actor.step()
-
-
 
         iter_ += 1
 
@@ -308,7 +316,11 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
                                           for p in model_actor.parameters()
                                           if p.grad is not None])
 
-            writer.add_scalar("mean_values", np.mean([v.data for v in values]), iter_)
+            valuelist = [v.data for v in values]
+
+            writer.add_scalar("mean_values", np.mean(valuelist), iter_)
+            writer.add_scalar("min_values", np.min(valuelist), iter_)
+            writer.add_scalar("max_values", np.max(valuelist), iter_)
             writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
             writer.add_scalar("loss_policy", actor_loss, iter_)
             writer.add_scalar("loss_value", critic_loss, iter_)
@@ -318,3 +330,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
             writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), iter_)
             writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), iter_)
             writer.add_scalar("grad_var_critic", np.var(grads_critic), iter_)
+            for param_group in optimizer_actor.param_groups:
+                writer.add_scalar("lr_actor", param_group['lr'], iter_)
+            for param_group in optimizer_critic.param_groups:
+                writer.add_scalar("lr_critic", param_group['lr'], iter_)
