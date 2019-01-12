@@ -133,8 +133,8 @@ class A3C(object):
         #     scheduler_critic, True, self.is_discrete,
 
         if self.optimizer_name == 'rmsprop':
-            optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.001)
-            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.005)
+            optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
+            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0005)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         elif self.optimizer_name == 'adam':
@@ -146,9 +146,10 @@ class A3C(object):
             optimizer_actor = None
             optimizer_critic = None
 
-        scheduler_critic = torch.optim.lr_scheduler.ExponentialLR(optimizer_critic, gamma=0.95)
-        scheduler_actor = torch.optim.lr_scheduler.ExponentialLR(optimizer_actor, gamma=0.95)
-        # scheduler = None
+        # scheduler_critic = torch.optim.lr_scheduler.ExponentialLR(optimizer_critic, gamma=0.95)
+        # scheduler_actor = torch.optim.lr_scheduler.ExponentialLR(optimizer_actor, gamma=0.95)
+        scheduler_actor = None
+        scheduler_critic = None
 
         if path_actor is not None:
             if optimizer_actor is not None:
@@ -173,7 +174,7 @@ class A3C(object):
             for rank in range(0, self.n_worker):
                 p = Process(target=train, args=(
                     self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-                    self.T, 5000, 64, .995, 1, .1, optimizer_actor, optimizer_critic, scheduler_actor,
+                    self.T, 5000, 128, .995, 1, .1, optimizer_actor, optimizer_critic, scheduler_actor,
                     scheduler_critic, True, self.is_discrete, self.global_reward))
                 p.start()
                 self.worker_pool.append(p)

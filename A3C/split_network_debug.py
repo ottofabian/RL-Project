@@ -193,24 +193,24 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
             value = model_critic(Variable(state))
             mu, sigma = model_actor(Variable(state))
 
-            dist = torch.distributions.Normal(mu, sigma)
+            # dist = torch.distributions.Normal(mu, sigma)
 
             # ------------------------------------------
             # # select action
-            # eps = Variable(torch.randn(mu.size()))
-            # action = (mu + sigma.sqrt() * eps).data
-            action = dist.rsample().detach()
+            eps = Variable(torch.randn(mu.size()))
+            action = (mu + sigma.sqrt() * eps).data
+            # action = dist.rsample().detach()
 
             # ------------------------------------------
             # Compute statistics for loss
-            # prob = normal(action, mu, sigma)
+            prob = normal(action, mu, sigma)
 
-            # entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
-            entropy = dist.entropy()
+            entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
+            # entropy = dist.entropy()
             entropies.append(entropy)
 
-            # log_prob = prob.log()
-            log_prob = dist.log_prob(action)
+            log_prob = prob.log()
+            # log_prob = dist.log_prob(action)
 
             # make selected move
             state, reward, done, _ = env.step(action.numpy())
