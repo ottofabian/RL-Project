@@ -22,6 +22,12 @@ Gu, S., Lillicrap, T., Sutskever, I., Levine, S.: {Continuous Deep Q-Learning
   JMLR.org, New York, NY, USA (2016).
 \newblock \urlprefix\url{http://arxiv.org/abs/1603.00748}
 
+\bibitem{Haarnoja2018}
+Haarnoja, T., Zhou, A., Hartikainen, K., Tucker, G., Ha, S., Tan, J., Kumar,
+  V., Zhu, H., Gupta, A., Abbeel, P., Levine, S.: {Soft Actor-Critic Algorithms
+  and Applications}  (2018).
+\newblock \urlprefix\url{http://arxiv.org/abs/1812.05905}
+
 \bibitem{VanHasselt2016}
 van Hasselt, H., Guez, A., Silver, D.: {Deep Reinforcement Learning with Double
   Q-learning}.
@@ -29,12 +35,23 @@ van Hasselt, H., Guez, A., Silver, D.: {Deep Reinforcement Learning with Double
   Phoenix, Arizona (2016).
 \newblock \urlprefix\url{http://arxiv.org/abs/1509.06461}
 
+\bibitem{Hunter2004}
+Hunter, D.R., Lange, K.: {A tutorial on MM algorithms}.
+\newblock The American Statistician \textbf{58}(1), 30--37 (2004)
+
 \bibitem{Ioffe2015}
 Ioffe, S., Szegedy, C.: {Batch Normalization: Accelerating Deep Network
   Training by Reducing Internal Covariate Shift}.
 \newblock In: International Conference on Machine Learning (ICML), ICML'15, pp.
   448--456. JMLR.org (2015).
 \newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=3045118.3045167}
+
+\bibitem{Kakade2001}
+Kakade, S.: {A Natural Policy Gradient}.
+\newblock In: Proceedings of the 14th International Conference on Neural
+  Information Processing Systems: Natural and Synthetic, NIPS'01, pp.
+  1531--1538. MIT Press, Cambridge, MA, USA (2001).
+\newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=2980539.2980738}
 
 \bibitem{Kulkarni2016}
 Kulkarni, T.D., Narasimhan, K., Saeedi, A., Tenenbaum, J.: {Hierarchical Deep
@@ -96,6 +113,19 @@ Schaul, T., Quan, J., Antonoglou, I., Silver, D.: {Prioritized Experience
 \newblock In: Interantional Conference for Learning Representations (ICLR)
   (2015).
 \newblock \urlprefix\url{http://arxiv.org/abs/1511.05952}
+
+\bibitem{Schulman2015}
+Schulman, J., Levine, S., Abbeel, P., Jordan, M., Moritz, P.: {Trust Region
+  Policy Optimization}.
+\newblock In: F.~Bach, D.~Blei (eds.) Proc. 32nd Int. Conf. Mach. Learn.,
+  \emph{Proceedings of Machine Learning Research}, vol.~37, pp. 1889--1897.
+  PMLR, Lille, France (2015).
+\newblock \urlprefix\url{http://proceedings.mlr.press/v37/schulman15.html}
+
+\bibitem{Schulman2017}
+Schulman, J., Wolski, F., Dhariwal, P., Radford, A., Klimov, O.: {Proximal
+  Policy Optimization Algorithms}  (2017).
+\newblock \urlprefix\url{http://arxiv.org/abs/1707.06347}
 
 \bibitem{Silver2014}
 Silver, D., Lever, G., Heess, N., Degris, T., Wierstra, D., Riedmiller, M.:

@@ -164,26 +164,53 @@
 		The lower level \textit{controller} maximizes an intrinsic reward by solving the subgoal.
 		This allows h-DQN to achieve a significant better performance on the Atari game Montezuma's Revenge.\\
 		As the above results show, classical Q-learning \cite{Watkins1989} is quite successful for discrete action spaces, real world problems however often require continuous action spaces.
-		Lillicrap, et al. \cite{Lillicrap2016} adapt the idea of DQN \cite{Mnih2015} and make it applicable to the continuous action domain. 
-		They introduce Deep Deterministic Policy Gradients (DDPG), a model-free Actor-Critic (AC) algorithm with approximate Q-Learning based on deterministic policy gradients (DPG) \cite{Silver2014}.
-		DQN's \cite{Mnih2015} architecture is improved by adding batch normalization layers \cite{Ioffe2015} to deal with different physical units in the observation space. 
-		In order to stabilize policies, they adapt the idea of target networks from DQN \cite{Mnih2015} and use "soft" target updates for AC. 
-		Besides continuous action spaces, it is usually hard to collect data from e.g. robots, and therefore dealing with high sample complexity in real world applications.
-		Normalized advantage functions (NAF) \cite{Gu2016} approaches this problem with a DQN based algorithm.
+		Further, it is usually hard in real world applications to collect data from e.g. robots, and therefore dealing with high sample complexity.
+		Normalized advantage functions (NAF) \cite{Gu2016} approach both problems with a DQN based algorithm.
 		Similar to DDDQN \cite{Wang2016}, the Q-network is represented by one state-value function output and one state dependent action advantage function.
 		In order to reduce sample complexity, NAF incorporates \textit{imagination rollouts}. 
 		Those synthetic on-policy samples are created by utilizing a mixture of iterative LQG (iLQG) \cite{Todorov2005} and on-policy trajectories for real world rollouts.
 		Afterwards, the learned model for the states is used to generate replay memory entries. 
 		This can be seen as a scalable variant of Dyna-Q \cite{Sutton1990}. 
-		As a drawback, NAF failed to show improvements using iLQG compared to on-policy samples, however, iLQG might be desirable when avoiding damaging actions is critical. 
+		As a drawback, NAF failed to show improvements using iLQG compared to on-policy samples, however, iLQG might be desirable when damage avoidance is crucial. 
+		Lillicrap, et al. \cite{Lillicrap2016} also adapt the fundamental idea of DQN \cite{Mnih2015} and make it applicable to the continuous action domain. 
+		However, they do not follow a value based learning and introduce Deep Deterministic Policy Gradients (DDPG), a model-free Actor-Critic (AC) algorithm with approximate Q-Learning based on deterministic policy gradients (DPG) \cite{Silver2014}.
+		%		different class of algorithms, policy gradients methods.
+		DQN's \cite{Mnih2015} architecture is improved by adding batch normalization layers \cite{Ioffe2015} to deal with different physical units in the observation space. 
+		In order to stabilize policies, they adapt the idea of target networks from DQN \cite{Mnih2015} and use "soft" target updates for AC. 
+		Albeit, this stability is, according to Haaranoja, et al. \cite{Haarnoja2018}, extremely difficult to achieve and further, DDPG is brittle to hyperparameter choices. 
+		As consequence, Haaranoja, et al. \cite{Haarnoja2018} present soft actor critic (SAC).
+		They combine the AC approach from DDPG \cite{Lillicrap2016} with maximum entropy reinforcement learning, which enables exploration and stability. 
+		Similarly to NAF \cite{Gu2016}, they also approach the problem of sample efficiency and gain significant improvements compared DDPG and other on-policy methods.
+		In general they also found modeling the state-value function and the action-value function with two separate NNs improved the stability of SAC. 
+%		One critical aspect of SAC is however the need of maintaining four different function approximates in form of neural networks at the same time.		
 		
-		
-%		In order to reduce sample complexity they do not require a second actor or policy. 
 		
 		
  	\paragraph{POMDPs}
     \subsection{On-Policy}
     \label{sec:on-policy}
+%    TODO introduction to on policy.
+   	DDPG established a policy gradient based method, which works off-policy. 
+   	However, must policy gradient methods are working on-policy.
+    Also following the concept of policy gradients, Schulman, et al. \cite{Schulman2015} introduce trust region policy optimization (TRPO).
+    They criticize that first order gradient methods are often overconfident and not accurate enough in curved areas, which results in losing already made learning progress. 
+    Consequently, TRPO applies the conjugate gradient method (CG) to the natural policy gradient \cite{Kakade2001}.
+    The optimization is based on a form of minorization-maximization \cite{Hunter2004} and optimizes a surrogate function under a Kullback-Leibler (KL) constrained objective.
+    %		The surrogate function is an importance sampling estimate of the advantage function and is optimized under a Kullback-Leibler (KL) constrained objective.
+    This trust region constraint represents a pessimistic/lower bound on the performance of the policy and guarantees monotonic improvement locally around the current policy.	
+    In order to solve for the inverse of the fisher information matrix (FIM), which is required for the CG update, truncated natural policy gradients are applied to find an approximate solution. 
+    Before the update a backtracking line search is applied, which allows to assume larger trust regions and therefore larger update steps. 
+    However, one big drawback in practice is the sample efficiency of TRPO. 
+    Theoretically, TRPO can be applied to any policy, but, due to the lack of scalability, it is not practical to use deep neural networks policies.
+    This shortcoming is addressed by Proximal Policy Optimization (PPO) \cite{Schulman2017}.
+    PPO keeps all monotonic improvement guarantees while using first order optimization. 
+    This can be achieved two ways: 
+    \begin{enumerate}
+    	\item The KL constrained objective is replaced with a KL penalized objective and the corresponding penalty coefficient is automatically adapted each step. 
+    	\item The objective can be clipped, i.e. the probability ratio of old and new policy, which results of an lower bound for the unclipped objective. 
+    \end{enumerate}
+    Typically, clipping the objective shows better performance than the adaptive KL penalty.
+    Besides PPO, actor critic using kronecker-factored trust region (ACKTR).
 	
     \subsection{Real World Applications}
     \label{sec:games}

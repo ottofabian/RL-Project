@@ -5,45 +5,47 @@ The style file: spmpsci.bst
 Database file #1: library.bib.bib
 Warning--I didn't find a database entry for "RefB"
 Warning--I didn't find a database entry for "RefJ"
-You've used 19 entries,
+Warning--empty journal in Haarnoja2018
+Warning--empty journal in Schulman2017
+You've used 24 entries,
             2945 wiz_defined-function locations,
-            763 strings with 9925 characters,
-and the built_in function-call counts, 11999 in all, are:
-= -- 995
-> -- 460
-< -- 10
-+ -- 185
-- -- 166
-* -- 773
-:= -- 1573
-add.period$ -- 46
-call.type$ -- 19
-change.case$ -- 159
+            804 strings with 11123 characters,
+and the built_in function-call counts, 15132 in all, are:
+= -- 1238
+> -- 597
+< -- 13
++ -- 240
+- -- 216
+* -- 992
+:= -- 1983
+add.period$ -- 55
+call.type$ -- 24
+change.case$ -- 202
 chr.to.int$ -- 0
-cite$ -- 19
-duplicate$ -- 997
-empty$ -- 1006
-format.name$ -- 182
-if$ -- 2576
+cite$ -- 26
+duplicate$ -- 1264
+empty$ -- 1254
+format.name$ -- 237
+if$ -- 3232
 int.to.chr$ -- 0
-int.to.str$ -- 19
-missing$ -- 231
-newline$ -- 103
-num.names$ -- 42
-pop$ -- 422
+int.to.str$ -- 24
+missing$ -- 297
+newline$ -- 125
+num.names$ -- 54
+pop$ -- 547
 preamble$ -- 1
-purify$ -- 116
+purify$ -- 150
 quote$ -- 0
-skip$ -- 303
+skip$ -- 378
 stack$ -- 0
-substring$ -- 588
-swap$ -- 580
-text.length$ -- 10
+substring$ -- 712
+swap$ -- 739
+text.length$ -- 13
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 74
-warning$ -- 0
-while$ -- 80
-width$ -- 21
-write$ -- 243
-(There were 2 warnings)
+type$ -- 94
+warning$ -- 2
+while$ -- 99
+width$ -- 26
+write$ -- 298
+(There were 4 warnings)
