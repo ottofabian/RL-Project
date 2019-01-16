@@ -7,10 +7,9 @@ from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
 
 seed = 1
-env_name = "Pendulum-v0"
+# env_name = "Pendulum-v0"
 
-
-# env_name = "CartpoleStabShort-v0"
+env_name = "CartpoleStabShort-v0"
 # env_name = "CartpoleStabRR-v0"
 
 # env_name = "CartpoleSwingShort-v0"

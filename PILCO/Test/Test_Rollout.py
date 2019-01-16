@@ -17,13 +17,19 @@ octave.addpath(dir_path)
 def test_rollout():
     np.random.seed(0)
 
+    # specifiy state and actions space
     state_dim = 2
     n_actions = 1
     n_targets = 2
 
-    n_features_rbf = 100
+    # how many samples for dynamics
+    n_samples = 100
+
+    # policy features and actions range
+    n_features_rbf = 20
     bound = np.array([10.0])
 
+    # trajectory length
     horizon = 10
 
     # ---------------------------------------------------------------------------------------
@@ -44,18 +50,21 @@ def test_rollout():
 
     # take any env, to avoid issues with gym.make
     # matlab is specified with squashing, so we assume bound bound
-    pilco = PILCO(env_name="Pendulum-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=None, bound=bound)
+    pilco = PILCO(env_name="MountainCarContinuous-v0", seed=1, n_features=None, Horizon=horizon, loss=None,
+                  bound=bound)
 
     # Training Dataset for dynamics model
-    X0_dyn = np.random.rand(100, state_dim + n_actions)
+    X0_dyn = np.random.rand(n_samples, state_dim + n_actions)
     A_dyn = np.random.rand(state_dim + n_actions, n_targets)
-    Y0_dyn = np.sin(X0_dyn).dot(A_dyn) + 1e-3 * (np.random.rand(100, n_targets) - 0.5)  # Just something smooth
+    Y0_dyn = np.sin(X0_dyn).dot(A_dyn) + 1e-3 * (np.random.rand(n_samples, n_targets) - 0.5)
 
     # set observed data set manually
     pilco.state_action_pairs = X0_dyn
     pilco.state_delta = Y0_dyn
     pilco.state_dim = state_dim
     pilco.n_actions = n_actions
+    # pilco.T = horizon
+    # pilco.bound = bound
 
     pilco.learn_dynamics_model()
 

@@ -60,7 +60,7 @@ class GaussianProcess(object):
         :param params: vector of [length_scales, sigma_f, sigma_eps]
         :return: penalized marginal log likelihood
         """
-        p = 30
+        p = 5
         length_scales, sigma_f, sigma_eps = self.unwrap_params(params)
 
         L = self.log_marginal_likelihood(params)

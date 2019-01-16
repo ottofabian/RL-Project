@@ -78,7 +78,7 @@ def test_squash():
     np.random.seed(0)
     n_actions = 1
 
-    mu = np.random.rand(1, n_actions)  # But MATLAB defines it as m'
+    mu = np.random.rand(1, n_actions)
     sigma = np.random.rand(n_actions, n_actions)
     sigma = sigma.dot(sigma.T)
     i_o_cov = np.ones(mu.T.shape)

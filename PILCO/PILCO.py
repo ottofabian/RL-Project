@@ -72,8 +72,7 @@ class PILCO(object):
         self.bound = bound
         self.n_features = n_features
         # TODO: increase by 25% when successful
-        self.T = Horizon
-        self.bound = self.env.action_space.high
+        self.Horizon = Horizon
 
         # -----------------------------------------------------
         # rollout variables
@@ -141,8 +140,8 @@ class PILCO(object):
                 # state-action pair as input
                 self.state_action_pairs[i] = np.concatenate([state_prev, action])
 
-                state_prev += np.random.multivariate_normal(np.ones(state.shape), 1e-6 * np.identity(state.shape[0]))
-                self.state_delta[i] = state - state_prev
+                noise = np.random.multivariate_normal(np.ones(state.shape), 1e-6 * np.identity(state.shape[0]))
+                self.state_delta[i] = state - state_prev + noise
 
                 self.rewards[i] = reward
                 state_prev = state
@@ -201,7 +200,7 @@ class PILCO(object):
         mu_action_container = []
         sigma_action_container = []
 
-        for t in range(0, self.T):
+        for t in range(0, self.Horizon):
             state_next_mu, state_next_cov, action_mu, action_cov = self.rollout(policy, state_mu, state_cov)
 
             # compute value of current state prediction
