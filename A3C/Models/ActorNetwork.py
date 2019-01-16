@@ -20,7 +20,6 @@ def init_weights(m):
 #
 #         self.n_inputs = self.n_inputs
 #         self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
-#         self.hidden_action2 = nn.Linear(n_hidden, n_hidden)
 #         self.mu = nn.Linear(n_hidden, self.n_outputs)
 #         self.sigma = nn.Linear(n_hidden, self.n_outputs)
 #
@@ -57,7 +56,7 @@ def init_weights(m):
 #         mu = 10 * torch.tanh(self.mu(x))
 #         sigma = F.softplus(self.sigma(x)) + 1e-5  # avoid 0
 
-load_stab = False #True
+load_stab = True #True
 
 
 class ActorNetwork(torch.nn.Module):
@@ -75,7 +74,6 @@ class ActorNetwork(torch.nn.Module):
 
             self.n_inputs = self.n_inputs
             self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
-            self.hidden_action2 = nn.Linear(n_hidden, n_hidden)
             self.mu = nn.Linear(n_hidden, self.n_outputs)
             self.sigma = nn.Linear(n_hidden, self.n_outputs)
 
@@ -102,7 +100,6 @@ class ActorNetwork(torch.nn.Module):
             x = x.float()
 
             x = F.relu(self.hidden_action1(x))
-            x = F.relu(self.hidden_action2(x))
 
             mu = 5 * torch.tanh(self.mu(x))
             sigma = F.softplus(self.sigma(x)) + 1e-5

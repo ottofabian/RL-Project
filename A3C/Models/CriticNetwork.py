@@ -33,7 +33,7 @@ def init_weights(m):
 # mu = 5 * torch.tanh(self.mu(action_hidden))
 # sigma = F.softplus(self.sigma(action_hidden)) + 1e-5
 
-load_stab = False #True
+load_stab = True #True
 
 class CriticNetwork(torch.nn.Module):
     def __init__(self, n_inputs, action_space, is_discrete=False):
