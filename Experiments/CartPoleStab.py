@@ -8,6 +8,7 @@ from A3C.A3C import A3C
 from Experiments.util.ColorLogger import enable_color_logging
 from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
+import torch
 
 quanser_robots
 #
@@ -26,14 +27,14 @@ env_name = "CartpoleStabShort-v0"
 
 enable_color_logging(debug_lvl=logging.DEBUG)
 logging.info('Start Experiment')
-a3c = A3C(n_worker=1, env_name=env_name, is_discrete=False, seed=seed, optimizer_name='rmsprop')
+a3c = A3C(n_worker=1, env_name=env_name, is_discrete=False, seed=seed, optimizer_name='rmsprop', is_train=False)
 # a3c.run()
 #a3c.run_debug(path_actor="./best_models/SwingUp/works but not stable/actor_T-135307781_global-3005.6435968448095.pth.tar",
 #               path_critic="./best_models/SwingUp/works but not stable/critic_T-135307786_global-3005.6435968448095.pth.tar")
 
-a3c.run_debug(path_actor="./best_models/Stabilization/Reduced action range/actor_T-6719059_global-9984.922698507235.pth.tar",
+a3c.run_debug(path_actor="./best_models/Stabilization/Reduced action range/actor_T-6719074_global-9984.922698507235.pth.tar",
                 path_critic="./best_models/Stabilization/Reduced action range/critic_T-6719074_global-9984.922698507235.pth.tar")
-#
+
 #a3c.run_debug(path_actor="./best_models/Stabilization/Full action range/actor_finetuned_T-7285824_global-1266.9597491827692.pth.tar",
 #              path_critic="./best_models/Stabilization/Full action range/critic_finetuned_T-7285824_global-1266.9597491827692.pth.tar")
 

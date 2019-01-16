@@ -12,13 +12,13 @@ from A3C.Optimizers.SharedAdam import SharedAdam
 from A3C.Optimizers.SharedRMSProp import SharedRMSProp
 from A3C.Worker import Worker
 from A3C.split_network_debug import test, train
-from Experiments.util.model_save import load_saved_model
+from Experiments.util.model_save import load_saved_model, save_checkpoint
 
 
 class A3C(object):
 
     def __init__(self, n_worker: int, env_name: str, is_discrete: bool = False,
-                 seed: int = 123, optimizer_name='rmsprop') -> None:
+                 seed: int = 123, optimizer_name='rmsprop', is_train: bool = True) -> None:
         """
 
         :param n_worker: Number of workers/threads to spawn which conduct the A3C algorithm.
@@ -29,6 +29,7 @@ class A3C(object):
                             This setting has effect on the network architecture as well as the loss function used.
                             For more detail see: p.12 - Asynchronous Methods for Deep Reinforcement Learning.pdf
         :param optimizer_name: Optimizer used for shared weight updates. Possible arguments are 'rmsprop', 'adam'.
+        :param is_train: If true enable training, use false if you only deploy the policy for testing
         """
         self.seed = seed
         self.env_name = env_name
@@ -43,6 +44,8 @@ class A3C(object):
         self.n_worker = n_worker
         self.worker_pool = []
         self.lock = Lock()
+
+        self.is_train = is_train
 
         self.logger = logging.getLogger(__name__)
 
@@ -170,8 +173,7 @@ class A3C(object):
         p.start()
         self.worker_pool.append(p)
 
-        train = False
-        if train:
+        if self.is_train:
             if "RR" not in self.env_name:
                 for rank in range(0, self.n_worker):
                     p = Process(target=train, args=(
