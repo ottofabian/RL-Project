@@ -63,19 +63,19 @@ class RBFController(MultivariateGP, Controller):
         # second X shape is for lengthscales
         # self.n_params = X.shape[0] * X.shape[1] + y.shape[0] * y.shape[1] + X.shape[0] + 1
 
-    def choose_action(self, mu, sigma, squash=True, bound=1):
+    def choose_action(self, mu, sigma, bound=None):
         action_mu, action_cov, input_output_cov = self.predict_from_dist(mu, sigma)
 
-        if squash:
-            action_mu, action_cov, input_output_cov = squash_action_dist(action_mu, action_cov, input_output_cov,
-                                                                         bound)
+        if bound is not None:
+            action_mu, action_cov, input_output_cov = squash_action_dist(action_mu, action_cov, input_output_cov, bound)
+
         # prediction from GP of cross_cov is times inv(s)
         return action_mu, action_cov, sigma @ input_output_cov
 
     def optimize(self):
         # TODO make this working for n_actions > 1
         params = np.array([gp.wrap_policy_hyperparams() for gp in self.gp_container]).flatten()
-        options = {'maxiter': 100, 'maxfun': 100, 'disp': True}
+        options = {'maxiter': 150, 'disp': True}
 
         try:
             self.logger.info("Starting to optimize policy with L-BFGS-B.")

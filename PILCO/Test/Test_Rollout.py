@@ -16,12 +16,13 @@ octave.addpath(dir_path)
 
 def test_rollout():
     np.random.seed(0)
+
     state_dim = 2
     n_actions = 1
     n_targets = 2
 
     n_features_rbf = 100
-    e = np.array([10.0])
+    bound = np.array([10.0])
 
     horizon = 10
 
@@ -33,7 +34,8 @@ def test_rollout():
     Y0_rbf = np.sin(X0_rbf).dot(A_rbf) + 1e-3 * (np.random.rand(n_features_rbf, n_actions) - 0.5)
     length_scales_rbf = np.random.rand(state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, rollout=None, length_scales=length_scales_rbf)
+    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, compute_cost=None,
+                        length_scales=length_scales_rbf)
     rbf.fit(X0_rbf, Y0_rbf)
 
     # ---------------------------------------------------------------------------------------
@@ -41,38 +43,37 @@ def test_rollout():
     # Pilco setup
 
     # take any env, to avoid issues with gym.make
-    # matlab is specified with squashing
-    pilco = PILCO(env_name="Pendulum-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=None, squash=True)
+    # matlab is specified with squashing, so we assume bound bound
+    pilco = PILCO(env_name="Pendulum-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=None, bound=bound)
 
     # Training Dataset for dynamics model
     X0_dyn = np.random.rand(100, state_dim + n_actions)
     A_dyn = np.random.rand(state_dim + n_actions, n_targets)
     Y0_dyn = np.sin(X0_dyn).dot(A_dyn) + 1e-3 * (np.random.rand(100, n_targets) - 0.5)  # Just something smooth
 
+    # set observed data set manually
     pilco.state_action_pairs = X0_dyn
     pilco.state_delta = Y0_dyn
     pilco.state_dim = state_dim
     pilco.n_actions = n_actions
-    pilco.bound = e
-    pilco.T = horizon
 
     pilco.learn_dynamics_model()
 
     # ---------------------------------------------------------------------------------------
 
     # Generate input
-    m = np.random.rand(1, state_dim)
-    s = np.random.rand(state_dim, state_dim)
-    s = s.dot(s.T)
+    mean = np.random.rand(1, state_dim)
+    sigma = np.random.rand(state_dim, state_dim)
+    sigma = sigma.dot(sigma.T)
 
     M = []
     S = []
 
-    M.append(m)
-    S.append(s)
+    M.append(mean.flatten())
+    S.append(sigma)
 
-    mm = m
-    ss = s
+    mm = mean
+    ss = sigma
 
     for i in range(horizon):
         mm, ss, _, _ = pilco.rollout(policy=rbf, state_mu=mm.flatten(), state_cov=ss)
@@ -117,7 +118,7 @@ def test_rollout():
     policy.p.hyp = hyp_rbf
     policy.p.inputs = X0_rbf
     policy.p.targets = Y0_rbf
-    policy.maxU = e
+    policy.maxU = bound
 
     # ---------------------------------------------------------------------------------------
 
@@ -130,7 +131,11 @@ def test_rollout():
 
     # ---------------------------------------------------------------------------------------
 
-    M_mat, S_mat = octave.pred(policy, plant, dynmodel, m.T, s, horizon, nout=2, verbose=True)
+    M_mat, S_mat = octave.pred(policy, plant, dynmodel, mean.T, sigma, horizon, nout=2, verbose=True)
+
+    # check initial values before rollout, avoids stupid mistakes
+    np.testing.assert_allclose(M[0], M_mat[:, 0].T, rtol=1e-5)
+    np.testing.assert_allclose(S[0], S_mat[:, :, 0], rtol=1e-5)
 
     # check after first iteration
     np.testing.assert_allclose(M[1], M_mat[:, 1].T, rtol=1e-5)

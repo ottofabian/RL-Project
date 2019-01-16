@@ -11,8 +11,9 @@ dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"
 octave.addpath(dir_path)
 
 
-def test_predictions():
-    np.random.seed(0)
+def test_mgpr():
+    np.random.seed(2)
+
     state_dim = 3
     n_targets = 2
 
@@ -28,9 +29,9 @@ def test_predictions():
     mgpr.optimize()
 
     # Generate input
-    m = np.random.rand(1, state_dim)  # But MATLAB defines it as m'
+    m = np.random.rand(1, state_dim)
     s = np.random.rand(state_dim, state_dim)
-    s = s.dot(s.T)  # Make s positive semidefinite
+    s = s.dot(s.T)
 
     _ = mgpr.predict_from_dist(m, s)
 
@@ -39,7 +40,6 @@ def test_predictions():
     mgpr.fit(X0, Y0)
 
     M, S, V = mgpr.predict_from_dist(m, s)
-    # V = np.linalg.solve(s, np.eye(s.shape[0])) @ V
 
     # convert data to the struct expected by the MATLAB implementation
     length_scales = mgpr.get_length_scales()
@@ -72,4 +72,4 @@ def test_predictions():
 
 
 if __name__ == '__main__':
-    test_predictions()
+    test_mgpr()

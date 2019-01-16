@@ -13,7 +13,8 @@ octave.addpath(dir_path)
 
 
 def test_cost():
-    np.random.seed(1)
+    np.random.seed(0)
+
     state_dim = 2
     mu = np.random.rand(1, state_dim)
     sigma = np.random.rand(state_dim, state_dim)
@@ -40,6 +41,7 @@ def test_cost():
 
 def test_trajectory_cost():
     np.random.seed(0)
+
     state_dim = 2
     n_actions = 1
     n_targets = 2
@@ -49,53 +51,52 @@ def test_trajectory_cost():
 
     horizon = 10
 
-    # ---------------------------------------------------------------------------------------
+    # Default initial distribution for computing trajectory cost
+    mu = np.random.randn(1, state_dim)
+    sigma = np.random.randn(state_dim, state_dim)
+    sigma = sigma.dot(sigma.T)
 
-    # setup policy
+    # some random target state to reach
+    target_state = np.random.rand(state_dim)
+
+    # ---------------------------------------------------------------------------------------
+    # Policy setup
+
     X0_rbf = np.random.rand(n_features_rbf, state_dim)
     A_rbf = np.random.rand(state_dim, n_actions)
     Y0_rbf = np.sin(X0_rbf).dot(A_rbf) + 1e-3 * (np.random.rand(n_features_rbf, n_actions) - 0.5)
     length_scales_rbf = np.random.rand(state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, rollout=None, length_scales=length_scales_rbf)
+    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, compute_cost=None,
+                        length_scales=length_scales_rbf)
     rbf.fit(X0_rbf, Y0_rbf)
 
     # ---------------------------------------------------------------------------------------
-
     # Pilco setup
 
     # setup loss
-    target_state = np.random.rand(state_dim)
     T_inv = np.random.randn(state_dim, state_dim)
     loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, T_inv=T_inv)
 
     # take any env, to avoid issues with gym.make
     # matlab is specified with squashing
-    pilco = PILCO(env_name="Pendulum-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=loss,
-                  squash=True, gamma=1)
+    pilco = PILCO(env_name="MountainCarContinuous-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=loss,
+                  bound=e, gamma=1, start_mu=mu.flatten(), start_cov=sigma)
 
     # Training Dataset for dynamics model
     X0_dyn = np.random.rand(100, state_dim + n_actions)
     A_dyn = np.random.rand(state_dim + n_actions, n_targets)
-    Y0_dyn = np.sin(X0_dyn).dot(A_dyn) + 1e-3 * (np.random.rand(100, n_targets) - 0.5)  # Just something smooth
+    Y0_dyn = np.sin(X0_dyn).dot(A_dyn) + 1e-3 * (np.random.rand(100, n_targets) - 0.5)
 
+    # set observed data set manually
     pilco.state_action_pairs = X0_dyn
     pilco.state_delta = Y0_dyn
     pilco.state_dim = state_dim
     pilco.n_actions = n_actions
-    pilco.bound = e
-    pilco.T = horizon
 
     pilco.learn_dynamics_model()
 
     # ---------------------------------------------------------------------------------------
-
-    # Generate input
-    # !!!! As of now this cannot be changed,
-    # this is the default init for state and action in compute_trajectory_cost
-    m = np.zeros((1,state_dim))
-    s = 1e-2 * np.identity(state_dim)
-    s = s.dot(s.T)
 
     M = pilco.compute_trajectory_cost(policy=rbf)
 
@@ -155,7 +156,7 @@ def test_trajectory_cost():
 
     # ---------------------------------------------------------------------------------------
 
-    M_mat, S_mat = octave.predcost(m.T, s, dynmodel, plant, policy, cost, horizon, nout=2, verbose=True)
+    M_mat, S_mat = octave.predcost(mu.T, sigma, dynmodel, plant, policy, cost, horizon, nout=2, verbose=True)
 
     # compare sum of cost
     np.testing.assert_allclose(M, np.sum(M_mat), rtol=1e-5)
