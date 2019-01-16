@@ -170,17 +170,19 @@ class A3C(object):
         p.start()
         self.worker_pool.append(p)
 
-        if "RR" not in self.env_name:
-            for rank in range(0, self.n_worker):
-                p = Process(target=train, args=(
-                    self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-                    self.T, 5000, 128, .995, 1, .1, optimizer_actor, optimizer_critic, scheduler_actor,
-                    scheduler_critic, True, self.is_discrete, self.global_reward))
-                p.start()
-                self.worker_pool.append(p)
+        train = False
+        if train:
+            if "RR" not in self.env_name:
+                for rank in range(0, self.n_worker):
+                    p = Process(target=train, args=(
+                        self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
+                        self.T, 5000, 128, .995, 1, .1, optimizer_actor, optimizer_critic, scheduler_actor,
+                        scheduler_critic, True, self.is_discrete, self.global_reward))
+                    p.start()
+                    self.worker_pool.append(p)
 
-            for p in self.worker_pool:
-                p.join()
+                for p in self.worker_pool:
+                    p.join()
 
     def stop(self):
         self.worker_pool = []
