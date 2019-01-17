@@ -110,7 +110,9 @@ class A3C(object):
         for w in self.worker_pool:
             w.join()
 
-    def run_debug(self, path_actor=None, path_critic=None):
+    def run_debug(self, path_actor=None, path_critic=None,
+                  max_episodes: int = 5000, t_max: int = 128, gamma: float = .995, tau: float = 1.0, beta: float = 0.1,
+                  use_gae: bool = True):
 
         torch.manual_seed(self.seed)
 
@@ -178,8 +180,8 @@ class A3C(object):
                 for rank in range(0, self.n_worker):
                     p = Process(target=train, args=(
                         self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-                        self.T, 5000, 128, .995, 1, .1, optimizer_actor, optimizer_critic, scheduler_actor,
-                        scheduler_critic, True, self.is_discrete, self.global_reward))
+                        self.T, max_episodes, t_max, gamma, tau, beta, optimizer_actor, optimizer_critic, scheduler_actor,
+                        scheduler_critic, use_gae, self.is_discrete, self.global_reward))
                     p.start()
                     self.worker_pool.append(p)
 
