@@ -7,14 +7,14 @@ from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
 
 
-def squash_action_dist(mu, sigma, input_output_cov, bound):
+def squash_action_dist(mu: np.ndarray, sigma: np.ndarray, input_output_cov: np.ndarray, bound: np.ndarray) -> tuple:
     """
     Rescales and squashes the distribution x with sin(x)
     See Deisenroth(2010) Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
-    :param bound:
-    :param mu:
-    :param sigma:
-    :param input_output_cov:
+    :param bound: max action to take
+    :param mu: mean of action distribution
+    :param sigma: covariance of actions distribution
+    :param input_output_cov: state action input out covariance
     :return: mu_squashed, sigma_squashed, input_output_cov_squashed
     """
 
@@ -56,7 +56,14 @@ class RBFController(MultivariateGP, Controller):
         self.compute_cost = compute_cost
         self.opt_ctr = 0
 
-    def fit(self, X, y):
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        """
+        set x and y
+        :param X: input variables [n_samples, sample dim]
+        :param y: target variables [n_samples, 1]
+        :return:
+        """
+
         # TODO this fits all X for all predictions, this does not matter for 1D actions
         MultivariateGP.fit(self, X, y)
 

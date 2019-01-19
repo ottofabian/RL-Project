@@ -41,6 +41,12 @@ class GaussianProcess(object):
         self.logger = logging.getLogger(__name__)
 
     def fit(self, X, y):
+        """
+        set x and y
+        :param X: input variables [n_samples, sample dim]
+        :param y: target variables [n_samples, 1]
+        :return:
+        """
 
         # ensure they are 2d
         y = y.reshape(y.shape[0], -1)
