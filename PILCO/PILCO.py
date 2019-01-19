@@ -235,8 +235,8 @@ class PILCO(object):
             state_cov = state_next_cov
 
         if print_trajectory:
-            self.print_trajectory(mu_state_container, sigma_state_container, mu_action_container,
-                                  sigma_action_container)
+            self.print_trajectory(np.array(mu_state_container), np.array(sigma_state_container),
+                                  np.array(mu_action_container), np.array(sigma_action_container))
 
         return cost
 
@@ -292,7 +292,7 @@ class PILCO(object):
         state_prev = state_prev.flatten()
 
         if self.env_name == "Pendulum-v0":
-            theta = np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1)
+            theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
             state_prev = np.array([np.cos(theta), np.sin(theta), 0])
             self.env.env.state = [theta, 0]
 
