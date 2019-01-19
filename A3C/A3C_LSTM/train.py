@@ -30,11 +30,11 @@ def normal(x, mu, variance):
     return a * b
 
 
-def train(rank, args, shared_model, T, global_reward, optimizer=None):
-    torch.manual_seed(args.seed + rank)
+def train(args, worker_id, shared_model, T, global_reward, writer, optimizer=None):
+    torch.manual_seed(args.seed + worker_id)
 
     env = gym.make(args.env_name)
-    env.seed(args.seed + rank)
+    env.seed(args.seed + worker_id)
 
     model = ActorCriticNetworkLSTM(n_inputs=env.observation_space.shape[0], action_space=env.action_space,
                                    n_hidden=args.n_hidden)
@@ -45,8 +45,6 @@ def train(rank, args, shared_model, T, global_reward, optimizer=None):
             optimizer = optim.Adam(shared_model.parameters(), lr=args.lr)
 
     model.train()
-
-    writer = SummaryWriter()
 
     state = env.reset()
     state = torch.from_numpy(state)
@@ -98,7 +96,7 @@ def train(rank, args, shared_model, T, global_reward, optimizer=None):
             done = done or episode_length >= args.max_episode_length
             episode_reward += reward
 
-            reward = max(min(float(reward), 1.), -1.)
+            # reward = max(min(float(reward), 1.), -1.)
             # reward = float(reward)
 
             with T.get_lock():

@@ -20,7 +20,7 @@ from A3C.A3C import A3C
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
 
 GAMMA = 0.99
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0001
 ENTROPY_BETA = 0.01
 BATCH_SIZE = 128
 NUM_ENVS = 50

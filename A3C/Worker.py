@@ -46,13 +46,14 @@ class Worker(Process):
     actions_taken_training = []
     values_training = []
 
-    def __init__(self, env_name: str, worker_id: int, shared_model: ActorCriticNetwork, seed: int, T: Value,
+    def __init__(self, args, writer: SummaryWriter, worker_id: int, shared_model: ActorCriticNetwork, seed: int, T: Value,
                  lr: float = 1e-4, max_episodes: int = 10, t_max: int = 100000, gamma: float = .99,
                  tau: float = 1, beta: float = .01, value_loss_coef: float = .5,
                  optimizer: Optimizer = None, scheduler: torch.optim.lr_scheduler = None, is_train: bool = True,
                  use_gae: bool = True, is_discrete: bool = False, global_reward=None, max_action=None):
         """
         Initialize Worker thread for A3C algorithm
+        :param args: Command Line parameters
         :param max_episodes: maximum episodes for training
         :param global_reward: global shared running reward
         :param use_gae: use Generalize Advantage Estimate
@@ -71,17 +72,15 @@ class Worker(Process):
         """
         super(Worker, self).__init__()
 
-        self.is_discrete = is_discrete
-
+        self.args = args
         # separate env for each worker
-        self.env_name = env_name
 
         # check if the requested environment is a quanser robot env
-        if 'RR' in self.env_name:
-            self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
+        if 'RR' in self.args.env_name:
+            self.env = quanser_robots.GentlyTerminating(gym.make(self.args.env_name))
         else:
             # use the official gym env as default
-            self.env = gym.make(self.env_name)
+            self.env = gym.make(self.args.env_name)
 
         self.env.seed(seed + worker_id)
 
@@ -146,8 +145,6 @@ class Worker(Process):
             # optimizer = torch.optim.Adam(global_model.parameters(), lr=lr)
 
         model.train()
-
-        writer = SummaryWriter()
 
         state = torch.from_numpy(np.array(self.env.reset()))
 

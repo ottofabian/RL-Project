@@ -56,24 +56,25 @@ def init_weights(m):
 #         mu = 10 * torch.tanh(self.mu(x))
 #         sigma = F.softplus(self.sigma(x)) + 1e-5  # avoid 0
 
-load_stab = True #True
+load_stab = False #True
 
 
 class ActorNetwork(torch.nn.Module):
-    def __init__(self, n_inputs, action_space, is_discrete=False):
+    def __init__(self, n_inputs, action_space, n_hidden, max_action):
         super(ActorNetwork, self).__init__()
 
-        self.is_discrete = is_discrete
         self.action_space = action_space
 
         self.n_outputs = action_space.shape[0]
         self.n_inputs = n_inputs
+        self.n_hidden = n_hidden
+        self.max_action = max_action
 
         if load_stab:
-            n_hidden = 200
+            #n_hidden = 200
 
             self.n_inputs = self.n_inputs
-            self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
+            self.hidden_action1 = nn.Linear(self.n_inputs, self.n_hidden)
             self.mu = nn.Linear(n_hidden, self.n_outputs)
             self.sigma = nn.Linear(n_hidden, self.n_outputs)
 
@@ -81,7 +82,7 @@ class ActorNetwork(torch.nn.Module):
             self.train()
 
         else:
-            n_hidden = 200
+            #n_hidden = 200
 
             self.n_inputs = self.n_inputs
             self.inputs = nn.Linear(self.n_inputs, n_hidden)
@@ -98,12 +99,9 @@ class ActorNetwork(torch.nn.Module):
 
         if load_stab:
             x = x.float()
-
             x = F.relu(self.hidden_action1(x))
-
-            mu = 5 * torch.tanh(self.mu(x))
+            mu = self.max_action * torch.tanh(self.mu(x))
             sigma = F.softplus(self.sigma(x)) + 1e-5
-
         else:
             x = x.float()
             x = F.relu(self.inputs(x))
@@ -112,7 +110,7 @@ class ActorNetwork(torch.nn.Module):
             # x = F.relu(self.hidden_action3(x))
             # TODO work only between [-5, 5] for cartpole
             # mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(x))
-            mu = 5 * torch.tanh(self.mu(x))
+            mu = torch.tanh(self.mu(x)) * self.max_action
             sigma = F.softplus(self.sigma(x)) + 1e-5  # avoid 0
 
         return mu, sigma
