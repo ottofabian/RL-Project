@@ -25,8 +25,7 @@ class RBFKernel(Kernel):
         log_hyperparams = np.atleast_2d(log_hyperparams)
 
         length_scales = np.exp(log_hyperparams[:, :x.shape[1]])
-        sigma_f = np.exp(2 * log_hyperparams[:, x.shape[1]])\
-            # .reshape(-1, 1, 1)
+        sigma_f = np.exp(2 * log_hyperparams[:, x.shape[1]]).reshape(-1, 1, 1)
 
         scaled_x = np.expand_dims(x, 0) / np.expand_dims(length_scales, 1)
         if z is None:

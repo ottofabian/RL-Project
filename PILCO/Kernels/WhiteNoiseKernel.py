@@ -14,7 +14,7 @@ class WhiteNoiseKernel(Kernel):
         super(WhiteNoiseKernel, self).__init__()
         self.n_hyperparams = lambda x: 1
 
-    def __call__(self, log_hyperparams, x, z=None):
+    def __call__(self, log_hyperparams: np.ndarray, x: np.ndarray, z: np.ndarray = None):
         """
         adds white noise to kernel value, if z is given no noise is added
         :param log_hyperparams: hyperparameter set [[sigma_eps] x input dimension]
