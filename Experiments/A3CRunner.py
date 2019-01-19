@@ -51,7 +51,7 @@ parser.add_argument('--max-grad-norm', type=float, default=40,
                     help='maximum gradient norm (default: 40)')
 parser.add_argument('--seed', type=int, default=1,
                     help='random seed (default: 1)')
-parser.add_argument('--worker', type=int, default=min(multiprocessing.cpu_count() - 2, 1),
+parser.add_argument('--worker', type=int, default=max(multiprocessing.cpu_count() - 2, 1),
                     help='how many training workers/threads to use (default: %d)' %
                          min(multiprocessing.cpu_count() - 2, 1))
 parser.add_argument('--t-max', type=int, default=10,
