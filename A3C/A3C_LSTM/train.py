@@ -1,3 +1,5 @@
+import math
+
 import gym
 import numpy as np
 import quanser_robots
@@ -17,6 +19,15 @@ def ensure_shared_grads(model, shared_model):
         if shared_param.grad is not None:
             return
         shared_param._grad = param.grad
+
+
+pi = Variable(torch.Tensor([math.pi])).float()
+
+
+def normal(x, mu, variance):
+    a = (-1 * (x - mu).pow(2) / (2 * variance)).exp()
+    b = 1 / (2 * variance * pi.expand_as(variance)).sqrt()
+    return a * b
 
 
 def train(rank, args, shared_model, T, global_reward, optimizer=None):
@@ -62,14 +73,25 @@ def train(rank, args, shared_model, T, global_reward, optimizer=None):
 
         for step in range(args.t_max):
             episode_length += 1
-            value, mu, sigma, (hx, cx) = model((state, (hx, cx)))
+            value, mu, variance, (hx, cx) = model((state, (hx, cx)))
+            mu = torch.clamp(mu, -5., 5.)
 
-            dist = torch.distributions.Normal(mu, sigma)
+            # dist = torch.distributions.Normal(mu, variance)
 
             # reparametrization trick through rsample
-            action = dist.rsample()
-            log_prob = dist.log_prob(action)
-            entropy = dist.entropy()
+            eps = Variable(torch.randn(mu.size()))
+            action = (mu + variance.sqrt() * eps).detach()
+            # action = dist.rsample().detach()
+
+            # ------------------------------------------
+            # Compute statistics for loss
+
+            entropy = .5 * ((variance * 2 * pi.expand_as(variance)).log() + 1)
+            # print("entropy:", entropy, dist.entropy())
+            entropies.append(entropy)
+
+            prob = normal(Variable(action), mu, variance)
+            log_prob = (prob + 1e-6).log()
             entropies.append(entropy)
 
             state, reward, done, _ = env.step(action.detach().numpy().flatten())
