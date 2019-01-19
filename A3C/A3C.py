@@ -17,8 +17,7 @@ from Experiments.util.model_save import load_saved_model, save_checkpoint
 
 class A3C(object):
 
-    def __init__(self, n_worker: int, env_name: str, is_discrete: bool = False,
-                 seed: int = 123, optimizer_name='rmsprop', is_train: bool = True) -> None:
+    def __init__(self, args) -> None:
         """
 
         :param n_worker: Number of workers/threads to spawn which conduct the A3C algorithm.
@@ -31,49 +30,39 @@ class A3C(object):
         :param optimizer_name: Optimizer used for shared weight updates. Possible arguments are 'rmsprop', 'adam'.
         :param is_train: If true enable training, use false if you only deploy the policy for testing
         """
-        self.seed = seed
-        self.env_name = env_name
-        self.lr = 0.0001  # Paper sampled between 1e-4 to 1e-2
-        self.is_discrete = is_discrete
+        self.args = args
 
         # global counter
         self.T = Value('i', 0)
         self.global_reward = Value('d', 0)
 
         # worker handling
-        self.n_worker = n_worker
         self.worker_pool = []
         self.lock = Lock()
-
-        self.is_train = is_train
 
         self.logger = logging.getLogger(__name__)
 
         # validity check for input parameter
-        if optimizer_name not in ['rmsprop', 'adam']:
+        if args.optimizer not in ['rmsprop', 'adam']:
             raise Exception('Your given optimizer %s is currently not supported. Choose either "rmsprop" or "adam"',
-                            optimizer_name)
+                            args.optimizer)
 
-        self.optimizer_name = optimizer_name
-
-    def run(self, path=None):
-        if "RR" in self.env_name:
-            env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
+    def run(self):
+        if "RR" in self.args.env_name:
+            env = quanser_robots.GentlyTerminating(gym.make(self.args.env_name))
         else:
-            env = gym.make(self.env_name)
-
-        max_action = 10
+            env = gym.make(self.args.env_name)
 
         shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
                                           action_space=env.action_space,
                                           n_hidden=64,
-                                          max_action=max_action)
+                                          max_action=self.args.max_action)
 
-        if self.optimizer_name == 'rmsprop':
-            optimizer = SharedRMSProp(shared_model.parameters(), lr=0.001)
+        if self.args.optimizer == 'rmsprop':
+            optimizer = SharedRMSProp(shared_model.parameters(), lr=self.args.lr_combined_actor_critic)
             optimizer.share_memory()
-        elif self.optimizer_name == 'adam':
-            optimizer = SharedAdam(shared_model.parameters(), lr=0.00001)
+        elif self.args.optimizer == 'adam':
+            optimizer = SharedAdam(shared_model.parameters(), lr=self.args.lr_actor_critic)
             optimizer.share_memory()
         else:
             optimizer = None
@@ -89,42 +78,37 @@ class A3C(object):
         scheduler = None
 
         # start the test worker which is visualized to see how the current progress is
-        w = Worker(env_name=self.env_name, worker_id=self.n_worker, shared_model=shared_model,
-                   T=self.T, seed=self.seed, lr=0, max_episodes=5000, t_max=0, gamma=0, tau=0,
-                   beta=0, value_loss_coef=0, optimizer=optimizer, scheduler=scheduler, is_train=False, use_gae=True,
-                   is_discrete=self.is_discrete, global_reward=self.global_reward, max_action=max_action)
+        w = Worker(args=self.args, worker_id=self.args.worker, shared_model=shared_model, T=self.T,
+                   optimizer=optimizer, scheduler=scheduler, is_train=False,
+                   global_reward=self.global_reward)
         w.start()
         self.worker_pool.append(w)
 
         # start all training workers which update the model parameters
-        for wid in range(0, self.n_worker):
+        for wid in range(0, self.args.worker):
             self.logger.info("Worker {} created".format(wid))
-            w = Worker(env_name=self.env_name, worker_id=wid, shared_model=shared_model, T=self.T,
-                       seed=self.seed, lr=None, max_episodes=5000, t_max=32, gamma=.995, tau=1,
-                       beta=.1, value_loss_coef=.5, optimizer=optimizer, scheduler=scheduler, is_train=True,
-                       use_gae=False, is_discrete=self.is_discrete,
-                       global_reward=self.global_reward, max_action=max_action)
+            w = Worker(self.args, writer=writer, worker_id=wid, shared_model=shared_model, T=self.T,
+                       optimizer=optimizer, scheduler=scheduler, is_train=True,
+                       global_reward=self.global_reward)
             w.start()
             self.worker_pool.append(w)
 
         for w in self.worker_pool:
             w.join()
 
-    def run_debug(self, path_actor=None, path_critic=None,
-                  max_episodes: int = 5000, t_max: int = 128, gamma: float = .995, tau: float = 1.0, beta: float = 0.1,
-                  use_gae: bool = True):
+    def run_debug(self, writer):
 
-        torch.manual_seed(self.seed)
+        torch.manual_seed(self.args.seed)
 
-        if "RR" in self.env_name:
-            env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
+        if "RR" in self.args.env_name:
+            env = quanser_robots.GentlyTerminating(gym.make(self.args.env_name))
         else:
-            env = gym.make(self.env_name)
+            env = gym.make(self.args.env_name)
 
         shared_model_critic = CriticNetwork(env.observation_space.shape[0],
-                                            env.action_space, self.is_discrete)
+                                            env.action_space, self.args.n_hidden)
         shared_model_actor = ActorNetwork(env.observation_space.shape[0],
-                                          env.action_space, self.is_discrete)
+                                          env.action_space, self.args.n_hidden, self.args.max_action)
 
         shared_model_critic.share_memory()
         shared_model_actor.share_memory()
@@ -137,14 +121,14 @@ class A3C(object):
         #     self.T, 5000, 128, .9975, 1, .05, optimizer_actor, optimizer_critic, scheduler_actor,
         #     scheduler_critic, True, self.is_discrete,
 
-        if self.optimizer_name == 'rmsprop':
-            optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
-            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0005)
+        if self.args.optimizer == 'rmsprop':
+            optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=self.args.lr_actor)
+            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=self.args.lr_critic)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
-        elif self.optimizer_name == 'adam':
-            optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=0.00001)
-            optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=0.00001)
+        elif self.args.optimizer == 'adam':
+            optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=self.args.lr_actor)
+            optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=self.args.lr_critic)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         else:
@@ -156,32 +140,32 @@ class A3C(object):
         scheduler_actor = None
         scheduler_critic = None
 
-        if path_actor is not None:
+        if self.args.path_actor is not None:
             if optimizer_actor is not None:
 
-                load_saved_model(shared_model_actor, path_actor, self.T, self.global_reward, optimizer_actor)
+                load_saved_model(shared_model_actor, self.args.path_actor, self.T, self.global_reward, optimizer_actor)
             else:
-                load_saved_model(shared_model_actor, path_actor, self.T, self.global_reward)
+                load_saved_model(shared_model_actor, self.args.path_actor, self.T, self.global_reward)
 
-        if path_critic is not None:
+        if self.args.path_critic is not None:
             if optimizer_critic is not None:
-                load_saved_model(shared_model_critic, path_critic, self.T, self.global_reward, optimizer_critic)
+                load_saved_model(shared_model_critic, self.args.path_critic, self.T, self.global_reward, optimizer_critic)
             else:
-                load_saved_model(shared_model_critic, path_critic, self.T, self.global_reward)
+                load_saved_model(shared_model_critic, self.args.path_critic, self.T, self.global_reward)
 
-        p = Process(target=test, args=(
-            self.env_name, self.n_worker, shared_model_actor, shared_model_critic,
-            self.seed, self.T, 5000, optimizer_actor, optimizer_critic, self.is_discrete, self.global_reward))
+        p = Process(target=test, args=(self.args, writer,
+            self.args.worker, shared_model_actor, shared_model_critic,
+            self.T, optimizer_actor, optimizer_critic, self.global_reward))
         p.start()
         self.worker_pool.append(p)
 
-        if self.is_train:
-            if "RR" not in self.env_name:
-                for rank in range(0, self.n_worker):
+        if self.args.train:
+            if "RR" not in self.args.env_name:
+                for wid in range(0, self.args.worker):
                     p = Process(target=train, args=(
-                        self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-                        self.T, max_episodes, t_max, gamma, tau, beta, optimizer_actor, optimizer_critic, scheduler_actor,
-                        scheduler_critic, use_gae, self.is_discrete, self.global_reward))
+                        self.args, writer, wid, shared_model_actor, shared_model_critic,
+                        self.T, optimizer_actor, optimizer_critic, scheduler_actor,
+                        scheduler_critic, self.global_reward))
                     p.start()
                     self.worker_pool.append(p)
 

@@ -5,7 +5,6 @@ import gym
 import numpy as np
 import quanser_robots
 import torch
-from tensorboardX import SummaryWriter
 from torch.autograd import Variable
 from torch.multiprocessing import Value
 from torch.optim import Optimizer
@@ -39,26 +38,26 @@ def normal(x, mu, variance):
     return a * b
 
 
-def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork, seed: int,
-         T: Value, max_episodes: int = 100000, optimizer_actor: Optimizer = None,
-         optimizer_critic: Optimizer = None, is_discrete: bool = False, global_reward: Value = None):
+def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
+         T: Value, optimizer_actor: Optimizer = None,
+         optimizer_critic: Optimizer = None, global_reward: Value = None):
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/_test.py
     :return:
     """
-    torch.manual_seed(seed + worker_id)
+    torch.manual_seed(args.seed + worker_id)
 
-    if "RR" in env_name:
-        env = quanser_robots.GentlyTerminating(gym.make(env_name))
+    if "RR" in args.env_name:
+        env = quanser_robots.GentlyTerminating(gym.make(args.env_name))
     else:
-        env = gym.make(env_name)
+        env = gym.make(args.env_name)
 
-    env.seed(seed + worker_id)
+    env.seed(args.seed + worker_id)
 
     # get an instance of the current global model state
-    model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
-    model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
+    model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, args.n_hidden, args.max_action)
+    model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, args.n_hidden)
     model_actor.eval()
     model_critic.eval()
     # model.load_state_dict(global_model.state_dict())
@@ -68,6 +67,7 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
 
     t = 0
     done = False
+    iter_ = 0
 
     while True:
 
@@ -94,9 +94,10 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
                     action = mu.detach()
 
                 state, reward, done, _ = env.step(action.numpy())
+
                 # TODO: check if this is better
                 # reward -= state[0]
-                done = done or t >= max_episodes
+                done = done or t >= args.max_episode_length
                 reward_sum += reward
 
                 if done:
@@ -117,6 +118,9 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
                                                                                             eps_len.mean(),
                                                                                             global_reward.value))
 
+        # writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
+        # writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
+
         save_checkpoint({
             'epoch': T.value,
             'state_dict': shared_model_actor.state_dict(),
@@ -133,29 +137,30 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
 
         # delay _test run for 10s to give the network some time to train
         time.sleep(10)
+        iter_ += 1
 
 
-def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
-          seed: int, T: Value, max_episodes: int = 10, t_max: int = 100000, gamma: float = .99,
-          tau: float = 1, beta: float = .01, optimizer_actor: Optimizer = None,
+def train(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
+          T: Value,
+          optimizer_actor: Optimizer = None,
           optimizer_critic: Optimizer = None, scheduler_actor: torch.optim.lr_scheduler = None,
-          scheduler_critic: torch.optim.lr_scheduler = None, use_gae: bool = True, is_discrete: bool = False,
+          scheduler_critic: torch.optim.lr_scheduler = None,
           global_reward=None):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
     :return: self
     """
-    torch.manual_seed(seed + worker_id)
+    torch.manual_seed(args.seed + worker_id)
     print(f"Training Worker {worker_id} started")
 
-    env = gym.make(env_name)
+    env = gym.make(args.env_name)
     # ensure different seed for each worker thread
-    env.seed(seed + worker_id)
+    env.seed(args.seed + worker_id)
 
     # init local NN instance for worker thread
-    model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
-    model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, is_discrete)
+    model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, args.n_hidden, args.max_action)
+    model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, args.n_hidden)
 
     # if no shared optimizer is provided use individual one
     if optimizer_actor is None:
@@ -166,8 +171,6 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
     model_actor.train()
     model_critic.train()
-
-    writer = SummaryWriter()
 
     state = torch.from_numpy(env.reset())
 
@@ -187,7 +190,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         entropies = []
 
         # reward_sum = 0
-        for step in range(t_max):
+        for step in range(args.t_max):
             t += 1
 
             value = model_critic(Variable(state))
@@ -201,7 +204,10 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
             eps = Variable(torch.randn(mu.size()))
             action = (mu + variance.sqrt() * eps).detach()
             # action = dist.rsample()
-            action = torch.clamp(action, -5, 5).detach()
+            if args.max_action:
+                action = torch.clamp(action, -args.max_action, args.max_action).detach()
+            else:
+                action = torch.clamp(action, float(env.action_space.low[0]), float(env.action_space.high[0])).detach()
 
             # ------------------------------------------
             # Compute statistics for loss
@@ -223,7 +229,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
             # reward = min(max(-1, reward), 1)
 
-            done = done or t >= max_episodes
+            done = done or t >= args.max_episodes
 
             with T.get_lock():
                 T.value += 1
@@ -277,16 +283,16 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
         # iterate over rewards from most recent to the starting one
         for i in reversed(range(len(rewards))):
-            R = rewards[i] + R * gamma
+            R = rewards[i] + R * args.gamma
             advantage = R - values[i]
             critic_loss = critic_loss + 0.5 * advantage.pow(2)
-            if use_gae:
+            if args.gae:
                 # Generalized Advantage Estimation
-                delta_t = rewards[i] + gamma * values[i + 1].data - values[i].data
-                gae = gae * gamma * tau + delta_t
-                actor_loss = actor_loss - (log_probs[i] * Variable(gae) + beta * entropies[i])
+                delta_t = rewards[i] + args.gamma * values[i + 1].data - values[i].data
+                gae = gae * args.gamma * args.tau + delta_t
+                actor_loss = actor_loss - (log_probs[i] * Variable(gae) + args.beta * entropies[i])
             else:
-                actor_loss = actor_loss - (log_probs[i] * advantage.data + beta * entropies[i])
+                actor_loss = actor_loss - (log_probs[i] * advantage.data + args.beta * entropies[i])
 
         # zero grads to avoid computation issues in the next step
         optimizer_critic.zero_grad()
