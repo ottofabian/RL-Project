@@ -68,6 +68,7 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
     t = 0
     done = False
     iter_ = 0
+    best_global_reward = None
 
     while True:
 
@@ -121,19 +122,21 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
         # writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
         # writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
 
-        save_checkpoint({
-            'epoch': T.value,
-            'state_dict': shared_model_actor.state_dict(),
-            'global_reward': global_reward.value,
-            'optimizer': optimizer_actor.state_dict() if optimizer_actor is not None else None,
-        }, filename="./checkpoints/actor_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
+        if best_global_reward is None or global_reward.value > best_global_reward:
+            best_global_reward = global_reward.value
+            save_checkpoint({
+                'epoch': T.value,
+                'state_dict': shared_model_actor.state_dict(),
+                'global_reward': global_reward.value,
+                'optimizer': optimizer_actor.state_dict() if optimizer_actor is not None else None,
+            }, filename="./checkpoints/actor_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
 
-        save_checkpoint({
-            'epoch': T.value,
-            'state_dict': shared_model_critic.state_dict(),
-            'global_reward': global_reward.value,
-            'optimizer': optimizer_critic.state_dict() if optimizer_critic is not None else None,
-        }, filename="./checkpoints/critic_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
+            save_checkpoint({
+                'epoch': T.value,
+                'state_dict': shared_model_critic.state_dict(),
+                'global_reward': global_reward.value,
+                'optimizer': optimizer_critic.state_dict() if optimizer_critic is not None else None,
+            }, filename="./checkpoints/critic_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
 
         # delay _test run for 10s to give the network some time to train
         time.sleep(10)
@@ -229,7 +232,7 @@ def train(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared
 
             # reward = min(max(-1, reward), 1)
 
-            done = done or t >= args.max_episodes
+            done = done or t >= args.max_episode_length
 
             with T.get_lock():
                 T.value += 1
