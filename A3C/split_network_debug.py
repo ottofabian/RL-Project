@@ -1,5 +1,4 @@
 import math
-import shutil
 import time
 
 import gym
@@ -31,12 +30,12 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
         shared_param._grad = param.grad  #
 
 
-pi = Variable(torch.Tensor([math.pi]))
+pi = Variable(torch.Tensor([math.pi])).float()
 
 
-def normal(x, mu, sigma_sq):
-    a = (-1 * (Variable(x) - mu).pow(2) / (2 * sigma_sq)).exp()
-    b = 1 / (2 * sigma_sq * pi.expand_as(sigma_sq)).sqrt()
+def normal(x, mu, variance):
+    a = (-1 * (x - mu).pow(2) / (2 * variance)).exp()
+    b = 1 / (2 * variance * pi.expand_as(variance)).sqrt()
     return a * b
 
 
@@ -84,14 +83,15 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
             while not done:
                 t += 1
 
-                if i == 0:
+                if i == 0 and t % 24 == 0:
                     env.render()
 
                 with torch.no_grad():
 
                     # select mean of normal dist as action --> Expectation
                     mu, _ = model_actor(Variable(state))
-                    action = mu.data
+                    # mu = torch.clamp(mu, -5., 5.)
+                    action = mu.detach()
 
                 state, reward, done, _ = env.step(action.numpy())
                 # TODO: check if this is better
@@ -191,25 +191,28 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
             t += 1
 
             value = model_critic(Variable(state))
-            mu, sigma = model_actor(Variable(state))
+            mu, variance = model_actor(Variable(state))
+            # mu = torch.clamp(mu, -5.0, 5.0)
 
-            # dist = torch.distributions.Normal(mu, sigma)
+            # dist = torch.distributions.Normal(mu, variance.sqrt())
 
             # ------------------------------------------
             # # select action
             eps = Variable(torch.randn(mu.size()))
-            action = (mu + sigma.sqrt() * eps).data
-            # action = dist.rsample().detach()
+            action = (mu + variance.sqrt() * eps).detach()
+            # action = dist.rsample()
+            action = torch.clamp(action, -5, 5).detach()
 
             # ------------------------------------------
             # Compute statistics for loss
-            prob = normal(action, mu, sigma)
 
-            entropy = -0.5 * (sigma + 2 * pi.expand_as(sigma)).log() + .5
+            entropy = .5 * ((variance * 2 * pi.expand_as(variance)).log() + 1)
+            # print("entropy:", entropy, dist.entropy())
             # entropy = dist.entropy()
             entropies.append(entropy)
 
-            log_prob = prob.log()
+            prob = normal(Variable(action), mu, variance)
+            log_prob = (prob + 1e-6).log()
             # log_prob = dist.log_prob(action)
 
             # make selected move
@@ -262,10 +265,11 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
         # if non terminal state is present set R to be value of current state
         if not done:
-            R = model_critic(state).detach()
+            R = model_critic(Variable(state)).detach()
 
-        # R = Variable(R)
-        values.append(R)
+        values.append(Variable(R))
+        # values.append(R)
+        R = Variable(R)
         # compute loss and backprop
         actor_loss = 0
         critic_loss = 0
@@ -280,16 +284,16 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
                 # Generalized Advantage Estimation
                 delta_t = rewards[i] + gamma * values[i + 1].data - values[i].data
                 gae = gae * gamma * tau + delta_t
-                actor_loss = actor_loss - log_probs[i] * Variable(gae) - beta * entropies[i]
+                actor_loss = actor_loss - (log_probs[i] * Variable(gae) + beta * entropies[i])
             else:
-                actor_loss = actor_loss - log_probs[i] * advantage.data - beta * entropies[i]
+                actor_loss = actor_loss - (log_probs[i] * advantage.data + beta * entropies[i])
 
         # zero grads to avoid computation issues in the next step
         optimizer_critic.zero_grad()
         optimizer_actor.zero_grad()
 
-        critic_loss.mean().backward()
-        actor_loss.mean().backward()
+        critic_loss.backward()
+        actor_loss.backward()
 
         # compute combined loss of actor_loss and critic_loss
         # avoid overfitting on value loss by scaling it down
@@ -297,8 +301,8 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
         # combined_loss.mean().backward()
         # combined_loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), 40)
-        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), 40)
+        # torch.nn.utils.clip_grad_norm_(model_critic.parameters(), 1)
+        # torch.nn.utils.clip_grad_norm_(model_actor.parameters(), 1)
 
         sync_grads(model_critic, shared_model_critic)
         sync_grads(model_actor, shared_model_actor)

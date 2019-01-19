@@ -4,6 +4,7 @@ import gym
 import numpy as np
 import quanser_robots
 import torch
+from torch.autograd import Variable
 
 from A3C.A3C_LSTM.ActorCriticNetworkLSTM import ActorCriticNetworkLSTM
 
@@ -53,7 +54,7 @@ def test(rank, args, shared_model, T, global_reward):
                 hx = hx.detach()
 
                 with torch.no_grad():
-                    _, mu, _, (hx, cx) = model((state, (hx, cx)))
+                    _, mu, _, (hx, cx) = model((Variable(state), (hx, cx)))
 
                 action = mu
 
@@ -61,7 +62,7 @@ def test(rank, args, shared_model, T, global_reward):
                 done = done or episode_length[i] >= args.max_episode_length
                 reward_sum[i] += reward
 
-                state = torch.from_numpy(state).view(1, env.observation_space.shape[0])
+                state = torch.from_numpy(state)
 
         print(
             "Total training time: {} -- T={}, FPS={:.0f} -- "

@@ -69,6 +69,7 @@ class PILCO(object):
         # TODO: increase by 25% when successful
         self.T = Horizon
         self.bound = self.env.action_space.high
+        # self.bound = np.array([10])
 
         # -----------------------------------------------------
         # Value calc
@@ -120,9 +121,11 @@ class PILCO(object):
         while i < n_init:
             state_prev = self.env.reset()
             if self.env_name == "Pendulum-v0":
-                theta = .1
-                self.env.env.state = [theta, 0]
-                state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
+                # theta = .1
+                # self.env.env.state = [theta, 0]
+                # state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
+                self.env.env.state = [np.pi, 0]
+                state_prev = np.array([-1., 0, 0.])
             # elif self.env_name == "CartpoleStabShort-v0":
             #     theta = -np.pi + .1
             #     self.env.env._state = [0, theta, 0, 0]
@@ -183,11 +186,13 @@ class PILCO(object):
         # TODO: Make this dynamic, would als be better for tests
         if self.env_name == "Pendulum-v0":
             # first dim is cosine
-            theta = .1
-            state_mu = np.array([np.cos(theta), np.sin(theta), 0])
+            # theta = .1
+            # state_mu = np.array([np.cos(theta), np.sin(theta), 0])
+            state_mu = np.array([-1., 0, 0.])
         elif self.env_name == "CartpoleStabShort-v0":
-            theta = -np.pi + .1
-            state_mu = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
+            # theta = -np.pi + .5
+            # state_mu = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
+            state_mu = np.array([0, 0, -1, 0, 0])
         elif self.env_name == "CartpoleSwingShort-v0":
             state_mu = np.array([0., 0., 1., 0., 0.])
 
@@ -323,8 +328,11 @@ class PILCO(object):
 
         if self.env_name == "Pendulum-v0":
             theta = .1
-            self.env.env.state = [theta, 0]
-            state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
+            # self.env.env.state = [theta, 0]
+            # state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
+            self.env.env.state = [np.pi, 0]
+            state_prev = np.array([-1., 0, 0.])
+
         # elif self.env_name == "CartpoleStabShort-v0":
         #     self.env.env._state = [0, -np.pi, 0, 0]
         #     state_prev = np.array([0., 0., -1., 0., 0.])

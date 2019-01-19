@@ -7,6 +7,19 @@ Source:\
 
 ## Best Parameter Settings: 
 
+### Pendulum-v0:  
+
+
+- network size: \[input, output\]
+- lr: 
+    - Actor: .0001
+    - Critic: .001
+- t_max/batch size: 10
+- max episode steps: 200
+- gamma: .9
+- tau: 1
+- beta: 1e-4
+
 ### CartpoleStabShort:  
 
 - lr: 

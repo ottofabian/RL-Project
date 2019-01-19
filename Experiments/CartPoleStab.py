@@ -22,6 +22,9 @@ env_name = "CartpoleSwingShort-v0"
 # env_name = "CartpoleStabRR-v0"
 # env_name = "Qube-v0"
 
+# print(gym.make(env_name).action_space.high)
+# print(gym.make(env_name).action_space.low)
+
 enable_color_logging(debug_lvl=logging.DEBUG)
 logging.info('Start Experiment')
 a3c = A3C(n_worker=6, env_name=env_name, is_discrete=False, seed=seed, optimizer_name='rmsprop')
@@ -39,6 +42,6 @@ a3c.run_debug()
 #     target_state = np.array([1, 0, 0])
 #
 # loss = SaturatedLoss(state_dim=env.observation_space.shape[0], target_state=target_state)
-# pilco = PILCO(env_name=env_name, seed=seed, n_features=100, Horizon=40, loss=loss, max_episode_steps=max_episode_steps,
-#               gamma=.99)
+# pilco = PILCO(env_name=env_name, seed=seed, n_features=50, Horizon=40, loss=loss, max_episode_steps=max_episode_steps,
+#               gamma=1)
 # pilco.run(n_samples=max_episode_steps)
