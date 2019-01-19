@@ -38,11 +38,11 @@ parser.add_argument('--max-grad-norm', type=float, default=40,
                     help='value loss coefficient (default: 40)')
 parser.add_argument('--seed', type=int, default=1,
                     help='random seed (default: 1)')
-parser.add_argument('--worker', type=int, default=2,
+parser.add_argument('--worker', type=int, default=6,
                     help='how many training workers to use (default: 2)')
-parser.add_argument('--t-max', type=int, default=10,
+parser.add_argument('--t-max', type=int, default=1000,
                     help='number of forward steps in A3C (default: 10)')
-parser.add_argument('--max-episode-length', type=int, default=100000,
+parser.add_argument('--max-episode-length', type=int, default=5000,
                     help='maximum length of an episode (default: 100000)')
 parser.add_argument('--env-name', default='CartpoleSwingShort-v0',
                     help='environment to train on (default: CartpoleStabShort-v0)')
