@@ -13,8 +13,8 @@ from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 
 class PILCO(object):
 
-    def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, gamma=.99,
-                 max_episode_steps: int = None, squash=True):
+    def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, start_mu: np.ndarray = None,
+                 start_cov: np.ndarray = None, gamma=1, max_episode_steps: int = None, bound: np.ndarray = None):
         """
 
         :param env_name: gym env to work with
@@ -23,6 +23,11 @@ class PILCO(object):
         :param Horizon: number of steps for trajectory rollout, also defined as horizon
         :param loss: loss object which defines the cost for the given environment.
                               This function is used for policy optimization.
+        :param start_mu:
+        :param start_cov:
+        :param gamma:
+        :param max_episode_steps:
+        :param bound: squash action with sin to +-bound or None if no squashing is required
         """
 
         # -----------------------------------------------------
@@ -64,23 +69,16 @@ class PILCO(object):
         # -----------------------------------------------------
         # policy
         self.policy = None
-        self.squash = squash
+        self.bound = bound
         self.n_features = n_features
         # TODO: increase by 25% when successful
-        self.T = Horizon
-        self.bound = self.env.action_space.high
-        # self.bound = np.array([10])
+        self.Horizon = Horizon
 
         # -----------------------------------------------------
-        # Value calc
-        # TODO: use GP as cost function for unknown cost
-        # If the cose comes from the environment and is not known,
-        #  the cost function has to be learn with a GP or the like.
-
-        # -----------------------------------------------------
-        # loss object for improving the policy
-        # known loss function
+        # rollout variables
         self.loss = loss
+        self.start_mu = start_mu
+        self.start_cov = start_cov
 
         # -----------------------------------------------------
         # Container for collected experience
@@ -121,11 +119,9 @@ class PILCO(object):
         while i < n_init:
             state_prev = self.env.reset()
             if self.env_name == "Pendulum-v0":
-                # theta = .1
-                # self.env.env.state = [theta, 0]
-                # state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
-                self.env.env.state = [np.pi, 0]
-                state_prev = np.array([-1., 0, 0.])
+                theta = .1
+                self.env.env.state = [theta, 0]
+                state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
             # elif self.env_name == "CartpoleStabShort-v0":
             #     theta = -np.pi + .1
             #     self.env.env._state = [0, theta, 0, 0]
@@ -144,8 +140,8 @@ class PILCO(object):
                 # state-action pair as input
                 self.state_action_pairs[i] = np.concatenate([state_prev, action])
 
-                state_prev += np.random.multivariate_normal(np.ones(state.shape), 1e-6 * np.identity(state.shape[0]))
-                self.state_delta[i] = state - state_prev
+                noise = np.random.multivariate_normal(np.ones(state.shape), 1e-6 * np.identity(state.shape[0]))
+                self.state_delta[i] = state - state_prev + noise
 
                 self.rewards[i] = reward
                 state_prev = state
@@ -183,23 +179,8 @@ class PILCO(object):
 
     def compute_trajectory_cost(self, policy, print_trajectory=False):
 
-        # TODO: Make this dynamic, would als be better for tests
-        if self.env_name == "Pendulum-v0":
-            # first dim is cosine
-            # theta = .1
-            # state_mu = np.array([np.cos(theta), np.sin(theta), 0])
-            state_mu = np.array([-1., 0, 0.])
-        elif self.env_name == "CartpoleStabShort-v0":
-            # theta = -np.pi + .5
-            # state_mu = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
-            state_mu = np.array([0, 0, -1, 0, 0])
-        elif self.env_name == "CartpoleSwingShort-v0":
-            state_mu = np.array([0., 0., 1., 0., 0.])
-
-        state_cov = 1e-2 * np.identity(self.state_dim)
-        # TODO: avoid bad initialization
-        # Make state_cov positive semidefinite
-        # state_cov = state_cov.dot(state_cov.T)
+        state_mu = self.start_mu
+        state_cov = self.start_cov
 
         cost = 0
 
@@ -219,7 +200,7 @@ class PILCO(object):
         mu_action_container = []
         sigma_action_container = []
 
-        for t in range(0, self.T):
+        for t in range(0, self.Horizon):
             state_next_mu, state_next_cov, action_mu, action_cov = self.rollout(policy, state_mu, state_cov)
 
             # compute value of current state prediction
@@ -247,7 +228,6 @@ class PILCO(object):
         # get mean and covar of next action, optionally with squashing and scaling towards an action bound
         # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
         action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
-                                                                              squash=self.squash,
                                                                               bound=self.bound)
 
         # ------------------------------------------------
@@ -256,50 +236,6 @@ class PILCO(object):
                                                                                                action_mu.flatten(),
                                                                                                action_cov,
                                                                                                action_input_output_cov)
-
-        # -----------------------------------------------------------------------------------------------------------
-        # Debugging code
-
-        # sample over dist
-        # x = np.random.multivariate_normal(state_action_mu, state_action_cov, size=1000)
-        # if np.any(np.isnan(state_action_cov)) or np.any(np.isnan(state_action_mu)):
-        #     print(state_action_cov)
-        #     print(state_action_mu)
-        #     print("nan")
-
-        # x = []
-        # for _ in range(100):
-        #     # reparametrization trick
-        #     x.append(np.random.randn(len(state_action_mu)) @ state_action_cov + state_action_mu)
-        # x = np.array(x)
-        # # use real env for dynamics
-        # pred = []
-        # self.env.reset()
-        # for elem in x:
-        #     print(elem)
-        #     if np.any(np.isnan(elem)):
-        #         continue
-        #     self.env.env.state = elem[:-1]
-        #     s, r, d, _ = self.env.step(np.array([elem[-1]])._value)
-        #     pred.append(s)
-        #
-        # pred = np.array(pred).T
-
-        # use deterministic prediction on samples one real GP dynamics
-        # pred = self.dynamics_model.predict(x)
-
-        # delta_mu = np.mean(pred, axis=1)
-        # diff = pred - delta_mu[:, None]
-        # delta_cov = 1 / (diff - 1) * diff @ diff.T
-
-        # delta_cov = np.cov(pred)
-
-        # print("-" * 50)
-        # print("Difference between sampling and Moment matching:")
-        # print("Mean:\n{}".format(np.mean(pred, axis=1) - delta_mu._value))
-        # print("Mean ratio:\n {}".format((np.mean(pred, axis=1) - delta_mu._value) / delta_mu._value))
-        # print("Covariance:\n{}".format(np.cov(pred) - delta_cov._value))
-        # print("Covariance ratio:\n{}".format((np.cov(pred) - delta_cov._value) / delta_cov._value))
 
         # ------------------------------------------------
         # compute delta and build next state dist
@@ -327,12 +263,9 @@ class PILCO(object):
         state_prev = state_prev.flatten()
 
         if self.env_name == "Pendulum-v0":
-            theta = .1
-            # self.env.env.state = [theta, 0]
-            # state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
-            self.env.env.state = [np.pi, 0]
-            state_prev = np.array([-1., 0, 0.])
-
+            state_prev = self.start_mu
+            # TODO: compute theta from data
+            self.env.env.state = [np.arctan2(state_prev[1], state_prev[0]), 0]
         # elif self.env_name == "CartpoleStabShort-v0":
         #     self.env.env._state = [0, -np.pi, 0, 0]
         #     state_prev = np.array([0., 0., -1., 0., 0.])
@@ -344,8 +277,7 @@ class PILCO(object):
             t += 1
 
             # no uncertainty during testing required
-            action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), squash=True,
-                                                     bound=self.bound)
+            action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), bound=self.bound)
             action = action.flatten()
 
             state, reward, done, _ = self.env.step(action)
@@ -388,13 +320,10 @@ class PILCO(object):
 
         return joint_mu, joint_cov, top
 
-    def get_init_hyperparams(self):
+    def get_init_hyperparams(self) -> np.ndarray:
         """
-        Compute hyperparams for GPR
-        :param i:
-        :param X: training vector containing values for [x,u]^T
-        :param y: target vector containing deltas of states
-        :return:
+        Compute inital hyperparams for GPR
+        :return: [noise of latent function, length scales, noise variance]
         """
         l = np.log(np.std(self.state_action_pairs, axis=0))
         sigma_f = np.log(np.std(self.state_delta))
@@ -402,7 +331,16 @@ class PILCO(object):
 
         return l, sigma_f, sigma_eps
 
-    def print_trajectory(self, mu_states, sigma_states, mu_actions, sigma_actions):
+    def print_trajectory(self, mu_states, sigma_states, mu_actions, sigma_actions) -> None:
+
+        """
+        Create plot for a given trajectory rollout
+        :param mu_states: means of state trajectory
+        :param sigma_states: covariance of state trajectory
+        :param mu_actions: means of action trajectory
+        :param sigma_actions: covariance of action trajectory
+        :return: None
+        """
 
         # plot state trajectory
         mu_states = np.array(mu_states)
@@ -412,33 +350,33 @@ class PILCO(object):
             m = mu_states[:, i]
             s = sigma_states[:, i, i]
 
-            # TODO: This is stupid and bad
-            try:
-                m = m._value
-            except Exception:
-                m = m
-            try:
-                s = s._value
-            except Exception:
-                s = s
+            # # TODO: This is stupid and bad
+            # try:
+            #     m = m._value
+            # except Exception:
+            #     m = m
+            # try:
+            #     s = s._value
+            # except Exception:
+            #     s = s
 
             plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
             plt.show()
 
         # plot action trajectory
-        mu_actions = np.array(mu_actions)
-        sigma_actions = np.array(sigma_actions)
+        m = np.array(mu_actions)
+        s = np.array(sigma_actions)
 
-        # TODO: This is stupid and bad
-        try:
-            m = mu_actions._value
-        except Exception:
-            m = mu_actions
-        try:
-            s = sigma_actions._value
-        except Exception:
-            s = sigma_actions
+        # # TODO: This is stupid and bad
+        # try:
+        #     m = mu_actions._value
+        # except Exception:
+        #     m = mu_actions
+        # try:
+        #     s = sigma_actions._value
+        # except Exception:
+        #     s = sigma_actions
 
         plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
         plt.title("Trajectory prediction for actions")

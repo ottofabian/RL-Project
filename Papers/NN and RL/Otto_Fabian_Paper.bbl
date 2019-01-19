@@ -1,0 +1,174 @@
+\begin{thebibliography}{10}
+\providecommand{\url}[1]{{#1}}
+\providecommand{\urlprefix}{URL }
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{DOI~\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{DOI~\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+
+\bibitem{Bellemare2013}
+Bellemare, M.G., Naddaf, Y., Veness, J., Bowling, M.: {The Arcade Learning
+  Environment: An Evaluation Platform for General Agents}.
+\newblock Journal of Artificial Intelligence Research \textbf{47}, 253--279
+  (2013).
+\newblock \doi{10.1613/jair.3912}.
+\newblock \urlprefix\url{http://arxiv.org/abs/1207.4708}
+
+\bibitem{Gu2016}
+Gu, S., Lillicrap, T., Sutskever, I., Levine, S.: {Continuous Deep Q-Learning
+  with Model-based Acceleration}.
+\newblock In: ICML'16 Proceedings of the 33rd International Conference on
+  International Conference onMachine Learning - Volume 48, pp. 2829--2838.
+  JMLR.org, New York, NY, USA (2016).
+\newblock \urlprefix\url{http://arxiv.org/abs/1603.00748}
+
+\bibitem{Haarnoja2018}
+Haarnoja, T., Zhou, A., Hartikainen, K., Tucker, G., Ha, S., Tan, J., Kumar,
+  V., Zhu, H., Gupta, A., Abbeel, P., Levine, S.: {Soft Actor-Critic Algorithms
+  and Applications}  (2018).
+\newblock \urlprefix\url{http://arxiv.org/abs/1812.05905}
+
+\bibitem{VanHasselt2016}
+van Hasselt, H., Guez, A., Silver, D.: {Deep Reinforcement Learning with Double
+  Q-learning}.
+\newblock In: AAAI Conference on Artificial Intelligence, pp. 2094--2100.
+  Phoenix, Arizona (2016).
+\newblock \urlprefix\url{http://arxiv.org/abs/1509.06461}
+
+\bibitem{Hunter2004}
+Hunter, D.R., Lange, K.: {A tutorial on MM algorithms}.
+\newblock The American Statistician \textbf{58}(1), 30--37 (2004)
+
+\bibitem{Ioffe2015}
+Ioffe, S., Szegedy, C.: {Batch Normalization: Accelerating Deep Network
+  Training by Reducing Internal Covariate Shift}.
+\newblock In: International Conference on Machine Learning (ICML), ICML'15, pp.
+  448--456. JMLR.org (2015).
+\newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=3045118.3045167}
+
+\bibitem{Kakade2001}
+Kakade, S.: {A Natural Policy Gradient}.
+\newblock In: Proceedings of the 14th International Conference on Neural
+  Information Processing Systems: Natural and Synthetic, NIPS'01, pp.
+  1531--1538. MIT Press, Cambridge, MA, USA (2001).
+\newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=2980539.2980738}
+
+\bibitem{Kulkarni2016}
+Kulkarni, T.D., Narasimhan, K., Saeedi, A., Tenenbaum, J.: {Hierarchical Deep
+  Reinforcement Learning: Integrating Temporal Abstraction and Intrinsic
+  Motivation}.
+\newblock In: D.D. Lee, M.~Sugiyama, U.V. Luxburg, I.~Guyon, R.~Garnett (eds.)
+  Advances in Neural Information Processing Systems 29, pp. 3675--3683. Curran
+  Associates, Inc. (2016).
+\newblock
+  \urlprefix\url{http://papers.nips.cc/paper/6233-hierarchical-deep-reinforcement-learning-integrating-temporal-abstraction-and-intrinsic-motivation.pdf}
+
+\bibitem{Lillicrap2016}
+Lillicrap, T.P., Hunt, J.J., Pritzel, A., Heess, N., Erez, T., Tassa, Y.,
+  Silver, D., Wierstra, D.: {Continuous control with deep reinforcement
+  learning}.
+\newblock In: International Conference on Learning Representations (ICLR) 2016.
+  London, UK (2016).
+\newblock \urlprefix\url{http://arxiv.org/abs/1509.02971}
+
+\bibitem{Lin1992}
+Lin, L.J.: {Self-improving reactive agents based on reinforcement learning,
+  planning and teaching}.
+\newblock Machine Learning \textbf{8}(3), 293--321 (1992).
+\newblock \doi{10.1007/BF00992699}.
+\newblock \urlprefix\url{https://doi.org/10.1007/BF00992699}
+
+\bibitem{Mnih2013}
+Mnih, V., Kavukcuoglu, K., Silver, D., Graves, A., Antonoglou, I., Wierstra,
+  D., Riedmiller, M.: {Playing Atari with Deep Reinforcement Learning}.
+\newblock NIPS Deep Learning Workshop 2013  (2013).
+\newblock \urlprefix\url{http://arxiv.org/abs/1312.5602}
+
+\bibitem{Mnih2015}
+Mnih, V., Kavukcuoglu, K., Silver, D., Rusu, A.A., Veness, J., Bellemare, M.G.,
+  Graves, A., Riedmiller, M., Fidjeland, A.K., Ostrovski, G., Petersen, S.,
+  Beattie, C., Sadik, A., Antonoglou, I., King, H., Kumaran, D., Wierstra, D.,
+  Legg, S., Hassabis, D.: {Human-level control through deep reinforcement
+  learning}.
+\newblock Nature \textbf{518}(7540), 529--533 (2015).
+\newblock \doi{10.1038/nature14236}.
+\newblock \urlprefix\url{http://www.nature.com/articles/nature14236}
+
+\bibitem{Riedmiller2005}
+Riedmiller, M.: {Neural Fitted Q Iteration - First Experiences with a Data
+  Efficient Neural Reinforcement Learning Method}.
+\newblock In: J.~Gama, R.~Camacho, P.B. Brazdil, A.M. Jorge, L.~Torgo (eds.)
+  Machine Learning: ECML 2005, pp. 317--328. Springer Berlin Heidelberg,
+  Berlin, Heidelberg (2005)
+
+\bibitem{Riedmiller1993}
+Riedmiller, M., Braun, H.: {A Direct Adaptive Method for Faster Backpropagation
+  Learning: The RPROP Algorithm}.
+\newblock In: IEEE International Conference on Neural Networks (IJCNN), pp.
+  586--591 (1993)
+
+\bibitem{Schaul2015}
+Schaul, T., Quan, J., Antonoglou, I., Silver, D.: {Prioritized Experience
+  Replay}.
+\newblock In: Interantional Conference for Learning Representations (ICLR)
+  (2015).
+\newblock \urlprefix\url{http://arxiv.org/abs/1511.05952}
+
+\bibitem{Schulman2015}
+Schulman, J., Levine, S., Abbeel, P., Jordan, M., Moritz, P.: {Trust Region
+  Policy Optimization}.
+\newblock In: F.~Bach, D.~Blei (eds.) Proc. 32nd Int. Conf. Mach. Learn.,
+  \emph{Proceedings of Machine Learning Research}, vol.~37, pp. 1889--1897.
+  PMLR, Lille, France (2015).
+\newblock \urlprefix\url{http://proceedings.mlr.press/v37/schulman15.html}
+
+\bibitem{Schulman2017}
+Schulman, J., Wolski, F., Dhariwal, P., Radford, A., Klimov, O.: {Proximal
+  Policy Optimization Algorithms}  (2017).
+\newblock \urlprefix\url{http://arxiv.org/abs/1707.06347}
+
+\bibitem{Silver2014}
+Silver, D., Lever, G., Heess, N., Degris, T., Wierstra, D., Riedmiller, M.:
+  {Deterministic Policy Gradient Algorithms}.
+\newblock In: International Conference on Machine Learning (ICML), ICML'14, pp.
+  I--387----I--395. JMLR.org, Beijing, China (2014).
+\newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=3044805.3044850}
+
+\bibitem{Sutton1990}
+Sutton, R.S.: {Integrated architectures for learning, planning, reacting based
+  on approxmiate dynmaic programming}.
+\newblock In: International Conference for Machine Learning (ICML)2, pp.
+  216--224 (1990)
+
+\bibitem{Sutton2018}
+Sutton, R.S., Barto, A.G.: {Reinforcement learning: An introduction}, second
+  edi edn.
+\newblock MIT Press, Cambridge, MA (2018).
+\newblock \urlprefix\url{http://incompleteideas.net/book/the-book.html}
+
+\bibitem{Tesauro1994}
+Tesauro, G.: {TD-Gammon, a Self-Teaching Backgammon Program, Achieves
+  Master-Level Play}.
+\newblock Applications of Neural Networks \textbf{6}(2), 215--219 (1994).
+\newblock \doi{10.1162/neco.1994.6.2.215}.
+\newblock \urlprefix\url{https://doi.org/10.1162/neco.1994.6.2.215}
+
+\bibitem{Todorov2005}
+Todorov, E., Li, W.: {A generalized iterative LQG method for locally-optimal
+  feedback control of constrained nonlinear stochastic systems}.
+\newblock In: American Control Conference, pp. 300--306 vol. 1 (2005).
+\newblock \doi{10.1109/ACC.2005.1469949}
+
+\bibitem{Wang2016}
+Wang, Z., Schaul, T., Hessel, M., {Van Hasselt}, H., Lanctot, M., {De Freitas},
+  N.: {Dueling Network Architectures for Deep Reinforcement Learning}.
+\newblock In: Proceedings of the 33rd International Conference on International
+  Conference on Machine Learning - Volume 48, ICML'16, pp. 1995--2003. JMLR.org
+  (2016).
+\newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=3045390.3045601}
+
+\bibitem{Watkins1989}
+Watkins, C.J.C.H.: {Learning from delayed rewards}.
+\newblock Ph.D. thesis, King's College, Cambridge (1989)
+
+\end{thebibliography}

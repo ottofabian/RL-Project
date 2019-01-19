@@ -106,6 +106,7 @@
     Define RL and the method in general.
     Show clear distinction to SL.
     Maybe include success of recent things in CV and NLP, might also be possible in \ref{sec:history} to transition to more recent approaches in RL. 
+    Introduce RL goal and notation, short intro ro MDPs.
     \section{Definition of Neural Networks}
     \label{sec:def}
     \cite{RefB} and \cite{RefJ}.
@@ -117,19 +118,105 @@
     Create good transition to recent approaches.
 
 
-    \section{Recent Approaches in Reinforcement Learning}
-    \label{sec:recent}
-    \subsection{Algorithms}
-    \label{sec:algo}
-    \subsection{Application Areas}
+%    \section{Recent Approaches in Reinforcement Learning}
+%    \label{sec:recent}
+    \section{Algorithms}
+	    \label{sec:algo}
+	    This section provides an overview of NN based RL algorithms including earlier work and its improvements as well as current state-of-the-art. 
+	    Most algorithms can be either classified as on-policy or off-policy algorithms.
+		On-policy algorithms estimate the value of policy while using it for control whereas in off-policy algorithms, the generating policy, called \textit{behavior policy}, is not necessarily related to the \textit{target policy}, which is improved and evaluated.
+		This allows to use a deterministic target policy, while sampling all actions applying the behavior policy. \cite[chapter 5]{Sutton2018}
+		
+ 	\subsection{Off-Policy}
+ 	\paragraph{MDPs}
+		\label{sec:off-policy}
+		One of the earlier NN based off-policy algorithms, named Neural fitted Q Iteration (NFQ), was published by Riedmiller \cite{Riedmiller2005} in 2005. 
+		NFQ is a model-free algorithm, based on Q-Learning \cite{Watkins1989} and approximates the action-value function with multilayer-perceptrons.
+		Compared to other approaches at the time, NFQ allows to learn with a relatively good data efficiency.
+		Further, batches from a replay memory \cite{Lin1992} are used in order to train the multilayer-perceptron with resilient backpropagation (RPROP) \cite{Riedmiller1993}.
+		Thereby, it is possible to dynamically add new samples to the replay memory during learning.
+		Motivated by this idea as well as the success of TD-gammon \cite{Tesauro1994} the arguably biggest improvement in NN based RL -- Deep Q-Networks (DQN) -- were introduced by Mnih, et al. \cite{Mnih2015}.   
+		They built upon their prior results \cite{Mnih2013} on the Atari Arcade Environment \cite{Bellemare2013} which already achieved state-of-the-art performance for some of the games.
+		DQNs introduce better scalability to larger data sets by replacing NFQ's RPROP with Stochastic Gradient Descent (SGD) updates. 
+		Further, they allow training end-to-end from the raw visual input utilizing convolutional neural networks. 
+		Benchmarks of more recent version \cite{Mnih2015} show an improved performance as well as a better generalization to more Atari games compared to initial work \cite{Mnih2013}.
+		The performance improvement was mainly achieved by introducing a second target Q-network, which is only periodically updated and thereby reduces sample correlations. 
+		However, van Hasselt, et al. \cite{VanHasselt2016} show that the current DQN \cite{Mnih2015} approach is not sufficient to avoid overestimations of action-values under certain conditions. 
+		This in itself is not harmful to the policy's performance, but if the overestimation is not uniform and not concentrated at the states of interest, it might affect the policy negatively. 
+		To mitigate the risk of overestimation, they propose Double DQN (DDQN).
+		Double Q-Learning in general tries to decouple the selection and evaluation of actions by learning two action-value functions. 
+		One determines the greedy policy and the other the value of this policy.  
+		In order to reduce the computational cost, van Hasselt, et al. utilize the already existing online Q-network for determining the greedy policy and the target Q-network for estimating its value. 
+		Further, this allows them to achieve better performance on most of the Atari games. 
+		Decoupling is also done in a more extreme form with Dueling Double DQNs (DDDQN) from Wang, et al. \cite{Wang2016}. 
+		They introduce two separate function approximators, one for the state-value function and one for the state dependent action advantage function, in order to represent the action-value\footnote{Both estimators share parameters in the networks's convolutional part and are trained together end-to-end.}.
+		These approximators allow the dueling architecture to learn about the value of a state regardless of the action taken. 
+		This is especially important as in many states, the action has no repercussions about the near future. 
+		Additional improvements, include gradient clipping and prioritized experience replay (PER) \cite{Schaul2015}.
+		Combining PER with DDQN \cite{Schaul2015} showed that sampling rare experiences with a higher probability makes learning with replay memories more efficient \cite{Lin1992}. 
+		However, sampling non-uniformly from the replay memory introduces a bias, that has to be corrected during the update step.\\
+		All previous approaches are using environments, which do not have to deal with delayed and sparse feedback.
+		In real world applications this is often not the case and algorithms still need the ability to learn.
+		One key problem, which arises during training, is insufficient exploration, thereby unstable policies. 
+		Using intrinsically motivated agents, exploration can be achieved for the agent itself rather for an external goal. 
+		This idea is implemented by Kulkarni, et al. \cite{Kulkarni2016} in hierarchical-DQN (h-DQN), which is based on a hierarchy of two DQNs.
+		A top level \textit{meta-controller} is selecting a subgoal in order to optimize the extrinsic reward.
+		The lower level \textit{controller} maximizes an intrinsic reward by solving the subgoal.
+		This allows h-DQN to achieve a significant better performance on the Atari game Montezuma's Revenge.\\
+		As the above results show, classical Q-learning \cite{Watkins1989} is quite successful for discrete action spaces, real world problems however often require continuous action spaces.
+		Further, it is usually hard in real world applications to collect data from e.g. robots, and therefore dealing with high sample complexity.
+		Normalized advantage functions (NAF) \cite{Gu2016} approach both problems with a DQN based algorithm.
+		Similar to DDDQN \cite{Wang2016}, the Q-network is represented by one state-value function output and one state dependent action advantage function.
+		In order to reduce sample complexity, NAF incorporates \textit{imagination rollouts}. 
+		Those synthetic on-policy samples are created by utilizing a mixture of iterative LQG (iLQG) \cite{Todorov2005} and on-policy trajectories for real world rollouts.
+		Afterwards, the learned model for the states is used to generate replay memory entries. 
+		This can be seen as a scalable variant of Dyna-Q \cite{Sutton1990}. 
+		As a drawback, NAF failed to show improvements using iLQG compared to on-policy samples, however, iLQG might be desirable when damage avoidance is crucial. 
+		Lillicrap, et al. \cite{Lillicrap2016} also adapt the fundamental idea of DQN \cite{Mnih2015} and make it applicable to the continuous action domain. 
+		However, they do not follow a value based learning and introduce Deep Deterministic Policy Gradients (DDPG), a model-free Actor-Critic (AC) algorithm with approximate Q-Learning based on deterministic policy gradients (DPG) \cite{Silver2014}.
+		%		different class of algorithms, policy gradients methods.
+		DQN's \cite{Mnih2015} architecture is improved by adding batch normalization layers \cite{Ioffe2015} to deal with different physical units in the observation space. 
+		In order to stabilize policies, they adapt the idea of target networks from DQN \cite{Mnih2015} and use "soft" target updates for AC. 
+		Albeit, this stability is, according to Haaranoja, et al. \cite{Haarnoja2018}, extremely difficult to achieve and further, DDPG is brittle to hyperparameter choices. 
+		As consequence, Haaranoja, et al. \cite{Haarnoja2018} present soft actor critic (SAC).
+		They combine the AC approach from DDPG \cite{Lillicrap2016} with maximum entropy reinforcement learning, which enables exploration and stability. 
+		Similarly to NAF \cite{Gu2016}, they also approach the problem of sample efficiency and gain significant improvements compared DDPG and other on-policy methods.
+		In general they also found modeling the state-value function and the action-value function with two separate NNs improved the stability of SAC. 
+%		One critical aspect of SAC is however the need of maintaining four different function approximates in form of neural networks at the same time.		
+		
+		
+		
+ 	\paragraph{POMDPs}
+    \subsection{On-Policy}
+    \label{sec:on-policy}
+%    TODO introduction to on policy.
+   	DDPG established a policy gradient based method, which works off-policy. 
+   	However, must policy gradient methods are working on-policy.
+    Also following the concept of policy gradients, Schulman, et al. \cite{Schulman2015} introduce trust region policy optimization (TRPO).
+    They criticize that first order gradient methods are often overconfident and not accurate enough in curved areas, which results in losing already made learning progress. 
+    Consequently, TRPO applies the conjugate gradient method (CG) to the natural policy gradient \cite{Kakade2001}.
+    The optimization is based on a form of minorization-maximization \cite{Hunter2004} and optimizes a surrogate function under a Kullback-Leibler (KL) constrained objective.
+    %		The surrogate function is an importance sampling estimate of the advantage function and is optimized under a Kullback-Leibler (KL) constrained objective.
+    This trust region constraint represents a pessimistic/lower bound on the performance of the policy and guarantees monotonic improvement locally around the current policy.	
+    In order to solve for the inverse of the fisher information matrix (FIM), which is required for the CG update, truncated natural policy gradients are applied to find an approximate solution. 
+    Before the update a backtracking line search is applied, which allows to assume larger trust regions and therefore larger update steps. 
+    However, one big drawback in practice is the sample efficiency of TRPO. 
+    Theoretically, TRPO can be applied to any policy, but, due to the lack of scalability, it is not practical to use deep neural networks policies.
+    This shortcoming is addressed by Proximal Policy Optimization (PPO) \cite{Schulman2017}.
+    PPO keeps all monotonic improvement guarantees while using first order optimization. 
+    This can be achieved two ways: 
+    \begin{enumerate}
+    	\item The KL constrained objective is replaced with a KL penalized objective and the corresponding penalty coefficient is automatically adapted each step. 
+    	\item The objective can be clipped, i.e. the probability ratio of old and new policy, which results of an lower bound for the unclipped objective. 
+    \end{enumerate}
+    Typically, clipping the objective shows better performance than the adaptive KL penalty.
+    Besides PPO, actor critic using kronecker-factored trust region (ACKTR).
+	
+    \subsection{Real World Applications}
     \label{sec:games}
     Talk about DeepMinds AlphaZero, TDGammon, Atari Game Systems, e.g. Minh
     But also applications outside of Games, maybe seperate this into two different subsections.
     \paragraph{Paragraph headings}
-    \begin{equation}
-        a^2+b^2=c^2
-    \end{equation}
-
     % For one-column wide figures use
     \begin{figure}
         \includegraphics{example.eps}
@@ -170,7 +257,7 @@
     %\bibliographystyle{spbasic}      % basic style, author-year citations
     \bibliographystyle{spmpsci}      % mathematics and physical sciences
     %\bibliographystyle{spphys}       % APS-like style for physics
-    \bibliography{resources.bib}
+    \bibliography{library.bib}
     % name your BibTeX data base
 
 \end{document}

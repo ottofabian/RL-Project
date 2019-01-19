@@ -8,8 +8,8 @@ import torch.nn.functional as F
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        nn.init.normal_(m.weight.data, 0, .05)
-        # nn.init.kaiming_normal_(m.weight.data)
+        # nn.init.normal_(m.weight.data, 0, .1)
+        nn.init.kaiming_normal_(m.weight.data)
         m.bias.data.fill_(0)
 
 
@@ -33,6 +33,8 @@ def init_weights(m):
 # mu = 5 * torch.tanh(self.mu(action_hidden))
 # sigma = F.softplus(self.sigma(action_hidden)) + 1e-5
 
+load_stab = True #True
+
 class CriticNetwork(torch.nn.Module):
     def __init__(self, n_inputs, action_space, is_discrete=False):
         super(CriticNetwork, self).__init__()
@@ -43,19 +45,30 @@ class CriticNetwork(torch.nn.Module):
         self.n_outputs = action_space.shape[0]
         self.n_inputs = n_inputs
 
-        n_hidden = 200
+        if load_stab:
+            n_hidden = 200
 
-        self.n_inputs = self.n_inputs
+            self.n_inputs = self.n_inputs
+            self.hidden_value1 = nn.Linear(self.n_inputs, n_hidden)
+            self.hidden_value2 = nn.Linear(n_hidden, n_hidden)
+            self.value = nn.Linear(n_hidden, 1)
 
-        self.inputs = nn.Linear(self.n_inputs, n_hidden)
-        # self.hidden_value1 = nn.Linear(n_hidden, n_hidden)
-        # self.hidden_value2 = nn.Linear(n_hidden, n_hidden)
-        # self.hidden_value3 = nn.Linear(n_hidden, n_hidden)
+            self.apply(init_weights)
+            self.train()
+        else:
+            n_hidden = 64
 
-        self.value = nn.Linear(n_hidden, 1)
+            self.n_inputs = self.n_inputs
 
-        self.apply(init_weights)
-        self.train()
+            self.inputs = nn.Linear(self.n_inputs, n_hidden)
+            self.hidden_value1 = nn.Linear(n_hidden, n_hidden)
+            self.hidden_value2 = nn.Linear(n_hidden, n_hidden)
+            self.hidden_value3 = nn.Linear(n_hidden, n_hidden)
+
+            self.value = nn.Linear(n_hidden, 1)
+
+            self.apply(init_weights)
+            self.train()
 
     def forward(self, x):
         """
@@ -67,9 +80,13 @@ class CriticNetwork(torch.nn.Module):
 
         x = x.float()
 
-        x = F.relu(self.inputs(x))
-        # x = F.relu(self.hidden_value1(x))
-        # x = F.leaky_relu(self.hidden_value2(x), .1)
-        # x = F.leaky_relu(self.hidden_value3(x), .1)
+        if load_stab:
+            x = F.relu(self.hidden_value1(x))
+            x = F.relu(self.hidden_value2(x))
+        else:
+            x = F.relu(self.inputs(x))
+            x = F.relu(self.hidden_value1(x))
+            x = F.relu(self.hidden_value2(x))
+            x = F.relu(self.hidden_value3(x))
 
         return self.value(x)

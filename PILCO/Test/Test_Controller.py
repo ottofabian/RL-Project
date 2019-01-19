@@ -18,6 +18,7 @@ def compute_action_wrapper(controller, m, s, squash=False):
 
 def test_rbf():
     np.random.seed(0)
+
     state_dim = 5
     n_actions = 1
     n_features = 10
@@ -28,17 +29,17 @@ def test_rbf():
     Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(n_features, n_actions) - 0.5)
     length_scales = np.random.rand(state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features, rollout=None, length_scales=length_scales)
+    rbf = RBFController(n_actions=n_actions, n_features=n_features, compute_cost=None, length_scales=length_scales)
     rbf.fit(X0, Y0)
 
     # Generate input
-    m = np.random.rand(1, state_dim)  # But MATLAB defines it as m'
-    s = np.random.rand(state_dim, state_dim)
-    s = s.dot(s.T)  # Make s positive semidefinite
+    mu = np.random.rand(1, state_dim)
+    sigma = np.random.rand(state_dim, state_dim)
+    sigma = sigma.dot(sigma.T)  # Make sigma positive semidefinite
 
-    M, S, V = rbf.choose_action(m, s, False)
+    M, S, V = rbf.choose_action(mu, sigma, None)
     # V is already multiplied with S, have to revert that to run positive test
-    V = np.linalg.solve(s, np.eye(s.shape[0])) @ V
+    V = np.linalg.solve(sigma, np.eye(sigma.shape[0])) @ V
 
     # convert data to the struct expected by the MATLAB implementation
     length_scales = length_scales.reshape(n_actions, state_dim)
@@ -56,7 +57,7 @@ def test_rbf():
     gpmodel.inputs = X0
     gpmodel.targets = Y0
 
-    M_mat, S_mat, V_mat = octave.gp2(gpmodel, m.T, s, nout=3)
+    M_mat, S_mat, V_mat = octave.gp2(gpmodel, mu.T, sigma, nout=3)
     M_mat = np.asarray([M_mat])
     S_mat = np.atleast_2d(S_mat)
     V_mat = np.asarray(V_mat)
@@ -77,7 +78,7 @@ def test_squash():
     np.random.seed(0)
     n_actions = 1
 
-    mu = np.random.rand(1, n_actions)  # But MATLAB defines it as m'
+    mu = np.random.rand(1, n_actions)
     sigma = np.random.rand(n_actions, n_actions)
     sigma = sigma.dot(sigma.T)
     i_o_cov = np.ones(mu.T.shape)

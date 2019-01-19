@@ -63,7 +63,7 @@ def test(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, shared
     model_critic.eval()
     # model.load_state_dict(global_model.state_dict())
 
-    state = torch.from_numpy(np.array(env.reset()))
+    state = torch.from_numpy(env.reset())
     reward_sum = 0
 
     t = 0
@@ -169,7 +169,7 @@ def train(env_name: str, worker_id: int, shared_model_actor: ActorNetwork, share
 
     writer = SummaryWriter()
 
-    state = torch.from_numpy(np.array(env.reset()))
+    state = torch.from_numpy(env.reset())
 
     t = 0
     iter_ = 0

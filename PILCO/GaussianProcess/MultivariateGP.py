@@ -14,6 +14,8 @@ class MultivariateGP(object):
         self.y = None
         self.n_targets = n_targets
         self.is_policy = is_policy
+
+        # TODO make this in matrix vector form
         # For a D-dimensional state space, we use D separate GPs, one for each state dimension. Deisenroth (2010)
         self.gp_container = [
             container(length_scales=length_scales, sigma_eps=sigma_eps, sigma_f=sigma_f, is_policy=is_policy) for _ in
@@ -133,85 +135,90 @@ class MultivariateGP(object):
             gp.optimize()
 
     def predict(self, x):
+        """
+        Computes point predictions from GPs
+        :param x: points to predict th man for
+        :return:
+        """
         # compute K_inv and betas
         [gp.compute_matrices() for gp in self.gp_container]
         return np.array([gp.predict(x) for gp in self.gp_container])
 
-    def compute_cross_cov(self, i, j, zeta, sigma):
-        precision_a_inv = np.diag(1 / self.gp_container[i].length_scales)
-        precision_b_inv = np.diag(1 / self.gp_container[j].length_scales)
-
-        # compute R
-        R = sigma @ (precision_a_inv + precision_b_inv) + np.identity(sigma.shape[0])
-        R_inv = np.linalg.solve(R, np.identity(R.shape[0]))
-
-        # compute z
-        z = precision_a_inv @ zeta + precision_b_inv @ zeta
-
-        # compute n using matrix inversion lemma, Appendix A.4 Deisenroth (2010)
-        right = (zeta.T @ precision_a_inv @ zeta +
-                 zeta.T @ precision_b_inv @ zeta -
-                 z.T @ R_inv @ sigma @ z) / 2
-
-        const = 2 * (np.log(self.gp_container[i].sigma_f) + np.log(self.gp_container[j].sigma_f))
-        n_square = const - right
-
-        # Compute Q
-        Q = np.exp(n_square) / np.sqrt(np.linalg.det(R))
-
-        return Q
-
-    def predict_from_dist_v2(self, mu, sigma):
-        """
-        This method should not be used, it is only based on the mathematical description of Deisenroth(2010).
-        Use predict_from_dist() in order to get a matlab based method, which is numerically more stable.
-        :param mu:
-        :param sigma:
-        :return:
-        """
-
-        mu_out = np.zeros((self.n_targets,))
-        sigma_out = np.zeros((self.n_targets, self.n_targets))
-        input_output_cov = np.zeros((self.n_targets, self.X.shape[1]))
-
-        # calculate combined Expectation of all gps
-        for i in range(self.n_targets):
-            mu_out[i] = self.gp_container[i].compute_matrices(mu, sigma)
-
-        # The cov og e.g. delta x is not diagonal, therefor it is necessary to
-        # compute the cross-cov between each output
-        # This requires to compute the expected value of the GP's outputs
-        # from xa,xb - the product of the corresponding mean values from above
-
-        # compute zeta before hand, it does not change
-        zeta = (self.X - mu).T
-
-        for i in range(self.n_targets):
-            beta_a = self.gp_container[i].betas
-            input_output_cov[i] = self.compute_input_output_cov(i, beta_a, sigma, zeta)
-
-            for j in range(self.n_targets):
-
-                Q = self.compute_cross_cov(i, j, zeta, sigma)
-                beta_b = self.gp_container[j].betas
-
-                # place into cov matrix
-                if i == j:
-                    cov_ab = beta_a.T @ Q @ beta_a - mu_out[i] ** 2 + self.gp_container[i].sigma_f ** 2 - \
-                             np.trace(self.gp_container[i].K_inv @ Q)
-                else:
-                    cov_ab = beta_a.T @ Q @ beta_b - mu_out[i] * mu_out[j]
-
-                sigma_out[i, j] = cov_ab
-
-        return mu_out, sigma_out, input_output_cov
-
-    def compute_input_output_cov(self, i, beta, sigma, zeta):
-
-        precision = np.diag(self.gp_container[i].length_scales)
-        # print(precision, sigma)
-        sigma_plus_precision_inv = np.linalg.solve(sigma @ precision, np.identity(sigma.shape[0]))
-        return np.sum(beta @ self.gp_container[i].qs * sigma @ sigma_plus_precision_inv @ zeta, axis=1)
+    # def compute_cross_cov(self, i, j, zeta, sigma):
+    #     precision_a_inv = np.diag(1 / self.gp_container[i].length_scales)
+    #     precision_b_inv = np.diag(1 / self.gp_container[j].length_scales)
+    #
+    #     # compute R
+    #     R = sigma @ (precision_a_inv + precision_b_inv) + np.identity(sigma.shape[0])
+    #     R_inv = np.linalg.solve(R, np.identity(R.shape[0]))
+    #
+    #     # compute z
+    #     z = precision_a_inv @ zeta + precision_b_inv @ zeta
+    #
+    #     # compute n using matrix inversion lemma, Appendix A.4 Deisenroth (2010)
+    #     right = (zeta.T @ precision_a_inv @ zeta +
+    #              zeta.T @ precision_b_inv @ zeta -
+    #              z.T @ R_inv @ sigma @ z) / 2
+    #
+    #     const = 2 * (np.log(self.gp_container[i].sigma_f) + np.log(self.gp_container[j].sigma_f))
+    #     n_square = const - right
+    #
+    #     # Compute Q
+    #     Q = np.exp(n_square) / np.sqrt(np.linalg.det(R))
+    #
+    #     return Q
+    #
+    # def predict_from_dist_v2(self, mu, sigma):
+    #     """
+    #     This method should not be used, it is only based on the mathematical description of Deisenroth(2010).
+    #     Use predict_from_dist() in order to get a matlab based method, which is numerically more stable.
+    #     :param mu:
+    #     :param sigma:
+    #     :return:
+    #     """
+    #
+    #     mu_out = np.zeros((self.n_targets,))
+    #     sigma_out = np.zeros((self.n_targets, self.n_targets))
+    #     input_output_cov = np.zeros((self.n_targets, self.X.shape[1]))
+    #
+    #     # calculate combined Expectation of all gps
+    #     for i in range(self.n_targets):
+    #         mu_out[i] = self.gp_container[i].compute_matrices(mu, sigma)
+    #
+    #     # The cov og e.g. delta x is not diagonal, therefor it is necessary to
+    #     # compute the cross-cov between each output
+    #     # This requires to compute the expected value of the GP's outputs
+    #     # from xa,xb - the product of the corresponding mean values from above
+    #
+    #     # compute zeta before hand, it does not change
+    #     zeta = (self.X - mu).T
+    #
+    #     for i in range(self.n_targets):
+    #         beta_a = self.gp_container[i].betas
+    #         input_output_cov[i] = self.compute_input_output_cov(i, beta_a, sigma, zeta)
+    #
+    #         for j in range(self.n_targets):
+    #
+    #             Q = self.compute_cross_cov(i, j, zeta, sigma)
+    #             beta_b = self.gp_container[j].betas
+    #
+    #             # place into cov matrix
+    #             if i == j:
+    #                 cov_ab = beta_a.T @ Q @ beta_a - mu_out[i] ** 2 + self.gp_container[i].sigma_f ** 2 - \
+    #                          np.trace(self.gp_container[i].K_inv @ Q)
+    #             else:
+    #                 cov_ab = beta_a.T @ Q @ beta_b - mu_out[i] * mu_out[j]
+    #
+    #             sigma_out[i, j] = cov_ab
+    #
+    #     return mu_out, sigma_out, input_output_cov
+    #
+    # def compute_input_output_cov(self, i, beta, sigma, zeta):
+    #
+    #     precision = np.diag(self.gp_container[i].length_scales)
+    #     # print(precision, sigma)
+    #     sigma_plus_precision_inv = np.linalg.solve(sigma @ precision, np.identity(sigma.shape[0]))
+    #     return np.sum(beta @ self.gp_container[i].qs * sigma @ sigma_plus_precision_inv @ zeta, axis=1)
 
     def get_sigma_fs(self):
         return np.array([c.sigma_f for c in self.gp_container])

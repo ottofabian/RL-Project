@@ -11,15 +11,18 @@ dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"
 octave.addpath(dir_path)
 
 
-def test_predictions():
-    np.random.seed(0)
+def test_mgpr():
+    np.random.seed(1)
+
     state_dim = 3
     n_targets = 2
 
+    n_samples = 100
+
     # Training Dataset
-    X0 = np.random.rand(100, state_dim)
+    X0 = np.random.rand(n_samples, state_dim)
     A = np.random.rand(state_dim, n_targets)
-    Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(100, n_targets) - 0.5)  # Just something smooth
+    Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(n_samples, n_targets) - 0.5)
     length_scales = np.random.rand(state_dim)
 
     mgpr = MultivariateGP(length_scales=length_scales, n_targets=n_targets, container=GaussianProcess)
@@ -28,18 +31,17 @@ def test_predictions():
     mgpr.optimize()
 
     # Generate input
-    m = np.random.rand(1, state_dim)  # But MATLAB defines it as m'
-    s = np.random.rand(state_dim, state_dim)
-    s = s.dot(s.T)  # Make s positive semidefinite
+    mu = np.random.rand(1, state_dim)
+    sigma = np.random.rand(state_dim, state_dim)
+    sigma = sigma.dot(sigma.T)
 
-    _ = mgpr.predict_from_dist(m, s)
+    _ = mgpr.predict_from_dist(mu, sigma)
 
     # Change the dataset to avoid any caching issues for K and beta
     X0 = 5 * np.random.rand(100, state_dim)
     mgpr.fit(X0, Y0)
 
-    M, S, V = mgpr.predict_from_dist(m, s)
-    # V = np.linalg.solve(s, np.eye(s.shape[0])) @ V
+    M, S, V = mgpr.predict_from_dist(mu, sigma)
 
     # convert data to the struct expected by the MATLAB implementation
     length_scales = mgpr.get_length_scales()
@@ -58,7 +60,7 @@ def test_predictions():
     gpmodel.targets = Y0
 
     # Call function in octave
-    M_mat, S_mat, V_mat = octave.gp0(gpmodel, m.T, s, nout=3)
+    M_mat, S_mat, V_mat = octave.gp0(gpmodel, mu.T, sigma, nout=3)
     M_mat = np.asarray(M_mat).flatten()
     S_mat = np.atleast_2d(S_mat)
     V_mat = np.asarray(V_mat)
@@ -72,4 +74,4 @@ def test_predictions():
 
 
 if __name__ == '__main__':
-    test_predictions()
+    test_mgpr()

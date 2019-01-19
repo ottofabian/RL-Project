@@ -12,13 +12,13 @@ from A3C.Optimizers.SharedAdam import SharedAdam
 from A3C.Optimizers.SharedRMSProp import SharedRMSProp
 from A3C.Worker import Worker
 from A3C.split_network_debug import test, train
-from Experiments.util.model_save import load_saved_model
+from Experiments.util.model_save import load_saved_model, save_checkpoint
 
 
 class A3C(object):
 
     def __init__(self, n_worker: int, env_name: str, is_discrete: bool = False,
-                 seed: int = 123, optimizer_name='rmsprop') -> None:
+                 seed: int = 123, optimizer_name='rmsprop', is_train: bool = True) -> None:
         """
 
         :param n_worker: Number of workers/threads to spawn which conduct the A3C algorithm.
@@ -29,6 +29,7 @@ class A3C(object):
                             This setting has effect on the network architecture as well as the loss function used.
                             For more detail see: p.12 - Asynchronous Methods for Deep Reinforcement Learning.pdf
         :param optimizer_name: Optimizer used for shared weight updates. Possible arguments are 'rmsprop', 'adam'.
+        :param is_train: If true enable training, use false if you only deploy the policy for testing
         """
         self.seed = seed
         self.env_name = env_name
@@ -43,6 +44,8 @@ class A3C(object):
         self.n_worker = n_worker
         self.worker_pool = []
         self.lock = Lock()
+
+        self.is_train = is_train
 
         self.logger = logging.getLogger(__name__)
 
@@ -107,7 +110,9 @@ class A3C(object):
         for w in self.worker_pool:
             w.join()
 
-    def run_debug(self, path_actor=None, path_critic=None):
+    def run_debug(self, path_actor=None, path_critic=None,
+                  max_episodes: int = 5000, t_max: int = 128, gamma: float = .995, tau: float = 1.0, beta: float = 0.1,
+                  use_gae: bool = True):
 
         torch.manual_seed(self.seed)
 
@@ -134,12 +139,12 @@ class A3C(object):
 
         if self.optimizer_name == 'rmsprop':
             optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
-            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.001)
+            optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0005)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         elif self.optimizer_name == 'adam':
-            optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=0.0001)
-            optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=0.0001)
+            optimizer_actor = SharedAdam(shared_model_actor.parameters(), lr=0.00001)
+            optimizer_critic = SharedAdam(shared_model_critic.parameters(), lr=0.00001)
             optimizer_actor.share_memory()
             optimizer_critic.share_memory()
         else:
@@ -170,17 +175,18 @@ class A3C(object):
         p.start()
         self.worker_pool.append(p)
 
-        if "RR" not in self.env_name:
-            for rank in range(0, self.n_worker):
-                p = Process(target=train, args=(
-                    self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-                    self.T, 5000, 1000, .9, 1, 1e-4, optimizer_actor, optimizer_critic, scheduler_actor,
-                    scheduler_critic, True, self.is_discrete, self.global_reward))
-                p.start()
-                self.worker_pool.append(p)
+        if self.is_train:
+            if "RR" not in self.env_name:
+                for rank in range(0, self.n_worker):
+                    p = Process(target=train, args=(
+                        self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
+                        self.T, max_episodes, t_max, gamma, tau, beta, optimizer_actor, optimizer_critic, scheduler_actor,
+                        scheduler_critic, use_gae, self.is_discrete, self.global_reward))
+                    p.start()
+                    self.worker_pool.append(p)
 
-            for p in self.worker_pool:
-                p.join()
+                for p in self.worker_pool:
+                    p.join()
 
     def stop(self):
         self.worker_pool = []
