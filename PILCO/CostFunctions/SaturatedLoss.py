@@ -5,7 +5,15 @@ from PILCO.CostFunctions.Loss import Loss
 
 class SaturatedLoss(Loss):
 
-    def __init__(self, state_dim, target_state=None, T_inv=None, cost_width=None, p=.5):
+    def __init__(self, state_dim: np.ndarray, target_state: np.ndarray = None, T_inv: np.ndarray = None,
+                 cost_width: np.ndarray = None):
+        """
+        Initialize saturated loss function
+        :param state_dim: state dimensionality
+        :param target_state: target state which should be reached
+        :param T_inv: weight matrix
+        :param cost_width: TODO what is this
+        """
 
         self.state_dim = state_dim
 
@@ -19,12 +27,17 @@ class SaturatedLoss(Loss):
         # -----------------------------------------------------
         # This is only useful if we have any penalties etc.
         self.cost_width = np.array([1]) if cost_width is None else cost_width
-        self.p = p
 
-    def compute_cost(self, mu, sigma):
+    def compute_cost(self, mu: np.ndarray, sigma: np.ndarray) -> tuple:
+        """
+        Compute cost of current state distribution
+        :param mu: mean of state
+        :param sigma: covariance of state
+        :return: cost of given state distribution
+        """
         mu = np.atleast_2d(mu)
 
-        sigma_T_inv = np.dot(sigma, self.T_inv)
+        sigma_T_inv = sigma @ self.T_inv
         S1 = np.linalg.solve((np.identity(self.state_dim) + sigma_T_inv).T, self.T_inv.T).T
         diff = mu - self.target_state
 
@@ -36,19 +49,21 @@ class SaturatedLoss(Loss):
         r2 = np.exp(-diff @ S2 @ diff.T) * ((np.linalg.det(np.identity(self.state_dim) + 2 * sigma_T_inv)) ** -.5)
         variance = r2 - mean ** 2
 
-        # for numeric reasons set to 0
-        # TODO: Do we need this? See matlab code
-        # if variance < 1e-12:
-        #     variance = 0
-
-        t = np.dot(self.T_inv, self.target_state.T) - S1 @ (np.dot(sigma_T_inv, self.target_state.T) + mu.T)
+        # compute cross covariance
+        t = self.T_inv @ self.target_state.T - S1 @ (sigma_T_inv @ self.target_state.T + mu.T)
 
         cross_cov = sigma @ (mean * t)
 
         # bring cost to the interval [0,1]
         return 1 + mean, variance, cross_cov
 
-    def compute_loss(self, mu, sigma):
+    def compute_loss(self, mu: np.ndarray, sigma: np.ndarray) -> float:
+        """
+        compute penalized loss function of state distribution
+        :param mu: mean of state distribution
+        :param sigma: covariance of state distribution
+        :return: loss
+        """
         # TODO: Ask supervisors if we need to do this.
         # We do not have information about the env for penalties or the like.
 

@@ -8,8 +8,8 @@ import torch.nn.functional as F
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        # nn.init.normal_(m.weight.data, 0, .1)
-        nn.init.kaiming_normal_(m.weight.data)
+        nn.init.normal_(m.weight.data, 0, .1)
+        # nn.init.kaiming_normal_(m.weight.data)
         m.bias.data.fill_(0)
 
 
@@ -85,12 +85,12 @@ class ActorNetwork(torch.nn.Module):
             #n_hidden = 200
 
             self.n_inputs = self.n_inputs
-            self.inputs = nn.Linear(self.n_inputs, self.n_hidden)
-            self.hidden_action1 = nn.Linear(n_hidden, self.n_hidden)
-            self.hidden_action2 = nn.Linear(n_hidden, self.n_hidden)
-            #self.hidden_action3 = nn.Linear(n_hidden, n_hidden)
-            self.mu = nn.Linear(self.n_hidden, self.n_outputs)
-            self.sigma = nn.Linear(self.n_hidden, self.n_outputs)
+            self.inputs = nn.Linear(self.n_inputs, n_hidden)
+            # self.hidden_action1 = nn.Linear(n_hidden, n_hidden)
+            # self.hidden_action2 = nn.Linear(n_hidden, n_hidden)
+            # self.hidden_action3 = nn.Linear(n_hidden, n_hidden)
+            self.mu = nn.Linear(n_hidden, self.n_outputs)
+            self.sigma = nn.Linear(n_hidden, self.n_outputs)
 
             self.apply(init_weights)
             self.train()
@@ -105,9 +105,9 @@ class ActorNetwork(torch.nn.Module):
         else:
             x = x.float()
             x = F.relu(self.inputs(x))
-            x = F.relu(self.hidden_action1(x))
-            x = F.relu(self.hidden_action2(x))
-            #x = F.relu(self.hidden_action3(x))
+            # x = F.relu(self.hidden_action1(x))
+            # x = F.relu(self.hidden_action2(x))
+            # x = F.relu(self.hidden_action3(x))
             # TODO work only between [-5, 5] for cartpole
             # mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(x))
             mu = torch.tanh(self.mu(x)) * self.max_action

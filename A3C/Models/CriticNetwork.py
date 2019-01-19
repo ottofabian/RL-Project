@@ -61,10 +61,10 @@ class CriticNetwork(torch.nn.Module):
 
             self.n_inputs = self.n_inputs
 
-            self.inputs = nn.Linear(self.n_inputs, self.n_hidden)
-            self.hidden_value1 = nn.Linear(self.n_hidden, self.n_hidden)
-            self.hidden_value2 = nn.Linear(self.n_hidden, self.n_hidden)
-            #self.hidden_value3 = nn.Linear(n_hidden, n_hidden)
+            self.inputs = nn.Linear(self.n_inputs, n_hidden)
+            # self.hidden_value1 = nn.Linear(n_hidden, n_hidden)
+            # self.hidden_value2 = nn.Linear(n_hidden, n_hidden)
+            # self.hidden_value3 = nn.Linear(n_hidden, n_hidden)
 
             self.value = nn.Linear(self.n_hidden, 1)
 
@@ -86,8 +86,8 @@ class CriticNetwork(torch.nn.Module):
             #x = F.relu(self.hidden_value2(x))
         else:
             x = F.relu(self.inputs(x))
-            x = F.relu(self.hidden_value1(x))
-            x = F.relu(self.hidden_value2(x))
-            #x = F.relu(self.hidden_value3(x))
+            # x = F.relu(self.hidden_value1(x))
+            # x = F.relu(self.hidden_value2(x))
+            # x = F.relu(self.hidden_value3(x))
 
         return self.value(x)

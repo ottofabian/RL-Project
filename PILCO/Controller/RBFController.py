@@ -7,14 +7,14 @@ from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
 
 
-def squash_action_dist(mu, sigma, input_output_cov, bound):
+def squash_action_dist(mu: np.ndarray, sigma: np.ndarray, input_output_cov: np.ndarray, bound: np.ndarray) -> tuple:
     """
     Rescales and squashes the distribution x with sin(x)
     See Deisenroth(2010) Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
-    :param bound:
-    :param mu:
-    :param sigma:
-    :param input_output_cov:
+    :param bound: max action to take
+    :param mu: mean of action distribution
+    :param sigma: covariance of actions distribution
+    :param input_output_cov: state action input out covariance
     :return: mu_squashed, sigma_squashed, input_output_cov_squashed
     """
 
@@ -56,14 +56,28 @@ class RBFController(MultivariateGP, Controller):
         self.compute_cost = compute_cost
         self.opt_ctr = 0
 
-    def fit(self, X, y):
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+        """
+        set x and y
+        :param X: input variables [n_samples, sample dim]
+        :param y: target variables [n_samples, 1]
+        :return: None
+        """
+
         # TODO this fits all X for all predictions, this does not matter for 1D actions
         MultivariateGP.fit(self, X, y)
 
         # second X shape is for lengthscales
         # self.n_params = X.shape[0] * X.shape[1] + y.shape[0] * y.shape[1] + X.shape[0] + 1
 
-    def choose_action(self, mu, sigma, bound=None):
+    def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: float = None) -> tuple:
+        """
+        Choose an action based on the current RBF functions
+        :param mu: mean of state
+        :param sigma: covariance of state
+        :param bound: float for squashing action in [-bound, bound] or None when no squashing is needed
+        :return: action_mu, action_cov, input_output_cov
+        """
         action_mu, action_cov, input_output_cov = self.predict_from_dist(mu, sigma)
 
         if bound is not None:
@@ -72,7 +86,11 @@ class RBFController(MultivariateGP, Controller):
         # prediction from GP of cross_cov is times inv(s)
         return action_mu, action_cov, sigma @ input_output_cov
 
-    def optimize(self):
+    def optimize(self) -> None:
+        """
+        optimize policy with regards to pseudo inputs and targets
+        :return: None
+        """
         # TODO make this working for n_actions > 1
         params = np.array([gp.wrap_policy_hyperparams() for gp in self.gp_container]).flatten()
         options = {'maxiter': 150, 'disp': True}
@@ -100,6 +118,11 @@ class RBFController(MultivariateGP, Controller):
         self.compute_cost(self, print_trajectory=True)
 
     def _optimize_hyperparams(self, params):
+        """
+        function handle to use for scipy optimizer
+        :param params: flat array of all parameters [
+        :return: cost of trajectory
+        """
 
         self.opt_ctr += 1
 
@@ -109,15 +132,12 @@ class RBFController(MultivariateGP, Controller):
             # computes beta and K_inv for updated hyperparams
             gp.compute_matrices()
 
-        self.logger.debug("Params as given from the optimization step:")
-        self.logger.debug(np.array2string(params if type(params) == np.ndarray else params._value))
+        # self.logger.debug("Params as given from the optimization step:")
+        # self.logger.debug(np.array2string(params if type(params) == np.ndarray else params._value))
 
-        # returns cost of trajectory rollout
-        cost = self.compute_cost(self, print_trajectory=False)
+        # cost of trajectory
+        return self.compute_cost(self, print_trajectory=False)
 
-        # print progress
-        # ToDo make this a callback
-        self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, np.array2string(
-            cost if type(cost) == np.ndarray else cost._value)))
-
-        return cost
+    # def callback(self, x):
+    #     self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, np.array2string(
+    #         cost if type(cost) == np.ndarray else cost._value)))

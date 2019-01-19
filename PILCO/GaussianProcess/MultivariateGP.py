@@ -38,11 +38,11 @@ class MultivariateGP(object):
     def predict_from_dist(self, mu, sigma):
 
         """
-        Predict dist given an uncertain input x~N(mu,sigma)
+        Predict dist given an uncertain input x~N(mu,sigma) from gaussian process
         Based on the idea of: https://github.com/cryscan/pilco-learner
         :param mu: n_targets x n_state + n_actions
         :param sigma: n_targets x (n_state + n_actions) x (n_state + n_actions)
-        :return: mu, sigma and inv(sigma) times input_output_cov
+        :return: mu, sigma and inv(sigma) @ input_output_cov
         """
 
         mu = np.atleast_2d(mu)
