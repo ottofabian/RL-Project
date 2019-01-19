@@ -66,13 +66,13 @@ class GaussianProcess(object):
         :param params: vector of [length_scales, sigma_f, sigma_eps]
         :return: penalized marginal log likelihood
         """
-        # p = 5
-        # length_scales, sigma_f, sigma_eps = self.unwrap_params(params)
+        p = 5
+        length_scales, sigma_f, sigma_eps = self.unwrap_params(params)
 
         L = self.log_marginal_likelihood(params)
 
-        # L = L + np.sum(((length_scales - np.log(self.std_pen)) / np.log(self.length_scale_pen)) ** p)
-        # L = L + np.sum(((sigma_f - sigma_eps) / np.log(self.signal_to_noise)) ** p)
+        L = L + np.sum(((length_scales - np.log(self.std_pen)) / np.log(self.length_scale_pen)) ** p)
+        L = L + np.sum(((sigma_f - sigma_eps) / np.log(self.signal_to_noise)) ** p)
         # print(L)
         return L
 
