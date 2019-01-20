@@ -37,7 +37,7 @@ class SaturatedLoss(Loss):
         """
         mu = np.atleast_2d(mu)
 
-        sigma_T_inv = sigma @ self.T_inv
+        sigma_T_inv = np.dot(sigma, self.T_inv)
         S1 = np.linalg.solve((np.identity(self.state_dim) + sigma_T_inv).T, self.T_inv.T).T
         diff = mu - self.target_state
 
@@ -50,7 +50,7 @@ class SaturatedLoss(Loss):
         variance = r2 - mean ** 2
 
         # compute cross covariance
-        t = self.T_inv @ self.target_state.T - S1 @ (sigma_T_inv @ self.target_state.T + mu.T)
+        t = np.dot(self.T_inv, self.target_state.T) - S1 @ (np.dot(sigma_T_inv, self.target_state.T) + mu.T)
 
         cross_cov = sigma @ (mean * t)
 

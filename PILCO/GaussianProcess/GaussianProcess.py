@@ -73,12 +73,12 @@ class GaussianProcess(object):
         likelihood = -self.log_marginal_likelihood(params)
 
         # penalty computation
-        # p = 5
-        # length_scales, sigma_f, sigma_eps = self.unwrap_params(params)
-        # std = np.std(self.X, 0)
-        #
-        # likelihood = likelihood + np.sum(((length_scales - np.log(std)) / np.log(self.length_scale_pen)) ** p)
-        # likelihood = likelihood + np.sum(((sigma_f - sigma_eps) / np.log(self.signal_to_noise)) ** p)
+        p = 30
+        length_scales, sigma_f, sigma_eps = self.unwrap_params(params)
+        std = np.std(self.X, 0)
+
+        likelihood = likelihood + (((length_scales - np.log(std)) / np.log(self.length_scale_pen)) ** p).sum()
+        likelihood = likelihood + (((sigma_f - sigma_eps) / np.log(self.signal_to_noise)) ** p).sum()
         # print(likelihood)
         return likelihood
 
@@ -131,7 +131,7 @@ class GaussianProcess(object):
         # K_trans = self.kernel(self._wrap_kernel_hyperparams(), x)
         # y_mean = K_trans.dot(self.betas)
         y_mean = np.mean(self.y, axis=0) if normalize else 0
-        return (y_mean + self.betas @ self.kernel(self._wrap_kernel_hyperparams(), x, self.X)[0]).flatten()
+        return (y_mean + np.dot(self.betas, self.kernel(self._wrap_kernel_hyperparams(), x, self.X)[0])).flatten()
 
     def log_marginal_likelihood(self, hyperparams: np.ndarray) -> float:
         """
@@ -148,7 +148,7 @@ class GaussianProcess(object):
         alpha = np.linalg.solve(K, self.y)
 
         return -.5 * self.X.shape[0] * self.n_targets * np.log(2 * np.pi) \
-               - .5 * self.y.flatten(order="F") @ alpha - (np.log(np.diag(L))).sum()
+               - .5 * np.dot(self.y.flatten(order="F"), alpha) - (np.log(np.diag(L))).sum()
 
     def compute_matrices(self) -> None:
 
