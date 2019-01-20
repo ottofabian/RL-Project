@@ -123,36 +123,40 @@ class PILCO(object):
         self.rewards = np.zeros((n_init,))
 
         i = 0
+        state_prev = self.env.reset()
+
+        if self.env_name == "Pendulum-v0":
+            theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
+            self.env.env.state = [theta, 0]
+            state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
+
         while i < n_init:
-            state_prev = self.env.reset()
-            if self.env_name == "Pendulum-v0":
-                theta = .1
-                self.env.env.state = [theta, 0]
-                state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
-            # elif self.env_name == "CartpoleStabShort-v0":
-            #     theta = -np.pi + .1
-            #     self.env.env._state = [0, theta, 0, 0]
-            #     state_prev = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
 
-            done = False
+            self.env.render()
 
-            while not done and i < n_init:
-                self.env.render()
-                action = self.env.action_space.sample()
-                state, reward, done, _ = self.env.step(action)
+            # take initial random action
+            action = self.env.action_space.sample()
+            state, reward, done, _ = self.env.step(action)
 
-                state = state
-                state_prev = state_prev
+            # safe state-action pair as input for dynamics GP
+            self.state_action_pairs[i] = np.concatenate([state_prev, action])
 
-                # state-action pair as input
-                self.state_action_pairs[i] = np.concatenate([state_prev, action])
+            # include some noise to reduce data correlations and non semi definite matrices during optimization
+            noise = np.random.multivariate_normal(np.zeros(state.shape), 1e-6 * np.identity(state.shape[0]))
+            self.state_delta[i] = state - state_prev + noise
 
-                noise = np.random.multivariate_normal(np.ones(state.shape), 1e-6 * np.identity(state.shape[0]))
-                self.state_delta[i] = state - state_prev + noise
+            self.rewards[i] = reward
 
-                self.rewards[i] = reward
-                state_prev = state
-                i += 1
+            # reset env if terminal state was reached before max samples were generated
+            if done:
+                state = self.env.reset()
+                if self.env_name == "Pendulum-v0":
+                    theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
+                    self.env.env.state = [theta, 0]
+                    state = np.array([np.cos(theta), np.sin(theta), 0.])
+
+            state_prev = state
+            i += 1
 
     def learn_dynamics_model(self) -> None:
         """
@@ -162,8 +166,8 @@ class PILCO(object):
 
         if self.dynamics_model is None:
             l, sigma_f, sigma_eps = self.get_init_hyperparams()
-            self.dynamics_model = MultivariateGP(length_scales=l, n_targets=self.state_dim, sigma_f=sigma_f,
-                                                 sigma_eps=sigma_eps, container=GaussianProcess)
+            self.dynamics_model = MultivariateGP(n_targets=self.state_dim, container=GaussianProcess, length_scales=l,
+                                                 sigma_f=sigma_f, sigma_eps=sigma_eps)
 
         self.dynamics_model.fit(self.state_action_pairs, self.state_delta)
         self.dynamics_model.optimize()
@@ -186,7 +190,10 @@ class PILCO(object):
 
             # augmented states would be initialized with .7, but we already have sin and cos given
             # and do not need to compute this with gaussian_trig
-            length_scales = np.ones(self.state_dim)
+            if self.env_name == "Pendulum-v0":
+                length_scales = np.array([1., 1., 1.])
+            else:
+                length_scales = np.ones(self.state_dim)
 
             self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features,
                                         compute_cost=self.compute_trajectory_cost,
@@ -312,7 +319,8 @@ class PILCO(object):
             # create history and new training instance
             X.append(np.append(state_prev, action))
 
-            y.append(state - state_prev + np.random.normal(0, 1e-6))
+            noise = np.random.multivariate_normal(np.zeros(state.shape), 1e-6 * np.identity(state.shape[0]))
+            y.append(state - state_prev + noise)
 
             rewards.append(reward)
             state_prev = state
@@ -346,7 +354,7 @@ class PILCO(object):
     def get_init_hyperparams(self) -> tuple:
         """
         Compute initial hyperparameters for dynamics GP
-        :return: [length scales, noise of latent function, noise variance]
+        :return: [length scales, signal variance, noise variance]
         """
         l = np.log(np.std(self.state_action_pairs, axis=0))
         sigma_f = np.log(np.std(self.state_delta))
@@ -370,12 +378,15 @@ class PILCO(object):
             m = mu_states[:, i]
             s = sigma_states[:, i, i]
 
-            plt.errorbar(np.arange(0, len(m)), m, yerr=s, fmt='-o')
+            x = np.arange(0, len(m))
+            plt.errorbar(x, m, yerr=s, fmt='-o')
+            # plt.fill_between(x, m - s, m + s)
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
             plt.show()
 
         # plot action trajectory
-
-        plt.errorbar(np.arange(0, len(mu_actions)), mu_actions, yerr=sigma_actions, fmt='-o')
+        x = np.arange(0, len(mu_actions))
+        plt.errorbar(x, mu_actions, yerr=sigma_actions, fmt='-o')
+        # plt.fill_between(x, mu_actions - sigma_actions, mu_actions + sigma_actions)
         plt.title("Trajectory prediction for actions")
         plt.show()

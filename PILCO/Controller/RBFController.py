@@ -41,7 +41,7 @@ def squash_action_dist(mu: np.ndarray, sigma: np.ndarray, input_output_cov: np.n
 class RBFController(MultivariateGP, Controller):
     """RBF Controller/Policy"""
 
-    def __init__(self, n_actions, n_features, compute_cost, length_scales, ridge=1e-6):
+    def __init__(self, n_actions, n_features, compute_cost, length_scales):
         # sigma_f is fixed for the RBF Controller, if it is seen as deterministic GP
         # sigma_eps is .01 to ensure a numerical stable computation
         sigma_f = np.log(1)
@@ -50,8 +50,7 @@ class RBFController(MultivariateGP, Controller):
         MultivariateGP.__init__(self, length_scales=length_scales, n_targets=n_actions, sigma_f=sigma_f,
                                 sigma_eps=sigma_eps, container=RBFNetwork, is_policy=True)
 
-        self.length_scales = None
-        self.ridge = ridge
+        # self.length_scales = None
         self.n_features = n_features
         self.compute_cost = compute_cost
         self.opt_ctr = 0
@@ -99,10 +98,6 @@ class RBFController(MultivariateGP, Controller):
             self.logger.info("Starting to optimize policy with L-BFGS-B.")
             res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B', jac=True,
                            options=options)
-
-            # numerical grad
-            # res = minimize(fun=self._optimize_hyperparams, x0=params, method='L-BFGS-B', jac=False,
-            #                options=options)
         except Exception:
             self.logger.info("Starting to optimize policy with CG.")
             res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='CG', jac=True,
@@ -115,7 +110,7 @@ class RBFController(MultivariateGP, Controller):
             gp.compute_matrices()
 
         # Make one more run for plots
-        self.compute_cost(self, print_trajectory=True)
+        self.compute_cost(policy=self, print_trajectory=True)
 
     def _optimize_hyperparams(self, params):
         """

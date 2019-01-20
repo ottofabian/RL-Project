@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 import autograd.numpy as np
 from autograd import value_and_grad
@@ -9,16 +10,24 @@ from PILCO.Kernels.WhiteNoiseKernel import WhiteNoiseKernel
 
 
 class GaussianProcess(object):
-    """
-    Gaussian Process Regression
-    """
 
-    def __init__(self, length_scales, sigma_f=1, sigma_eps=1, is_policy=False):
+    def __init__(self, length_scales: np.ndarray, sigma_f: Union[np.ndarray, float] = 1,
+                 sigma_eps: Union[np.ndarray, float] = 1, length_scale_pen: float = 100, signal_to_noise: float = 500):
+        """
+        Gaussian Process Regression
+        :param length_scales: prior for length scale values
+        :param sigma_f: prior for signal variance
+        :param sigma_eps: prior for noise variance
+        """
 
+        # kernel defintion as in Deisenroth(2010), p.10
         self.kernel = RBFKernel() + WhiteNoiseKernel()
 
+        # data of GP
         self.X = None
         self.y = None
+
+        # hyperparameters of GP
         self.sigma_eps = np.atleast_1d(sigma_eps)
         self.length_scales = length_scales
         self.sigma_f = np.atleast_1d(sigma_f)
@@ -26,21 +35,19 @@ class GaussianProcess(object):
         self.n_targets = None
         self.state_dim = None
 
-        self.is_policy = is_policy
+        # params to penalize bad hyperparams choices when optimizing log likelihood GP,
+        # this is only required for the dynamics model
+        self.length_scale_pen = length_scale_pen
+        self.signal_to_noise = signal_to_noise
 
-        # params to penalize high hyperparams
-        # TODO tune those hyperparams
-        self.length_scale_pen = 100
-        self.signal_to_noise = 500
-        self.std_pen = 1
-
+        # container for caching gram matrix, betas and inv of gram matrix
         self.K = None
         self.betas = None
         self.K_inv = None
 
         self.logger = logging.getLogger(__name__)
 
-    def fit(self, X, y):
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         """
         set x and y
         :param X: input variables [n_samples, sample dim]
@@ -57,24 +64,23 @@ class GaussianProcess(object):
         self.n_targets = y.shape[1]
         self.state_dim = X.shape[1]
 
-        if not self.is_policy:
-            self.std_pen = np.std(X, 0)
-
-    def _optimize_hyperparams(self, params):
+    def _optimize_hyperparams(self, params: np.ndarray) -> float:
         """
         function handle for scipy optimizer
-        :param params: vector of [length_scales, sigma_f, sigma_eps]
+        :param params: vector of [length scales, signal variance, noise variance]
         :return: penalized marginal log likelihood
         """
-        p = 5
-        length_scales, sigma_f, sigma_eps = self.unwrap_params(params)
+        likelihood = -self.log_marginal_likelihood(params)
 
-        L = self.log_marginal_likelihood(params)
-
-        L = L + np.sum(((length_scales - np.log(self.std_pen)) / np.log(self.length_scale_pen)) ** p)
-        L = L + np.sum(((sigma_f - sigma_eps) / np.log(self.signal_to_noise)) ** p)
-        # print(L)
-        return L
+        # penalty computation
+        # p = 5
+        # length_scales, sigma_f, sigma_eps = self.unwrap_params(params)
+        # std = np.std(self.X, 0)
+        #
+        # likelihood = likelihood + np.sum(((length_scales - np.log(std)) / np.log(self.length_scale_pen)) ** p)
+        # likelihood = likelihood + np.sum(((sigma_f - sigma_eps) / np.log(self.signal_to_noise)) ** p)
+        # print(likelihood)
+        return likelihood
 
     def optimize(self) -> None:
         """
@@ -110,9 +116,9 @@ class GaussianProcess(object):
 
     def _wrap_kernel_hyperparams(self) -> np.ndarray:
         """
-        wraps GPS hyperparams to vector.
+        wraps GP hyperparams to vector.
         Required for optimization.
-        :return: vector of [length scales, sigma_f, sigma_eps]
+        :return: vector of [length scales, signal variance, noise variance]
         """
         return np.concatenate([self.length_scales, self.sigma_f, self.sigma_eps])
 
@@ -130,16 +136,19 @@ class GaussianProcess(object):
     def log_marginal_likelihood(self, hyperparams: np.ndarray) -> float:
         """
         compute log marginal likelihood for given hyperparameter set
-        :param hyperparams: vector of [length scales, sigma_f, sigma_eps]
+        :param hyperparams: vector of [length scales, signal variance, noise variance]
         :return: negative log marginal likelihood
         """
-
+        # TODO: Deisenroth(2010), p.15 uses this on top of the white noise kernel, why??
+        # TODO: Here it causes numerical issues
+        # + self.sigma_eps * np.identity(self.X.shape[0])
         K = self.kernel(hyperparams, self.X)[0]
+
         L = np.linalg.cholesky(K)
         alpha = np.linalg.solve(K, self.y)
 
-        return 0.5 * self.X.shape[0] * self.n_targets * np.log(2 * np.pi) \
-               + 0.5 * np.dot(self.y.flatten(order="F"), alpha) + np.sum(np.log(np.diag(L)))
+        return -.5 * self.X.shape[0] * self.n_targets * np.log(2 * np.pi) \
+               - .5 * self.y.flatten(order="F") @ alpha - (np.log(np.diag(L))).sum()
 
     def compute_matrices(self) -> None:
 
@@ -192,7 +201,7 @@ class GaussianProcess(object):
         """
         unwrap vector of hyperparams into seperate values for gp
         Required for optimization
-        :param params: vector of [length scales, sigma_f, sigma_eps]
+        :param params: vector of [length scales, signal variance, noise variance]
         :return: length scales, sigma_f, sigma_eps
         """
 

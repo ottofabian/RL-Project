@@ -25,7 +25,7 @@ def test_mgpr():
     Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(n_samples, n_targets) - 0.5)
     length_scales = np.random.rand(state_dim)
 
-    mgpr = MultivariateGP(length_scales=length_scales, n_targets=n_targets, container=GaussianProcess)
+    mgpr = MultivariateGP(container=GaussianProcess, length_scales=length_scales, n_targets=n_targets)
     mgpr.fit(X0, Y0)
 
     mgpr.optimize()

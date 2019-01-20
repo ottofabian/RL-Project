@@ -8,19 +8,10 @@ class RBFNetwork(GaussianProcess):
     Gaussian Process Regression given an input Gaussian
     """
 
-    def __init__(self, length_scales, sigma_f=1, sigma_eps=.01, is_policy=True):
-
-        super(RBFNetwork, self).__init__(length_scales, sigma_f, sigma_eps, is_policy)
-
-        self.opt_ctr = 0  # optimization counter
-
-    #     self.rollout = None
-    #
-    # def set_rollout(self, rollout: callable):
-    #     self.rollout = rollout
+    def __init__(self, length_scales, sigma_f=1, sigma_eps=.01):
+        super(RBFNetwork, self).__init__(length_scales, sigma_f, sigma_eps)
 
     def wrap_policy_hyperparams(self):
-
         n_features = self.X.shape[0]
 
         split1 = self.state_dim * n_features  # split for RBF centers
@@ -42,7 +33,6 @@ class RBFNetwork(GaussianProcess):
         self.K_inv = np.zeros(self.K.shape)
 
     def unwrap_params(self, params):
-
         n_features = self.X.shape[0]
 
         split1 = self.state_dim * n_features  # split for RBF centers
@@ -56,40 +46,7 @@ class RBFNetwork(GaussianProcess):
         # ensure noise is an numpy array
         self.X, self.y, self.length_scales, self.sigma_eps = X, y, length_scales, np.atleast_1d(sigma_eps)
 
-    # def _optimize_hyperparams(self, params):
-    #     self.opt_ctr += 1
-    #     self.X, self.y, self.length_scales, self.sigma_eps = self.unwrap_params(params)
-    #     print(params)
-    #
-    #     # computes beta and K_inv for updated hyperparams
-    #     self.compute_matrices()
-    #
-    #     # returns cost of trajectory rollout
-    #     cost = self.rollout(self, print=False)
-    #
-    #     # print progress
-    #     self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, cost._value[0]))
-    #
-    #     return cost
-
-    # def optimize(self):
-    #     params = self.wrap_policy_hyperparams()
-    #     options = {'maxiter': 150, 'disp': True}
-    #
-    #     try:
-    #         # res = minimize(value_and_grad(self._optimize_hyperparams), params, method='L-BFGS-B', jac=True,
-    #         #                options=options)
-    #         res = minimize(self._optimize_hyperparams, params, method='L-BFGS-B', jac=False,
-    #                        options=options)
-    #     except Exception:
-    #         res = minimize(value_and_grad(self._optimize_hyperparams), params, method='CG', jac=True,
-    #                        options=options)
-    #
-    #     # Make one more run for plots
-    #     self.rollout(self, print=True)
-    #
-    #     self.opt_ctr = 0
-    #     self.X, self.y, self.length_scales, self.sigma_eps = self.unwrap_params(res.x)
-    #     self.compute_matrices()
-    #
-    #     # self.logger.debug("Best Params: \n", self.X, self.y, self.length_scales)
+    def optimize(self):
+        self.logger.warning(
+            "RBF networks are only optimized during the trajectory rollout, calling this method does nothing.")
+        pass

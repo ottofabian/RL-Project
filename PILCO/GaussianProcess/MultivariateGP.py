@@ -1,14 +1,27 @@
 import logging
+from typing import Union, Type
 
 import autograd.numpy as np
 
+from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
+from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
+
 
 class MultivariateGP(object):
-    """
-    Multivariate Gaussian Process Regression
-    """
 
-    def __init__(self, length_scales, n_targets, container, sigma_f=1, sigma_eps=1, is_policy=False):
+    def __init__(self, n_targets: int, container: Union[Type[GaussianProcess], Type[RBFNetwork]],
+                 length_scales: np.ndarray, sigma_f: Union[np.ndarray, float] = 1,
+                 sigma_eps: Union[np.ndarray, float] = 1, is_policy: bool = False):
+        """
+        Multivariate Gaussian Process Regression
+        :param n_targets: amount of target, each dimension of data inputs requires one target
+        :param container: submodel type for each target, this depends on whether this should model dynamics of RBF policy
+        :param length_scales: prior for length scales
+        :param sigma_f: prior for signal variance
+        :param sigma_eps: prior for noise variance
+        :param is_policy: is this instanced used as RBF policy or not,
+                          the moment matching is consequently computed differently
+        """
 
         self.X = None
         self.y = None
@@ -18,8 +31,7 @@ class MultivariateGP(object):
         # TODO make this in matrix vector form
         # For a D-dimensional state space, we use D separate GPs, one for each state dimension. Deisenroth (2010)
         self.gp_container = [
-            container(length_scales=length_scales, sigma_eps=sigma_eps, sigma_f=sigma_f, is_policy=is_policy) for _ in
-            range(self.n_targets)]
+            container(length_scales=length_scales, sigma_eps=sigma_eps, sigma_f=sigma_f) for _ in range(self.n_targets)]
 
         self.logger = logging.getLogger(__name__)
 
@@ -35,7 +47,7 @@ class MultivariateGP(object):
         for i in range(self.n_targets):
             self.gp_container[i].fit(X, y[:, i:i + 1])
 
-    def predict_from_dist(self, mu, sigma):
+    def predict_from_dist(self, mu: np.ndarray, sigma: np.ndarray) -> tuple:
 
         """
         Predict dist given an uncertain input x~N(mu,sigma) from gaussian process
@@ -117,7 +129,7 @@ class MultivariateGP(object):
         Q = np.exp(k[:, np.newaxis, :, np.newaxis] + k[np.newaxis, :, np.newaxis, :] + mahalanobis_dist)
 
         if self.is_policy:
-            # noise for numerical reasons
+            # noise for numerical reasons/ridge term
             cov = scaling_factor * np.einsum('ji,iljk,kl->il', beta, Q, beta) + 1e-6 * np.identity(target_dim)
         else:
             cov = np.einsum('ji,iljk,kl->il', beta, Q, beta)
@@ -134,15 +146,15 @@ class MultivariateGP(object):
             self.logger.info("Optimization for GP (output={}) started.".format(i))
             gp.optimize()
 
-    def predict(self, x):
+    def predict(self, X: np.ndarray):
         """
         Computes point predictions from GPs
-        :param x: points to predict th man for
+        :param X: points to predict th man for
         :return:
         """
         # compute K_inv and betas
         [gp.compute_matrices() for gp in self.gp_container]
-        return np.array([gp.predict(x) for gp in self.gp_container])
+        return np.array([gp.predict(X) for gp in self.gp_container])
 
     # def compute_cross_cov(self, i, j, zeta, sigma):
     #     precision_a_inv = np.diag(1 / self.gp_container[i].length_scales)
