@@ -87,7 +87,7 @@ class A3C(object):
         # start all training workers which update the model parameters
         for wid in range(0, self.args.worker):
             self.logger.info("Worker {} created".format(wid))
-            w = Worker(self.args, writer=writer, worker_id=wid, shared_model=shared_model, T=self.T,
+            w = Worker(self.args, worker_id=wid, shared_model=shared_model, T=self.T,
                        optimizer=optimizer, scheduler=scheduler, is_train=True,
                        global_reward=self.global_reward)
             w.start()
@@ -96,7 +96,7 @@ class A3C(object):
         for w in self.worker_pool:
             w.join()
 
-    def run_debug(self, writer):
+    def run_debug(self):
 
         torch.manual_seed(self.args.seed)
 
@@ -153,7 +153,7 @@ class A3C(object):
             else:
                 load_saved_model(shared_model_critic, self.args.path_critic, self.T, self.global_reward)
 
-        p = Process(target=test, args=(self.args, writer,
+        p = Process(target=test, args=(self.args,
             self.args.worker, shared_model_actor, shared_model_critic,
             self.T, optimizer_actor, optimizer_critic, self.global_reward))
         p.start()
@@ -163,7 +163,7 @@ class A3C(object):
             if "RR" not in self.args.env_name:
                 for wid in range(0, self.args.worker):
                     p = Process(target=train, args=(
-                        self.args, writer, wid, shared_model_actor, shared_model_critic,
+                        self.args, wid, shared_model_actor, shared_model_critic,
                         self.T, optimizer_actor, optimizer_critic, scheduler_actor,
                         scheduler_critic, self.global_reward))
                     p.start()

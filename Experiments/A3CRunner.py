@@ -91,12 +91,10 @@ parser.add_argument('--max-action', type=float, default=5,
 
 if __name__ == '__main__':
 
-    writer = SummaryWriter()
-
     enable_color_logging(debug_lvl=logging.DEBUG)
     logging.info('Start Experiment')
 
     args = parser.parse_args()
     a3c = A3C(args)
 
-    a3c.run_debug(writer)
+    a3c.run_debug()

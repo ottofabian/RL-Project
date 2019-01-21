@@ -13,6 +13,7 @@ from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
 from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Worker import save_checkpoint
+from tensorboardX import SummaryWriter
 
 
 def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
@@ -38,7 +39,7 @@ def normal(x, mu, variance):
     return a * b
 
 
-def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
+def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
          T: Value, optimizer_actor: Optimizer = None,
          optimizer_critic: Optimizer = None, global_reward: Value = None):
     """
@@ -64,6 +65,7 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
 
     state = torch.from_numpy(env.reset())
     reward_sum = 0
+    writer = SummaryWriter(comment='_test')
 
     t = 0
     done = False
@@ -119,8 +121,8 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
                                                                                             eps_len.mean(),
                                                                                             global_reward.value))
 
-        # writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
-        # writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
+        writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
+        writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
 
         if best_global_reward is None or global_reward.value > best_global_reward:
             best_global_reward = global_reward.value
@@ -143,7 +145,7 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
         iter_ += 1
 
 
-def train(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
+def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
           T: Value,
           optimizer_actor: Optimizer = None,
           optimizer_critic: Optimizer = None, scheduler_actor: torch.optim.lr_scheduler = None,
@@ -180,6 +182,8 @@ def train(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared
     t = 0
     iter_ = 0
     episode_reward = 0
+
+    writer = SummaryWriter()
 
     while True:
         # Get state of the global model
