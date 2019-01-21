@@ -42,9 +42,9 @@ parser.add_argument('--gamma', type=float, default=0.99,
                     help='discount factor for rewards (default: 0.99)')
 parser.add_argument('--gae', type=bool, default=True,
                     help='use general advantage estimation (default: True)')
-parser.add_argument('--tau', type=float, default=1.00,
+parser.add_argument('--tau', type=float, default=1.0,
                     help='parameter for GAE (default: 1.00)')
-parser.add_argument('--beta', type=float, default=0.01,
+parser.add_argument('--beta', type=float, default=1e-4,
                     help='entropy term coefficient (default: 0.01)')
 parser.add_argument('--max-grad-norm', type=float, default=40,
                     help='maximum gradient norm (default: 40)')
@@ -57,7 +57,7 @@ parser.add_argument('--t-max', type=int, default=20,
                     help='number of forward steps in A3C (default: 20)')
 parser.add_argument('--max-episode-length', type=int, default=5000,
                     help='maximum length of an episode (default: 5000)')
-parser.add_argument('--env-name', default='CartpoleStabShort-v0',
+parser.add_argument('--env-name', default='CartpoleSwingShort-v0',
                     help='name of the gym environment to use.'
                          ' All available gym environments are supported as well as'
                          'additional gym environments: https://git.ias.informatik.tu-darmstadt.de/quanser/clients.'
