@@ -54,8 +54,8 @@ parser.add_argument('--seed', type=int, default=1,
 parser.add_argument('--worker', type=int, default=max(multiprocessing.cpu_count() - 2, 1),
                     help='how many training workers/threads to use (default: %d)' %
                          max(multiprocessing.cpu_count() - 2, 1))
-parser.add_argument('--t-max', type=int, default=10,
-                    help='number of forward steps in A3C (default: 10)')
+parser.add_argument('--t-max', type=int, default=20,
+                    help='number of forward steps in A3C (default: 20)')
 parser.add_argument('--max-episode-length', type=int, default=5000,
                     help='maximum length of an episode (default: 5000)')
 parser.add_argument('--env-name', default='CartpoleStabShort-v0',
@@ -77,6 +77,9 @@ parser.add_argument('--path_critic', default=None,
                     help='weight location for the critic (default: False)')
 parser.add_argument('--max-action', type=float, default=5,
                     help='maximum allowed action to use, if None the full available action range is used (default: 5)')
+parser.add_argument('--normalize', default=True,
+                    help='if True the state feature space is linearly scaled to the range of [0,1] (default: True)')
+
 # a3c.run_debug(
 #     path_actor="./best_models/SwingUp/works but not stable/actor_T-135307781_global-3005.6435968448095.pth.tar",
 #     path_critic="./best_models/SwingUp/works but not stable/critic_T-135307786_global-3005.6435968448095.pth.tar")

@@ -31,12 +31,36 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
 
 
 pi = Variable(torch.Tensor([math.pi])).float()
+min_state = None
+max_state = None
 
 
 def normal(x, mu, variance):
     a = (-1 * (x - mu).pow(2) / (2 * variance)).exp()
     b = 1 / (2 * variance * pi.expand_as(variance)).sqrt()
     return a * b
+
+
+def normalize_state(state: torch.Tensor):
+    """
+    Applies min-/max-scaling to to the state features into range [0,1] for all features
+    :param state: Pytorch tensor which defines the state
+    :return: Normalized version of the state in which all entries are within the range [0,1]
+    """
+    global min_state, max_state
+
+    return (state-min_state) / (min_state-max_state)
+
+
+def unnormalize_state(state: np.ndarray):
+    """
+    Reverts the min-/max-scaling back to the original state representation
+    :param state: Pytorch tensor which defines the state
+    :return: Original state representation of the environment
+    """
+    global min_state, max_state
+
+    return state * (min_state - max_state) + min_state
 
 
 def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
@@ -64,6 +88,7 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
     # model.load_state_dict(global_model.state_dict())
 
     state = torch.from_numpy(env.reset())
+
     reward_sum = 0
     writer = SummaryWriter(comment='_test')
 
@@ -91,8 +116,14 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
 
                 with torch.no_grad():
 
+                    # apply min/max scaling on the environment
+                    if args.normalize:
+                        state_normalized = normalize_state(state)
+                    else:
+                        state_normalized = state
+
                     # select mean of normal dist as action --> Expectation
-                    mu, _ = model_actor(Variable(state))
+                    mu, _ = model_actor(Variable(state_normalized))
                     # mu = torch.clamp(mu, -5., 5.)
                     action = mu.detach()
 
@@ -156,6 +187,9 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
     :return: self
     """
+
+    global min_state, max_state
+
     torch.manual_seed(args.seed + worker_id)
     print(f"Training Worker {worker_id} started")
 
@@ -179,6 +213,21 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
 
     state = torch.from_numpy(env.reset())
 
+    # define the minimum maximum state representation for min/max scaling
+    if args.normalize and min_state is None:
+        min_state = env.observation_space.low
+        max_state = env.observation_space.high
+
+        # set the minimum and maximum for x_dot and theta_dot manually because they are set to infinity by default
+        min_state[3] = -3
+        max_state[3] = 3
+
+        min_state[4] = -80
+        max_state[4] = 80
+
+        min_state = torch.from_numpy(min_state).double()
+        max_state = torch.from_numpy(max_state).double()
+
     t = 0
     iter_ = 0
     episode_reward = 0
@@ -200,8 +249,14 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
         for step in range(args.t_max):
             t += 1
 
-            value = model_critic(Variable(state))
-            mu, variance = model_actor(Variable(state))
+            # apply min/max scaling on the environment
+            if args.normalize:
+                state_normalized = normalize_state(state)
+            else:
+                state_normalized = state
+
+            value = model_critic(Variable(state_normalized))
+            mu, variance = model_actor(Variable(state_normalized))
             # mu = torch.clamp(mu, -5.0, 5.0)
 
             # dist = torch.distributions.Normal(mu, variance.sqrt())
