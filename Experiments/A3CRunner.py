@@ -6,7 +6,6 @@ from A3C.A3C import A3C
 from Experiments.util.ColorLogger import enable_color_logging
 import argparse
 import multiprocessing
-from tensorboardX import SummaryWriter
 
 quanser_robots
 #
@@ -78,7 +77,10 @@ parser.add_argument('--path_critic', default=None,
 parser.add_argument('--max-action', type=float, default=5,
                     help='maximum allowed action to use, if None the full available action range is used (default: 5)')
 parser.add_argument('--normalize', default=True,
-                    help='if True the state feature space is linearly scaled to the range of [0,1] (default: True)')
+                    help='if True the state feature space is linearly scaled to the range of [0,1],'
+                         'Note: Normalizing is only supported for the environments '
+                         '["CartpoleStabShort-v0", "CartpoleSwingRR-v0", "CartpoleStabShort-v0", "CartpoleStabRR-v0"]'
+                         ' (default: True)')
 
 # a3c.run_debug(
 #     path_actor="./best_models/SwingUp/works but not stable/actor_T-135307781_global-3005.6435968448095.pth.tar",

@@ -105,19 +105,22 @@ class A3C(object):
         min_max_scaler = None
         # define the minimum maximum state representation for min/max scaling
         if self.args.normalize:
-            min_state = env.observation_space.low
-            max_state = env.observation_space.high
 
-            # set the minimum and maximum for x_dot and theta_dot manually because they are set to infinity by default
-            min_state[3] = -3
-            max_state[3] = 3
-
-            min_state[4] = -80
-            max_state[4] = 80
-
-            min_state = torch.from_numpy(min_state).double()
-            max_state = torch.from_numpy(max_state).double()
-            min_max_scaler = MinMaxScaler(min_state, max_state)
+            if self.args.env_name in ["CartpoleStabShort-v0", "CartpoleStabRR-v0",
+                                      "CartpoleSwingShort-v0", "CartpoleSwingRR-v0"]:
+                min_state = env.observation_space.low
+                max_state = env.observation_space.high
+                # set the minimum and maximum for x_dot and theta_dot manually because
+                # they are set to infinity by default
+                min_state[3] = -3
+                max_state[3] = 3
+                min_state[4] = -80
+                max_state[4] = 80
+                min_state = torch.from_numpy(min_state).double()
+                max_state = torch.from_numpy(max_state).double()
+                min_max_scaler = MinMaxScaler(min_state, max_state)
+            else:
+                logging.warning("You're given environment %s isn't supported for normalization" % self.args.env_name)
 
         shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
                                           action_space=env.action_space,

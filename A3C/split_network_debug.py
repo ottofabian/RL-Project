@@ -16,6 +16,7 @@ from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
 from Experiments.util.MinMaxScaler import MinMaxScaler
 
+
 def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
     """
     This method synchronizes the grads of the local network with the global network.
@@ -93,7 +94,7 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
                 with torch.no_grad():
 
                     # apply min/max scaling on the environment
-                    if args.normalize:
+                    if min_max_scaler:
                         state_normalized = min_max_scaler.normalize_state(state)
                     else:
                         state_normalized = state
@@ -163,9 +164,6 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
     :return: self
     """
-
-    global min_state, max_state
-
     torch.manual_seed(args.seed + worker_id)
     print(f"Training Worker {worker_id} started")
 
@@ -211,7 +209,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             t += 1
 
             # apply min/max scaling on the environment
-            if args.normalize:
+            if min_max_scaler:
                 state_normalized = min_max_scaler.normalize_state(state)
             else:
                 state_normalized = state
