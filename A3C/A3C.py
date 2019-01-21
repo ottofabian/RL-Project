@@ -13,6 +13,7 @@ from A3C.Optimizers.SharedRMSProp import SharedRMSProp
 from A3C.Worker import Worker
 from A3C.split_network_debug import test, train
 from Experiments.util.model_save import load_saved_model, save_checkpoint
+from Experiments.util.MinMaxScaler import MinMaxScaler
 
 
 class A3C(object):
@@ -48,15 +49,11 @@ class A3C(object):
                             args.optimizer)
 
     def run(self):
+
         if "RR" in self.args.env_name:
             env = quanser_robots.GentlyTerminating(gym.make(self.args.env_name))
         else:
             env = gym.make(self.args.env_name)
-
-        shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
-                                          action_space=env.action_space,
-                                          n_hidden=64,
-                                          max_action=self.args.max_action)
 
         if self.args.optimizer == 'rmsprop':
             optimizer = SharedRMSProp(shared_model.parameters(), lr=self.args.lr_combined_actor_critic)
@@ -104,6 +101,28 @@ class A3C(object):
             env = quanser_robots.GentlyTerminating(gym.make(self.args.env_name))
         else:
             env = gym.make(self.args.env_name)
+
+        min_max_scaler = None
+        # define the minimum maximum state representation for min/max scaling
+        if self.args.normalize:
+            min_state = env.observation_space.low
+            max_state = env.observation_space.high
+
+            # set the minimum and maximum for x_dot and theta_dot manually because they are set to infinity by default
+            min_state[3] = -3
+            max_state[3] = 3
+
+            min_state[4] = -80
+            max_state[4] = 80
+
+            min_state = torch.from_numpy(min_state).double()
+            max_state = torch.from_numpy(max_state).double()
+            min_max_scaler = MinMaxScaler(min_state, max_state)
+
+        shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
+                                          action_space=env.action_space,
+                                          n_hidden=64,
+                                          max_action=self.args.max_action)
 
         shared_model_critic = CriticNetwork(env.observation_space.shape[0],
                                             env.action_space, self.args.n_hidden)
@@ -155,7 +174,7 @@ class A3C(object):
 
         p = Process(target=test, args=(self.args,
             self.args.worker, shared_model_actor, shared_model_critic,
-            self.T, optimizer_actor, optimizer_critic, self.global_reward))
+            self.T, optimizer_actor, optimizer_critic, self.global_reward, min_max_scaler))
         p.start()
         self.worker_pool.append(p)
 
@@ -165,7 +184,7 @@ class A3C(object):
                     p = Process(target=train, args=(
                         self.args, wid, shared_model_actor, shared_model_critic,
                         self.T, optimizer_actor, optimizer_critic, scheduler_actor,
-                        scheduler_critic, self.global_reward))
+                        scheduler_critic, self.global_reward, min_max_scaler))
                     p.start()
                     self.worker_pool.append(p)
 

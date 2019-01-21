@@ -14,7 +14,7 @@ from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
-
+from Experiments.util.MinMaxScaler import MinMaxScaler
 
 def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
     """
@@ -31,8 +31,6 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
 
 
 pi = Variable(torch.Tensor([math.pi])).float()
-min_state = None
-max_state = None
 
 
 def normal(x, mu, variance):
@@ -41,31 +39,9 @@ def normal(x, mu, variance):
     return a * b
 
 
-def normalize_state(state: torch.Tensor):
-    """
-    Applies min-/max-scaling to to the state features into range [0,1] for all features
-    :param state: Pytorch tensor which defines the state
-    :return: Normalized version of the state in which all entries are within the range [0,1]
-    """
-    global min_state, max_state
-
-    return (state-min_state) / (min_state-max_state)
-
-
-def unnormalize_state(state: np.ndarray):
-    """
-    Reverts the min-/max-scaling back to the original state representation
-    :param state: Pytorch tensor which defines the state
-    :return: Original state representation of the environment
-    """
-    global min_state, max_state
-
-    return state * (min_state - max_state) + min_state
-
-
 def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
          T: Value, optimizer_actor: Optimizer = None,
-         optimizer_critic: Optimizer = None, global_reward: Value = None):
+         optimizer_critic: Optimizer = None, global_reward: Value = None, min_max_scaler: MinMaxScaler = None):
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/_test.py
@@ -118,7 +94,7 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
 
                     # apply min/max scaling on the environment
                     if args.normalize:
-                        state_normalized = normalize_state(state)
+                        state_normalized = min_max_scaler.normalize_state(state)
                     else:
                         state_normalized = state
 
@@ -181,7 +157,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
           optimizer_actor: Optimizer = None,
           optimizer_critic: Optimizer = None, scheduler_actor: torch.optim.lr_scheduler = None,
           scheduler_critic: torch.optim.lr_scheduler = None,
-          global_reward=None):
+          global_reward=None, min_max_scaler: MinMaxScaler = None ):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
@@ -213,21 +189,6 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
 
     state = torch.from_numpy(env.reset())
 
-    # define the minimum maximum state representation for min/max scaling
-    if args.normalize and min_state is None:
-        min_state = env.observation_space.low
-        max_state = env.observation_space.high
-
-        # set the minimum and maximum for x_dot and theta_dot manually because they are set to infinity by default
-        min_state[3] = -3
-        max_state[3] = 3
-
-        min_state[4] = -80
-        max_state[4] = 80
-
-        min_state = torch.from_numpy(min_state).double()
-        max_state = torch.from_numpy(max_state).double()
-
     t = 0
     iter_ = 0
     episode_reward = 0
@@ -251,7 +212,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
 
             # apply min/max scaling on the environment
             if args.normalize:
-                state_normalized = normalize_state(state)
+                state_normalized = min_max_scaler.normalize_state(state)
             else:
                 state_normalized = state
 
