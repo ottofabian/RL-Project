@@ -16,6 +16,7 @@ from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
 from Experiments.util.MinMaxScaler import MinMaxScaler
 
+
 def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
     """
     This method synchronizes the grads of the local network with the global network.
@@ -107,6 +108,7 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
 
                 # TODO: check if this is better
                 # reward -= state[0]
+                # reward += .5 * np.exp(- np.abs(state[0]) ** 2)
                 done = done or t >= args.max_episode_length
                 reward_sum += reward
 
@@ -161,7 +163,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
-    :return: self
+    :return: None
     """
 
     global min_state, max_state
@@ -248,6 +250,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             state, reward, done, _ = env.step(action.numpy())
             # TODO: check if this is better
             # reward -= state[0]
+            # reward += (-state[2]+1) * np.exp(- np.abs(state[0]) ** 2)
             episode_reward += reward
 
             # reward = min(max(-1, reward), 1)

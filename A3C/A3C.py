@@ -1,4 +1,6 @@
 import logging
+import time
+
 import torch
 
 import gym
@@ -168,28 +170,29 @@ class A3C(object):
 
         if self.args.path_critic is not None:
             if optimizer_critic is not None:
-                load_saved_model(shared_model_critic, self.args.path_critic, self.T, self.global_reward, optimizer_critic)
+                load_saved_model(shared_model_critic, self.args.path_critic, self.T, self.global_reward,
+                                 optimizer_critic)
             else:
                 load_saved_model(shared_model_critic, self.args.path_critic, self.T, self.global_reward)
 
         p = Process(target=test, args=(self.args,
-            self.args.worker, shared_model_actor, shared_model_critic,
-            self.T, optimizer_actor, optimizer_critic, self.global_reward, min_max_scaler))
+                                       self.args.worker, shared_model_actor, shared_model_critic,
+                                       self.T, optimizer_actor, optimizer_critic, self.global_reward, min_max_scaler))
         p.start()
         self.worker_pool.append(p)
 
-        if self.args.train:
-            if "RR" not in self.args.env_name:
-                for wid in range(0, self.args.worker):
-                    p = Process(target=train, args=(
-                        self.args, wid, shared_model_actor, shared_model_critic,
-                        self.T, optimizer_actor, optimizer_critic, scheduler_actor,
-                        scheduler_critic, self.global_reward, min_max_scaler))
-                    p.start()
-                    self.worker_pool.append(p)
+        if self.args.train and "RR" not in self.args.env_name:
+            for wid in range(0, self.args.worker):
+                p = Process(target=train, args=(
+                    self.args, wid, shared_model_actor, shared_model_critic,
+                    self.T, optimizer_actor, optimizer_critic, scheduler_actor,
+                    scheduler_critic, self.global_reward, min_max_scaler))
+                p.start()
+                self.worker_pool.append(p)
+                time.sleep(1)
 
-                for p in self.worker_pool:
-                    p.join()
+            for p in self.worker_pool:
+                p.join()
 
     def stop(self):
         self.worker_pool = []
