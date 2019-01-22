@@ -6,12 +6,10 @@ from Experiments.util.ColorLogger import enable_color_logging
 from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
 
-seed = 5
+seed = 1
 # env_name = "Pendulum-v0"
-
-
+#
 env_name = "CartpoleStabShort-v0"
-
 
 # env_name = "CartpoleStabRR-v0"
 
@@ -58,7 +56,7 @@ def main():
     # --------------------------------------------------------
 
     loss = SaturatedLoss(state_dim=env.observation_space.shape[0], target_state=target_state)
-    pilco = PILCO(env_name=env_name, seed=seed, n_features=100, Horizon=40, loss=loss,
+    pilco = PILCO(env_name=env_name, seed=seed, n_features=50, Horizon=40, loss=loss,
                   max_episode_steps=max_episode_steps, gamma=1, start_mu=start_mu, start_cov=start_cov, bound=bound)
     pilco.run(n_samples=max_episode_steps)
 

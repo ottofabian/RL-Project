@@ -45,10 +45,12 @@ class PILCO(object):
             # use the official gym env as default
             self.env = gym.make(self.env_name)
 
-        if max_episode_steps is not None:
-            self.env._max_episode_steps = max_episode_steps
+        # if max_episode_steps is not None:
+        #     self.env._max_episode_steps = max_episode_steps
+        self.max_episode_steps = max_episode_steps
 
         self.env.seed(self.seed)
+
         if self.env_name == "Pendulum-v0":
             self.state_names = ["cos($\\theta$)", "sin($\\theta$)", "$\\dot{\\theta}$"]
         elif "Cartpole" in self.env_name:
@@ -118,34 +120,40 @@ class PILCO(object):
         :param n_init: amount of samples to be generated
         :return: None
         """
-        self.state_action_pairs = np.zeros((n_init, self.state_dim + self.n_actions))
-        self.state_delta = np.zeros((n_init, self.state_dim))
-        self.rewards = np.zeros((n_init,))
+        # state_action_pairs = np.zeros((n_init, self.state_dim + self.n_actions))
+        # state_delta = np.zeros((n_init, self.state_dim))
+        # rewards = np.zeros((n_init,))
+
+        state_action_pairs = []
+        state_delta = []
+        rewards = []
 
         i = 0
         state_prev = self.env.reset()
+        done = False
 
         if self.env_name == "Pendulum-v0":
             theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
             self.env.env.state = [theta, 0]
             state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
 
-        while i < n_init:
+        # sample more than init until current episode is over, select randomly at the end.
+        while not done or i < n_init:
 
-            self.env.render()
+            # self.env.render()
 
             # take initial random action
             action = self.env.action_space.sample()
             state, reward, done, _ = self.env.step(action)
 
             # safe state-action pair as input for dynamics GP
-            self.state_action_pairs[i] = np.concatenate([state_prev, action])
+            state_action_pairs.append(np.concatenate([state_prev, action]))
 
             # include some noise to reduce data correlations and non semi definite matrices during optimization
             noise = np.random.multivariate_normal(np.zeros(state.shape), 1e-6 * np.identity(state.shape[0]))
-            self.state_delta[i] = state - state_prev + noise
+            state_delta.append(state - state_prev + noise)
 
-            self.rewards[i] = reward
+            rewards.append(reward)
 
             # reset env if terminal state was reached before max samples were generated
             if done:
@@ -157,6 +165,13 @@ class PILCO(object):
 
             state_prev = state
             i += 1
+
+        # sample some random training samples
+        idx = np.random.choice(range(0, len(state_action_pairs)), n_init, replace=False)
+
+        self.state_action_pairs = np.array(state_action_pairs)[idx]
+        self.state_delta = np.array(state_delta)[idx]
+        self.rewards = np.array(rewards)[idx]
 
     def learn_dynamics_model(self) -> None:
         """
@@ -190,10 +205,10 @@ class PILCO(object):
 
             # augmented states would be initialized with .7, but we already have sin and cos given
             # and do not need to compute this with gaussian_trig
-            if self.env_name == "Pendulum-v0":
-                length_scales = np.array([1., 1., 1.])
-            else:
-                length_scales = np.ones(self.state_dim)
+            # if self.env_name == "Pendulum-v0":
+            #     length_scales = np.array([1., 1., 1.])
+            # else:
+            length_scales = np.repeat(np.ones(self.state_dim).reshape(1, -1), self.n_actions, axis=0)
 
             self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features,
                                         compute_cost=self.compute_trajectory_cost,
@@ -326,7 +341,14 @@ class PILCO(object):
             state_prev = state
 
         print("reward={}, episode_len={}".format(np.sum(rewards), t))
-        return np.array(X), np.array(y), np.array(rewards)
+
+        idx = np.random.choice(range(0, len(X)), self.max_episode_steps, replace=False)
+
+        X = np.array(X)[idx]
+        y = np.array(y)[idx]
+        rewards = np.array(rewards)[idx]
+
+        return X, y, rewards
 
     def get_joint_dist(self, state_mu, state_cov, action_mu, action_cov, input_output_cov) -> tuple:
         """
@@ -356,9 +378,9 @@ class PILCO(object):
         Compute initial hyperparameters for dynamics GP
         :return: [length scales, signal variance, noise variance]
         """
-        l = np.log(np.std(self.state_action_pairs, axis=0))
-        sigma_f = np.log(np.std(self.state_delta))
-        sigma_eps = np.log(np.std(self.state_delta / 10))
+        l = np.repeat(np.log(np.std(self.state_action_pairs, axis=0)).reshape(1, -1), self.state_dim, axis=0)
+        sigma_f = np.log(np.std(self.state_delta, axis=0))
+        sigma_eps = np.log(np.std(self.state_delta, axis=0) / 10)
 
         return l, sigma_f, sigma_eps
 

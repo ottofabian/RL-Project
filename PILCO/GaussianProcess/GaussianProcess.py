@@ -4,6 +4,7 @@ from typing import Union
 import autograd.numpy as np
 from autograd import value_and_grad
 from scipy.optimize import minimize
+import autograd.scipy.stats.multivariate_normal as mvn
 
 from PILCO.Kernels.RBFKernel import RBFKernel
 from PILCO.Kernels.WhiteNoiseKernel import WhiteNoiseKernel
@@ -75,7 +76,7 @@ class GaussianProcess(object):
         # penalty computation
         p = 30
         length_scales, sigma_f, sigma_eps = self.unwrap_params(params)
-        std = np.std(self.X, 0)
+        std = np.std(self.X, axis=0)
 
         likelihood = likelihood + (((length_scales - np.log(std)) / np.log(self.length_scale_pen)) ** p).sum()
         likelihood = likelihood + (((sigma_f - sigma_eps) / np.log(self.signal_to_noise)) ** p).sum()
@@ -90,6 +91,9 @@ class GaussianProcess(object):
 
         # start optimizing with current parameter set
         params = self._wrap_kernel_hyperparams()
+
+        # bounds for noise variance to be lower than 1e-10
+        # bounds = [(None, None) for _ in range(len(params) - 1)] + [(None, np.log(1e-10))]
 
         self.logger.debug("Log Length scales before: {}".format(np.array2string(self.length_scales)))
         self.logger.debug("Log Sigma_f before: {}".format(np.array2string(self.sigma_f)))
@@ -137,11 +141,9 @@ class GaussianProcess(object):
         """
         compute log marginal likelihood for given hyperparameter set
         :param hyperparams: vector of [length scales, signal variance, noise variance]
-        :return: negative log marginal likelihood
+        :return: log marginal likelihood
         """
-        # TODO: Deisenroth(2010), p.15 uses this on top of the white noise kernel, why??
-        # TODO: Here it causes numerical issues
-        # + self.sigma_eps * np.identity(self.X.shape[0])
+
         K = self.kernel(hyperparams, self.X)[0]
 
         L = np.linalg.cholesky(K)
@@ -149,6 +151,8 @@ class GaussianProcess(object):
 
         return -.5 * self.X.shape[0] * self.n_targets * np.log(2 * np.pi) \
                - .5 * np.dot(self.y.flatten(order="F"), alpha) - (np.log(np.diag(L))).sum()
+        #
+        # return mvn.logpdf(self.y, np.zeros(len(self.y)), K)
 
     def compute_matrices(self) -> None:
 

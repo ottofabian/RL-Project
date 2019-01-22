@@ -44,8 +44,8 @@ class RBFController(MultivariateGP, Controller):
     def __init__(self, n_actions, n_features, compute_cost, length_scales):
         # sigma_f is fixed for the RBF Controller, if it is seen as deterministic GP
         # sigma_eps is .01 to ensure a numerical stable computation
-        sigma_f = np.log(1)
-        sigma_eps = np.log(.01)
+        sigma_f = np.log(np.ones((n_actions,)))
+        sigma_eps = np.log(np.ones((n_actions,)) * .01)
 
         MultivariateGP.__init__(self, length_scales=length_scales, n_targets=n_actions, sigma_f=sigma_f,
                                 sigma_eps=sigma_eps, container=RBFNetwork, is_policy=True)

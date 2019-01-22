@@ -31,7 +31,8 @@ class MultivariateGP(object):
         # TODO make this in matrix vector form
         # For a D-dimensional state space, we use D separate GPs, one for each state dimension. Deisenroth (2010)
         self.gp_container = [
-            container(length_scales=length_scales, sigma_eps=sigma_eps, sigma_f=sigma_f) for _ in range(self.n_targets)]
+            container(length_scales=length_scales[i], sigma_eps=sigma_eps[i], sigma_f=sigma_f[i]) for i in
+            range(self.n_targets)]
 
         self.logger = logging.getLogger(__name__)
 
