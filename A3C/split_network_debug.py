@@ -13,6 +13,8 @@ from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
 from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Worker import save_checkpoint
+from tensorboardX import SummaryWriter
+from Experiments.util.MinMaxScaler import MinMaxScaler
 
 
 def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
@@ -38,9 +40,9 @@ def normal(x, mu, variance):
     return a * b
 
 
-def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
+def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
          T: Value, optimizer_actor: Optimizer = None,
-         optimizer_critic: Optimizer = None, global_reward: Value = None):
+         optimizer_critic: Optimizer = None, global_reward: Value = None, min_max_scaler: MinMaxScaler = None):
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/_test.py
@@ -63,7 +65,9 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
     # model.load_state_dict(global_model.state_dict())
 
     state = torch.from_numpy(env.reset())
+
     reward_sum = 0
+    writer = SummaryWriter(comment='_test')
 
     t = 0
     done = False
@@ -89,8 +93,14 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
 
                 with torch.no_grad():
 
+                    # apply min/max scaling on the environment
+                    if min_max_scaler:
+                        state_normalized = min_max_scaler.normalize_state(state)
+                    else:
+                        state_normalized = state
+
                     # select mean of normal dist as action --> Expectation
-                    mu, _ = model_actor(Variable(state))
+                    mu, _ = model_actor(Variable(state_normalized))
                     # mu = torch.clamp(mu, -5., 5.)
                     action = mu.detach()
 
@@ -98,6 +108,7 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
 
                 # TODO: check if this is better
                 # reward -= state[0]
+                # reward += .5 * np.exp(- np.abs(state[0]) ** 2)
                 done = done or t >= args.max_episode_length
                 reward_sum += reward
 
@@ -119,8 +130,8 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
                                                                                             eps_len.mean(),
                                                                                             global_reward.value))
 
-        # writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
-        # writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
+        writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
+        writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
 
         if best_global_reward is None or global_reward.value > best_global_reward:
             best_global_reward = global_reward.value
@@ -143,16 +154,16 @@ def test(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_
         iter_ += 1
 
 
-def train(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
+def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
           T: Value,
           optimizer_actor: Optimizer = None,
           optimizer_critic: Optimizer = None, scheduler_actor: torch.optim.lr_scheduler = None,
           scheduler_critic: torch.optim.lr_scheduler = None,
-          global_reward=None):
+          global_reward=None, min_max_scaler: MinMaxScaler = None ):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
-    :return: self
+    :return: None
     """
     torch.manual_seed(args.seed + worker_id)
     print(f"Training Worker {worker_id} started")
@@ -181,6 +192,8 @@ def train(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared
     iter_ = 0
     episode_reward = 0
 
+    writer = SummaryWriter()
+
     while True:
         # Get state of the global model
         model_critic.load_state_dict(shared_model_critic.state_dict())
@@ -196,8 +209,14 @@ def train(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared
         for step in range(args.t_max):
             t += 1
 
-            value = model_critic(Variable(state))
-            mu, variance = model_actor(Variable(state))
+            # apply min/max scaling on the environment
+            if min_max_scaler:
+                state_normalized = min_max_scaler.normalize_state(state)
+            else:
+                state_normalized = state
+
+            value = model_critic(Variable(state_normalized))
+            mu, variance = model_actor(Variable(state_normalized))
             # mu = torch.clamp(mu, -5.0, 5.0)
 
             # dist = torch.distributions.Normal(mu, variance.sqrt())
@@ -228,6 +247,7 @@ def train(args, writer, worker_id: int, shared_model_actor: ActorNetwork, shared
             state, reward, done, _ = env.step(action.numpy())
             # TODO: check if this is better
             # reward -= state[0]
+            # reward += (-state[2]+1) * np.exp(- np.abs(state[0]) ** 2)
             episode_reward += reward
 
             # reward = min(max(-1, reward), 1)

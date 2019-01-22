@@ -1,4 +1,6 @@
 import logging
+import time
+
 import torch
 
 import gym
@@ -13,6 +15,7 @@ from A3C.Optimizers.SharedRMSProp import SharedRMSProp
 from A3C.Worker import Worker
 from A3C.split_network_debug import test, train
 from Experiments.util.model_save import load_saved_model, save_checkpoint
+from Experiments.util.MinMaxScaler import MinMaxScaler
 
 
 class A3C(object):
@@ -48,15 +51,11 @@ class A3C(object):
                             args.optimizer)
 
     def run(self):
+
         if "RR" in self.args.env_name:
             env = quanser_robots.GentlyTerminating(gym.make(self.args.env_name))
         else:
             env = gym.make(self.args.env_name)
-
-        shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
-                                          action_space=env.action_space,
-                                          n_hidden=64,
-                                          max_action=self.args.max_action)
 
         if self.args.optimizer == 'rmsprop':
             optimizer = SharedRMSProp(shared_model.parameters(), lr=self.args.lr_combined_actor_critic)
@@ -87,7 +86,7 @@ class A3C(object):
         # start all training workers which update the model parameters
         for wid in range(0, self.args.worker):
             self.logger.info("Worker {} created".format(wid))
-            w = Worker(self.args, writer=writer, worker_id=wid, shared_model=shared_model, T=self.T,
+            w = Worker(self.args, worker_id=wid, shared_model=shared_model, T=self.T,
                        optimizer=optimizer, scheduler=scheduler, is_train=True,
                        global_reward=self.global_reward)
             w.start()
@@ -96,7 +95,7 @@ class A3C(object):
         for w in self.worker_pool:
             w.join()
 
-    def run_debug(self, writer):
+    def run_debug(self):
 
         torch.manual_seed(self.args.seed)
 
@@ -104,6 +103,31 @@ class A3C(object):
             env = quanser_robots.GentlyTerminating(gym.make(self.args.env_name))
         else:
             env = gym.make(self.args.env_name)
+
+        min_max_scaler = None
+        # define the minimum maximum state representation for min/max scaling
+        if self.args.normalize:
+
+            if self.args.env_name in ["CartpoleStabShort-v0", "CartpoleStabRR-v0",
+                                      "CartpoleSwingShort-v0", "CartpoleSwingRR-v0"]:
+                min_state = env.observation_space.low
+                max_state = env.observation_space.high
+                # set the minimum and maximum for x_dot and theta_dot manually because
+                # they are set to infinity by default
+                min_state[3] = -3
+                max_state[3] = 3
+                min_state[4] = -80
+                max_state[4] = 80
+                min_state = torch.from_numpy(min_state).double()
+                max_state = torch.from_numpy(max_state).double()
+                min_max_scaler = MinMaxScaler(min_state, max_state)
+            else:
+                logging.warning("You're given environment %s isn't supported for normalization" % self.args.env_name)
+
+        shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
+                                          action_space=env.action_space,
+                                          n_hidden=64,
+                                          max_action=self.args.max_action)
 
         shared_model_critic = CriticNetwork(env.observation_space.shape[0],
                                             env.action_space, self.args.n_hidden)
@@ -149,28 +173,29 @@ class A3C(object):
 
         if self.args.path_critic is not None:
             if optimizer_critic is not None:
-                load_saved_model(shared_model_critic, self.args.path_critic, self.T, self.global_reward, optimizer_critic)
+                load_saved_model(shared_model_critic, self.args.path_critic, self.T, self.global_reward,
+                                 optimizer_critic)
             else:
                 load_saved_model(shared_model_critic, self.args.path_critic, self.T, self.global_reward)
 
-        p = Process(target=test, args=(self.args, writer,
-            self.args.worker, shared_model_actor, shared_model_critic,
-            self.T, optimizer_actor, optimizer_critic, self.global_reward))
+        p = Process(target=test, args=(self.args,
+                                       self.args.worker, shared_model_actor, shared_model_critic,
+                                       self.T, optimizer_actor, optimizer_critic, self.global_reward, min_max_scaler))
         p.start()
         self.worker_pool.append(p)
 
-        if self.args.train:
-            if "RR" not in self.args.env_name:
-                for wid in range(0, self.args.worker):
-                    p = Process(target=train, args=(
-                        self.args, writer, wid, shared_model_actor, shared_model_critic,
-                        self.T, optimizer_actor, optimizer_critic, scheduler_actor,
-                        scheduler_critic, self.global_reward))
-                    p.start()
-                    self.worker_pool.append(p)
+        if self.args.train and "RR" not in self.args.env_name:
+            for wid in range(0, self.args.worker):
+                p = Process(target=train, args=(
+                    self.args, wid, shared_model_actor, shared_model_critic,
+                    self.T, optimizer_actor, optimizer_critic, scheduler_actor,
+                    scheduler_critic, self.global_reward, min_max_scaler))
+                p.start()
+                self.worker_pool.append(p)
+                time.sleep(1)
 
-                for p in self.worker_pool:
-                    p.join()
+            for p in self.worker_pool:
+                p.join()
 
     def stop(self):
         self.worker_pool = []

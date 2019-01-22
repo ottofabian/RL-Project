@@ -6,7 +6,6 @@ from A3C.A3C import A3C
 from Experiments.util.ColorLogger import enable_color_logging
 import argparse
 import multiprocessing
-from tensorboardX import SummaryWriter
 
 quanser_robots
 #
@@ -43,9 +42,9 @@ parser.add_argument('--gamma', type=float, default=0.99,
                     help='discount factor for rewards (default: 0.99)')
 parser.add_argument('--gae', type=bool, default=True,
                     help='use general advantage estimation (default: True)')
-parser.add_argument('--tau', type=float, default=1.00,
+parser.add_argument('--tau', type=float, default=1.0,
                     help='parameter for GAE (default: 1.00)')
-parser.add_argument('--beta', type=float, default=0.01,
+parser.add_argument('--beta', type=float, default=1e-4,
                     help='entropy term coefficient (default: 0.01)')
 parser.add_argument('--max-grad-norm', type=float, default=40,
                     help='maximum gradient norm (default: 40)')
@@ -54,11 +53,11 @@ parser.add_argument('--seed', type=int, default=1,
 parser.add_argument('--worker', type=int, default=max(multiprocessing.cpu_count() - 2, 1),
                     help='how many training workers/threads to use (default: %d)' %
                          max(multiprocessing.cpu_count() - 2, 1))
-parser.add_argument('--t-max', type=int, default=10,
-                    help='number of forward steps in A3C (default: 10)')
+parser.add_argument('--t-max', type=int, default=20,
+                    help='number of forward steps in A3C (default: 20)')
 parser.add_argument('--max-episode-length', type=int, default=5000,
                     help='maximum length of an episode (default: 5000)')
-parser.add_argument('--env-name', default='CartpoleStabShort-v0',
+parser.add_argument('--env-name', default='CartpoleSwingShort-v0',
                     help='name of the gym environment to use.'
                          ' All available gym environments are supported as well as'
                          'additional gym environments: https://git.ias.informatik.tu-darmstadt.de/quanser/clients.'
@@ -77,6 +76,12 @@ parser.add_argument('--path_critic', default=None,
                     help='weight location for the critic (default: False)')
 parser.add_argument('--max-action', type=float, default=5,
                     help='maximum allowed action to use, if None the full available action range is used (default: 5)')
+parser.add_argument('--normalize', default=True,
+                    help='if True the state feature space is linearly scaled to the range of [0,1],'
+                         'Note: Normalizing is only supported for the environments '
+                         '["CartpoleStabShort-v0", "CartpoleSwingRR-v0", "CartpoleStabShort-v0", "CartpoleStabRR-v0"]'
+                         ' (default: True)')
+
 # a3c.run_debug(
 #     path_actor="./best_models/SwingUp/works but not stable/actor_T-135307781_global-3005.6435968448095.pth.tar",
 #     path_critic="./best_models/SwingUp/works but not stable/critic_T-135307786_global-3005.6435968448095.pth.tar")
@@ -91,12 +96,10 @@ parser.add_argument('--max-action', type=float, default=5,
 
 if __name__ == '__main__':
 
-    writer = SummaryWriter()
-
     enable_color_logging(debug_lvl=logging.DEBUG)
     logging.info('Start Experiment')
 
     args = parser.parse_args()
     a3c = A3C(args)
 
-    a3c.run_debug(writer)
+    a3c.run_debug()
