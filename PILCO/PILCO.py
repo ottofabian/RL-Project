@@ -342,11 +342,16 @@ class PILCO(object):
 
         print("reward={}, episode_len={}".format(np.sum(rewards), t))
 
-        idx = np.random.choice(range(0, len(X)), self.max_episode_steps, replace=False)
+        if len(X) < self.max_episode_steps:
+            X = np.array(X)
+            y = np.array(y)
+            rewards = np.array(rewards)
+        else:
+            idx = np.random.choice(range(0, len(X)), self.max_episode_steps, replace=False)
 
-        X = np.array(X)[idx]
-        y = np.array(y)[idx]
-        rewards = np.array(rewards)[idx]
+            X = np.array(X)[idx]
+            y = np.array(y)[idx]
+            rewards = np.array(rewards)[idx]
 
         return X, y, rewards
 

@@ -6,46 +6,47 @@ Database file #1: library.bib.bib
 Warning--I didn't find a database entry for "RefB"
 Warning--I didn't find a database entry for "RefJ"
 Warning--empty journal in Haarnoja2018
+Warning--empty journal in Martens2015
 Warning--empty journal in Schulman2017
-You've used 24 entries,
+You've used 31 entries,
             2945 wiz_defined-function locations,
-            804 strings with 11123 characters,
-and the built_in function-call counts, 15132 in all, are:
-= -- 1238
-> -- 597
-< -- 13
-+ -- 240
-- -- 216
-* -- 992
-:= -- 1983
-add.period$ -- 55
-call.type$ -- 24
-change.case$ -- 202
+            856 strings with 13189 characters,
+and the built_in function-call counts, 19866 in all, are:
+= -- 1619
+> -- 781
+< -- 19
++ -- 311
+- -- 280
+* -- 1297
+:= -- 2586
+add.period$ -- 72
+call.type$ -- 31
+change.case$ -- 260
 chr.to.int$ -- 0
-cite$ -- 26
-duplicate$ -- 1264
-empty$ -- 1254
-format.name$ -- 237
-if$ -- 3232
+cite$ -- 34
+duplicate$ -- 1672
+empty$ -- 1652
+format.name$ -- 310
+if$ -- 4262
 int.to.chr$ -- 0
-int.to.str$ -- 24
-missing$ -- 297
-newline$ -- 125
-num.names$ -- 54
-pop$ -- 547
+int.to.str$ -- 31
+missing$ -- 388
+newline$ -- 159
+num.names$ -- 74
+pop$ -- 718
 preamble$ -- 1
-purify$ -- 150
+purify$ -- 189
 quote$ -- 0
-skip$ -- 378
+skip$ -- 516
 stack$ -- 0
-substring$ -- 712
-swap$ -- 739
-text.length$ -- 13
+substring$ -- 931
+swap$ -- 982
+text.length$ -- 19
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 94
-warning$ -- 2
-while$ -- 99
-width$ -- 26
-write$ -- 298
-(There were 4 warnings)
+type$ -- 122
+warning$ -- 3
+while$ -- 131
+width$ -- 33
+write$ -- 383
+(There were 5 warnings)

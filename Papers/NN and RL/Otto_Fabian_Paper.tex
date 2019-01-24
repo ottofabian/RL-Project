@@ -124,8 +124,8 @@
 	    \label{sec:algo}
 	    This section provides an overview of NN based RL algorithms including earlier work and its improvements as well as current state-of-the-art. 
 	    Most algorithms can be either classified as on-policy or off-policy algorithms.
-		On-policy algorithms estimate the value of policy while using it for control whereas in off-policy algorithms, the generating policy, called \textit{behavior policy}, is not necessarily related to the \textit{target policy}, which is improved and evaluated.
-		This allows to use a deterministic target policy, while sampling all actions applying the behavior policy. \cite[chapter 5]{Sutton2018}
+		On-policy algorithms estimate the value of policy while using it for control whereas off-policy algorithms, the generating policy, called \textit{behavior policy}, is not necessarily related to the \textit{target policy}, which is improved and evaluated.
+		This allows to use a deterministic target policy, while still sampling all actions through the behavior policy. \cite[chapter 5]{Sutton2018}
 		
  	\subsection{Off-Policy}
  	\paragraph{MDPs}
@@ -182,17 +182,30 @@
 		They combine the AC approach from DDPG \cite{Lillicrap2016} with maximum entropy reinforcement learning, which enables exploration and stability. 
 		Similarly to NAF \cite{Gu2016}, they also approach the problem of sample efficiency and gain significant improvements compared DDPG and other on-policy methods.
 		In general they also found modeling the state-value function and the action-value function with two separate NNs improved the stability of SAC. 
-%		One critical aspect of SAC is however the need of maintaining four different function approximates in form of neural networks at the same time.		
-		
-		
+		Another extension of DDPG \cite{Lillicrap2016}, which was developed in parallel with SAC continues to addresses the hyperparameter sensitivity. Further, they show that overestimation of the action-value function is also a present issue for AC setting. 
+		DDQN \cite{VanHasselt2016} approach to this in the discrete case is not easily applicable to the continuous actions space, therefor Fujimoto, et al. \cite{Fujimoto2018} introduce twin delayed DDPG (TD3). 
+		In order to mitigate the above issues, they apply three key improvements.
+		A clipped variant of double Q-Learning \cite{VanHasselt2010} trains two separate Q-Networks in order to reduce the overestimation bias.
+		Policy smoothing, similar to expected SARSA \cite{VanSeijen2009}, adds noise to the target action to avoid exploiting Q-function errors and brings action-values of similar actions closer together.
+		The most important improvement, however, are delayed updates, i.e.the policy network as well as the target networks are updated less frequently than the Q-network.
+		This avoids that the policy is optimized based on incorrect value estimates and is less likely to diverge.	
+		Building upon the idea of entropy reinforcement learning from SAC, Maximum a-posteriori policy optimization (MPO) \cite{Abdolmaleki2018} transforms the RL problem in an inference problem, which allows them to utilize expectation maximization (EM) for training, while optimizing a relative-entropy objective.
+		Combining the distributed framework of RL algorithms \cite{Mnih2016} as well as the distributional per on-policy as well as off-policy improvements from last years in one single algorithm 
 		
  	\paragraph{POMDPs}
     \subsection{On-Policy}
     \label{sec:on-policy}
-%    TODO introduction to on policy.
    	DDPG established a policy gradient based method, which works off-policy. 
    	However, must policy gradient methods are working on-policy.
-    Also following the concept of policy gradients, Schulman, et al. \cite{Schulman2015} introduce trust region policy optimization (TRPO).
+	Comparably important to DQN \cite{Mnih2015} in the off-policy setting is the introduction of Asynchronous Advantage Actor Critic (A3C) \cite{Mnih2016} for the on-policy setting.
+   	Besides A3C, Mnih, et al. also introduce asynchronous off-policy methods for Q-Learning as well as SARSA.
+   	However, they show that A3C outperforms the off-policy methods.
+   	Utilizing multiple worker threads allows A3C to experience a larger space of the environment and incorporate this into one shared network.
+   	Consequently, the stability and robustness of the training process is increased without incorporating a replay memory. 
+	Further, less computational power is required to achieve better results compared to DQN \cite{Mnih2015}.\footnote{A3C only utilizes CPU computation compared to DQN's GPU computation for the Atari environments.}
+	Similar to SAC \cite{Haarnoja2018} entropy is employed, however only as regularizer and not as optimization target.
+	A3C was also tested for continuous action spaces and was able to learn reliable policies. 
+    Following concept of policy gradients, Schulman, et al. \cite{Schulman2015} introduce trust region policy optimization (TRPO).
     They criticize that first order gradient methods are often overconfident and not accurate enough in curved areas, which results in losing already made learning progress. 
     Consequently, TRPO applies the conjugate gradient method (CG) to the natural policy gradient \cite{Kakade2001}.
     The optimization is based on a form of minorization-maximization \cite{Hunter2004} and optimizes a surrogate function under a Kullback-Leibler (KL) constrained objective.
@@ -210,42 +223,46 @@
     	\item The objective can be clipped, i.e. the probability ratio of old and new policy, which results of an lower bound for the unclipped objective. 
     \end{enumerate}
     Typically, clipping the objective shows better performance than the adaptive KL penalty.
-    Besides PPO, actor critic using kronecker-factored trust region (ACKTR).
+    PPO is also combined with A3C's idea of asynchronicity and implemented in a distributed scenario as Distributed PPO (DPPO) \cite{Heess2017}. 
+    Besides PPO, actor critic using kronecker-factored trust region (ACKTR)\cite{Wu2017} also approaches TRPO's problem of sample complexity.
+    ACKTR utlizes A3C's advantage function and approximates the natural gradient with kronecker-factored approximate curvature (K-FAC) \cite{Grosse2016} \cite{Martens2015}, which offers a comparable cost to SGD. 
+    By maintaining a running average K-FAC is able to reduce variance and achieve scalability, therefore ACKTR is more efficient in computing the inverse FIM. 
+    Further, ACKTR is not only able to increase the performance and sample efficiency compared to TRPO but also compared to the synchronous version of A3C - A2C \cite{Mnih2016}. 
 	
     \subsection{Real World Applications}
     \label{sec:games}
     Talk about DeepMinds AlphaZero, TDGammon, Atari Game Systems, e.g. Minh
     But also applications outside of Games, maybe seperate this into two different subsections.
-    \paragraph{Paragraph headings}
-    % For one-column wide figures use
-    \begin{figure}
-        \includegraphics{example.eps}
-        % figure caption is below the figure
-        \caption{Please write your figure caption here}
-        \label{fig:1}
-    \end{figure}
-    %
-    % For two-column wide figures use
-    \begin{figure*}
-        \includegraphics[width=0.75\textwidth]{example.eps}
-        % figure caption is below the figure
-        \caption{Please write your figure caption here}
-        \label{fig:2}
-    \end{figure*}
-
-    \begin{table}
-        % table caption is above the table
-        \caption{Please write your table caption here}
-        \label{tab:1}
-        \begin{tabular}{lll}
-            \hline\noalign{\smallskip}
-            first & second & third  \\
-            \noalign{\smallskip}\hline\noalign{\smallskip}
-            number & number & number \\
-            number & number & number \\
-            \noalign{\smallskip}\hline
-        \end{tabular}
-    \end{table}
+%    \paragraph{Paragraph headings}
+%    % For one-column wide figures use
+%    \begin{figure}
+%        \includegraphics{example.eps}
+%        % figure caption is below the figure
+%        \caption{Please write your figure caption here}
+%        \label{fig:1}
+%    \end{figure}
+%    %
+%    % For two-column wide figures use
+%    \begin{figure*}
+%        \includegraphics[width=0.75\textwidth]{example.eps}
+%        % figure caption is below the figure
+%        \caption{Please write your figure caption here}
+%        \label{fig:2}
+%    \end{figure*}
+%
+%    \begin{table}
+%        % table caption is above the table
+%        \caption{Please write your table caption here}
+%        \label{tab:1}
+%        \begin{tabular}{lll}
+%            \hline\noalign{\smallskip}
+%            first & second & third  \\
+%            \noalign{\smallskip}\hline\noalign{\smallskip}
+%            number & number & number \\
+%            number & number & number \\
+%            \noalign{\smallskip}\hline
+%        \end{tabular}
+%    \end{table}
 
 
     %\begin{acknowledgements}
