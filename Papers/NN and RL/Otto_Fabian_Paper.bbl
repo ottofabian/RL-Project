@@ -6,6 +6,11 @@
   \providecommand{\doi}{DOI~\discretionary{}{}{}\begingroup
   \urlstyle{rm}\Url}\fi
 
+\bibitem{Abdolmaleki2018}
+Abdolmaleki, A., Springenberg, J.T., Tassa, Y., Munos, R., Heess, N.,
+  Riedmiller, M.: {Maximum a Posteriori Policy Optimisation}  (2018).
+\newblock \urlprefix\url{http://arxiv.org/abs/1806.06920}
+
 \bibitem{Bellemare2013}
 Bellemare, M.G., Naddaf, Y., Veness, J., Bowling, M.: {The Arcade Learning
   Environment: An Evaluation Platform for General Agents}.
@@ -56,6 +61,12 @@ van Hasselt, H., Guez, A., Silver, D.: {Deep Reinforcement Learning with Double
 \newblock In: AAAI Conference on Artificial Intelligence, pp. 2094--2100.
   Phoenix, Arizona (2016).
 \newblock \urlprefix\url{http://arxiv.org/abs/1509.06461}
+
+\bibitem{Heess2017}
+Heess, N., TB, D., Sriram, S., Lemmon, J., Merel, J., Wayne, G., Tassa, Y.,
+  Erez, T., Wang, Z., Eslami, S.M.A., Riedmiller, M., Silver, D.: {Emergence of
+  Locomotion Behaviours in Rich Environments}  (2017).
+\newblock \urlprefix\url{http://arxiv.org/abs/1707.02286}
 
 \bibitem{Hunter2004}
 Hunter, D.R., Lange, K.: {A tutorial on MM algorithms}.
@@ -215,6 +226,13 @@ Wang, Z., Schaul, T., Hessel, M., {Van Hasselt}, H., Lanctot, M., {De Freitas},
 \bibitem{Watkins1989}
 Watkins, C.J.C.H.: {Learning from delayed rewards}.
 \newblock Ph.D. thesis, King's College, Cambridge (1989)
+
+\bibitem{Williams1992}
+Williams, R.J.: {Simple statistical gradient-following algorithms for
+  connectionist reinforcement learning}.
+\newblock Machine Learning \textbf{8}(3), 229--256 (1992).
+\newblock \doi{10.1007/BF00992696}.
+\newblock \urlprefix\url{https://doi.org/10.1007/BF00992696}
 
 \bibitem{Wu2017}
 Wu, Y., Mansimov, E., Grosse, R.B., Liao, S., Ba, J.: {Scalable trust-region
