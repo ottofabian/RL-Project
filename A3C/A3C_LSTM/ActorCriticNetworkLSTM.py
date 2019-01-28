@@ -64,8 +64,8 @@ class ActorCriticNetworkLSTM(torch.nn.Module):
         self.n_inputs = self.n_inputs
 
         self.input = nn.Linear(self.n_inputs, self.n_hidden)
-        self.fc1 = nn.Linear(self.n_hidden, self.n_hidden)
-        self.fc2 = nn.Linear(self.n_hidden, self.n_hidden)
+        # self.fc1 = nn.Linear(self.n_hidden, self.n_hidden)
+        # self.fc2 = nn.Linear(self.n_hidden, self.n_hidden)
         # self.fc3 = nn.Linear(self.n_hidden, self.n_hidden)
 
         self.lstm_stacks = n_frames * self.n_hidden
@@ -78,10 +78,10 @@ class ActorCriticNetworkLSTM(torch.nn.Module):
 
         self.apply(init_weights)
 
-        lrelu = nn.init.calculate_gain('leaky_relu')
-        self.input.weight.data.mul_(lrelu)
-        self.fc1.weight.data.mul_(lrelu)
-        self.fc2.weight.data.mul_(lrelu)
+        # lrelu = nn.init.calculate_gain('leaky_relu')
+        # self.input.weight.data.mul_(lrelu)
+        # self.fc1.weight.data.mul_(lrelu)
+        # self.fc2.weight.data.mul_(lrelu)
         # self.fc3.weight.data.mul_(lrelu)
 
         self.mu.weight.data = norm_col_init(self.mu.weight.data, 0.01)
@@ -99,9 +99,9 @@ class ActorCriticNetworkLSTM(torch.nn.Module):
     def forward(self, inputs):
         inputs, (hx, cx) = inputs
 
-        x = F.leaky_relu_(self.input(inputs.float()), .1)
-        x = F.leaky_relu_(self.fc1(x), .1)
-        x = F.leaky_relu_(self.fc2(x), .1)
+        x = F.relu(self.input(inputs.float()))
+        # x = F.relu(self.fc1(x), .1)
+        # x = F.relu(self.fc2(x), .1)
         # x = F.leaky_relu_(self.fc3(x), .1)
 
         x = x.view(-1, self.lstm_stacks)

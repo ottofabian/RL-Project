@@ -46,6 +46,8 @@
 \smartqed  % flush right qed marks, e.g. at end of proof
 %
 \usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{amsmath}
 %
 % \usepackage{mathptmx}      % use Times fonts if available on your TeX system
 %
@@ -59,6 +61,9 @@
 % Insert the name of "your journal" with
 % \journalname{myjournal}
 %
+
+\newcommand{\argmax}[1]{\underset{#1}{\operatorname{arg}\,\operatorname{max}}\;}
+
 \begin{document}
 
     \title{Neural Networks and their Application in Reinforcement Learning%\thanks{Grants or other notes
@@ -107,16 +112,40 @@
     Show clear distinction to SL.
     Maybe include success of recent things in CV and NLP, might also be possible in \ref{sec:history} to transition to more recent approaches in RL. 
     Introduce RL goal and notation, short intro ro MDPs.
-    \section{Definition of Neural Networks}
+    
+    \section{Preliminaries}
+%    \paragraph{Markov Decision Process}
+    A Markov Decision Process (MDP) is defined as a tuple $(\mathcal{S}, \mathcal{A}, \mathcal{T},\mathcal{R})$, where $\mathcal{S}$ is a finite set of states, $\mathcal{A}$ is a finite set of actions, $\mathcal{T}:\mathcal{S} \times \mathcal{A} \rightarrow \Pi(\mathcal{S})$ represents the state transition function, which returns a probability distribution over states and 
+    $\mathcal{R}:\mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$ returns the expected immediate reward for taking each action in each state. 
+    This paper mainly considers the infinite horizon MDP, which tries to maximize the expected discounted cumulative reward:
+    \[
+    R_t = \mathbb{E} \left[ \sum_{\tau=t}^{k=\infty} \gamma^{\tau-t} r_t \right]
+	\]
+    Here $\gamma \in \left[0,1\right)$ describes the discount factor, which trades of immediate and future rewards, and $r_t$ the received reward at step $t$.
+    By choosing $\gamma=1$ and setting the horizon $k$ to an finite value, the optimization target of finite horizon MDP can be described.\\
+    RL algorithms now seek a policy $\pi:\mathcal{S} \rightarrow \mathcal{A}$, which describes the optimal behavior to maximize the expected future reward from all states.
+    Therefor, we define an action-value function, which returns the value of taking an action $a$ in state $s$, under the policy $\pi$ as:
+    \[
+    Q_\pi(s,a) = \mathbb{E}\left[R_t|s_t =s,a_t=a,\pi\right] =\mathcal{R}(s,\pi(s)) + \gamma \sum_{s\in\mathcal{S}}\mathcal{T}(s,a,s') \max_{a'}Q_\pi(s',a')
+	\]
+    In order to find the best policy, value-based methods are interested in finding the optimal action-value function $Q^*(s,a) =\max_\pi Q_\pi(s,a)$, which is equivalent to finding the optimal policy 
+    \[
+	\pi^*(s) = \argmax{a} \mathcal{R}(s,a) + \gamma \sum_{s\in\mathcal{S}}\mathcal{T}(s,a,s') \max_{a'}Q^*(s',a')
+    \]
+    Alternatively, the optimal value function $V^*(s) = \mathbb{E}\left[R_t|s_t=s, \pi\right] = \max_{a} Q^*(s,a)$ combined with a model of the environment can be used.\\
+    In contrast to value-based methods, policy-based methods directly parameterize a policy $\pi(s;\theta)$. 
+    One such method is REINFORCE \cite{Williams1992}, it updates the policy parameters $\theta$ in the direction $\nabla_\theta \mathbb{E}[R]\approx \nabla_\theta\log\pi(s;\theta)R$.
+    In order to reduce variance and keeping the estimate unbiased, a baseline $b(s)$ is subtracted from the return $\nabla_\theta\log\pi(s;\theta)(R - b(s))$. 
+    For this baseline, it is common to use an estimate of the value function $b(s)\approx V^\pi(s)$.
+    Consequently, $R-b(s)$ can be seen as an estimate of the advantage function $A_\pi(s,a) = Q_\pi(s,a) - V_\pi(s)$.
+    
+    \section{Neural Networks and their history}
     \label{sec:def}
+    (see Sect.~\ref{sec:1}).
     \cite{RefB} and \cite{RefJ}.
     Describe formally how NN are working, how can they be trained, what other methods do we have, etc.
-    \section{History of Neural Networks}
-    \label{sec:history}
-    (see Sect.~\ref{sec:1}).
     What did lead to the rise and fall of NNs throughout time.
     Create good transition to recent approaches.
-
 
 %    \section{Recent Approaches in Reinforcement Learning}
 %    \label{sec:recent}

@@ -20,9 +20,9 @@ quanser_robots
 parser = argparse.ArgumentParser(description='A3C')
 parser.add_argument('--lr', type=float, default=0.0001,
                     help='learning rate (default: 0.0001)')
-parser.add_argument('--n-hidden', type=int, default=200,
+parser.add_argument('--n-hidden', type=int, default=10,
                     help='amount of hidden nodes (default: 256')
-parser.add_argument('--gamma', type=float, default=0.995,
+parser.add_argument('--gamma', type=float, default=0.99,
                     help='discount factor for rewards (default: 0.99)')
 parser.add_argument('--gae', type=bool, default=True,
                     help='use general advantage estimation (default: True)')
@@ -36,13 +36,13 @@ parser.add_argument('--max-grad-norm', type=float, default=40,
                     help='value loss coefficient (default: 40)')
 parser.add_argument('--seed', type=int, default=1,
                     help='random seed (default: 1)')
-parser.add_argument('--num-processes', type=int, default=2,
+parser.add_argument('--num-processes', type=int, default=6,
                     help='how many training processes to use (default: 2)')
-parser.add_argument('--t-max', type=int, default=10,
+parser.add_argument('--t-max', type=int, default=50,
                     help='number of forward steps in A3C (default: 10)')
-parser.add_argument('--max-episode-length', type=int, default=5000,
+parser.add_argument('--max-episode-length', type=int, default=200,
                     help='maximum length of an episode (default: 5000)')
-parser.add_argument('--env-name', default='CartpoleSwingShort-v0',
+parser.add_argument('--env-name', default='Pendulum-v0',
                     help='environment to train on (default: CartpoleStabShort-v0)')
 parser.add_argument('--no-shared', default=False,
                     help='use an non shared optimizer.')
@@ -84,6 +84,6 @@ if __name__ == '__main__':
         p.start()
         processes.append(p)
 
-    print('before join')
+    # print('before join')
     for p in processes:
         p.join()

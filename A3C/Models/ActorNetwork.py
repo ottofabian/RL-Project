@@ -9,7 +9,9 @@ import torch.nn.functional as F
 def init_weights(m):
     if isinstance(m, nn.Linear):
         # nn.init.normal_(m.weight.data, 0, .1)
-        nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
+        # nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
+        nn.init.orthogonal_(m.weight.data)
+        m.weight.data.mul_(1e-3)
         m.bias.data.fill_(0)
 
 
@@ -76,7 +78,8 @@ class ActorNetwork(torch.nn.Module):
             self.n_inputs = self.n_inputs
             self.fc2 = nn.Linear(self.n_inputs, self.n_hidden)
             self.mu = nn.Linear(self.n_hidden, self.n_outputs)
-            self.sigma = nn.Linear(self.n_hidden, self.n_outputs)
+            # self.sigma = nn.Linear(self.n_hidden, self.n_outputs)
+            self.sigma = nn.Parameter(torch.zeros(n_outputs))
 
             self.apply(init_weights)
             self.train()
@@ -108,6 +111,7 @@ class ActorNetwork(torch.nn.Module):
             # x = F.relu(self.fc4(x))
             # TODO test if no tanh is better
             mu = torch.tanh(self.mu(x)) * self.max_action
-            sigma = F.softplus(self.sigma(x)) + 1e-5  # avoid 0
+            sigma = F.softplus(self.sigma(x))
+            # + 1e-5  # avoid 0
 
         return mu, sigma

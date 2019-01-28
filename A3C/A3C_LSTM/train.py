@@ -30,7 +30,7 @@ def normal(x, mu, variance):
     return a * b
 
 
-def train(args, worker_id, shared_model, T, global_reward, writer, optimizer=None):
+def train(worker_id, args, shared_model, T, global_reward, optimizer=None):
     torch.manual_seed(args.seed + worker_id)
 
     env = gym.make(args.env_name)
@@ -72,27 +72,28 @@ def train(args, worker_id, shared_model, T, global_reward, writer, optimizer=Non
         for step in range(args.t_max):
             episode_length += 1
             value, mu, variance, (hx, cx) = model((state, (hx, cx)))
-            mu = torch.clamp(mu, -5., 5.)
+            # mu = torch.clamp(mu, -5., 5.)
 
-            # dist = torch.distributions.Normal(mu, variance)
+            dist = torch.distributions.Normal(mu, variance)
 
             # reparametrization trick through rsample
-            eps = Variable(torch.randn(mu.size()))
-            action = (mu + variance.sqrt() * eps).detach()
-            # action = dist.rsample().detach()
+            # eps = Variable(torch.randn(mu.size()))
+            # action = (mu + variance.sqrt() * eps).detach()
+            action = dist.rsample().detach()
 
             # ------------------------------------------
             # Compute statistics for loss
 
-            entropy = .5 * ((variance * 2 * pi.expand_as(variance)).log() + 1)
-            # print("entropy:", entropy, dist.entropy())
-            entropies.append(entropy)
+            # entropy = .5 * ((variance * 2 * pi.expand_as(variance)).log() + 1)
+            # print("entropy:", entropy, )
+            entropies.append(dist.entropy())
 
-            prob = normal(Variable(action), mu, variance)
-            log_prob = (prob + 1e-6).log()
-            entropies.append(entropy)
+            # prob = normal(Variable(action), mu, variance)
+            # log_prob = (prob + 1e-6).log()
+            log_prob = dist.log_prob(action)
+            # entropies.append(entropy)
 
-            state, reward, done, _ = env.step(action.detach().numpy().flatten())
+            state, reward, done, _ = env.step(np.clip(action.numpy().flatten(), -2, 2))
             done = done or episode_length >= args.max_episode_length
             episode_reward += reward
 
@@ -116,10 +117,10 @@ def train(args, worker_id, shared_model, T, global_reward, writer, optimizer=Non
                         global_reward.value = episode_reward
                     else:
                         global_reward.value = .99 * global_reward.value + 0.01 * episode_reward
-                    writer.add_scalar("global_reward", global_reward.value, iter_)
-                episode_reward = 0
+                        # writer.add_scalar("global_reward", global_reward.value, iter_)
+                        episode_reward = 0
 
-            state = torch.from_numpy(state).view(1, env.observation_space.shape[0])
+            state = torch.from_numpy(state)
 
             if done:
                 break
@@ -129,11 +130,12 @@ def train(args, worker_id, shared_model, T, global_reward, writer, optimizer=Non
             value, _, _, _ = model((state, (hx, cx)))
             R = value.detach()
 
-        R = Variable(R)
+        # R = Variable(R)
         values.append(R)
         policy_loss = 0
         critic_loss = 0
         gae = torch.zeros(1, 1)
+
         # iterate over rewards from most recent to the starting one
         for i in reversed(range(len(rewards))):
             R = rewards[i] + R * args.gamma
@@ -157,14 +159,14 @@ def train(args, worker_id, shared_model, T, global_reward, writer, optimizer=Non
 
         iter_ += 1
 
-        grads = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                for p in model.parameters()
-                                if p.grad is not None])
-
-        writer.add_scalar("loss_policy", policy_loss, iter_)
-        writer.add_scalar("loss_value", critic_loss, iter_)
-        writer.add_scalar("values", np.mean([v.data for v in values]), iter_)
-        writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
-        writer.add_scalar("grad_l2", np.sqrt(np.mean(np.square(grads))), iter_)
-        writer.add_scalar("grad_max", np.max(np.abs(grads)), iter_)
-        writer.add_scalar("grad_variance", np.var(grads), iter_)
+        # grads = np.concatenate([p.grad.data.cpu().numpy().flatten()
+        #                         for p in model.parameters()
+        #                         if p.grad is not None])
+        #
+        # writer.add_scalar("loss_policy", policy_loss, iter_)
+        # writer.add_scalar("loss_value", critic_loss, iter_)
+        # writer.add_scalar("values", np.mean([v.data for v in values]), iter_)
+        # writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
+        # writer.add_scalar("grad_l2", np.sqrt(np.mean(np.square(grads))), iter_)
+        # writer.add_scalar("grad_max", np.max(np.abs(grads)), iter_)
+        # writer.add_scalar("grad_variance", np.var(grads), iter_)

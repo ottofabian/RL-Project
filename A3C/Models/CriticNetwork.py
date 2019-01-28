@@ -9,7 +9,9 @@ import torch.nn.functional as F
 def init_weights(m):
     if isinstance(m, nn.Linear):
         # nn.init.normal_(m.weight.data, 0, .1)
-        nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
+        # nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
+        nn.init.orthogonal_(m.weight.data)
+        m.weight.data.mul_(1e-3)
         m.bias.data.fill_(0)
 
 
