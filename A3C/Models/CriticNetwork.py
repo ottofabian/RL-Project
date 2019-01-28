@@ -8,8 +8,8 @@ import torch.nn.functional as F
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        nn.init.normal_(m.weight.data, 0, .1)
-        #nn.init.kaiming_normal_(m.weight.data)
+        # nn.init.normal_(m.weight.data, 0, .1)
+        nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
         m.bias.data.fill_(0)
 
 
@@ -37,34 +37,29 @@ load_stab = False #True
 
 
 class CriticNetwork(torch.nn.Module):
-    def __init__(self, n_inputs, action_space, n_hidden):
+    def __init__(self, n_inputs):
         super(CriticNetwork, self).__init__()
 
-        self.action_space = action_space
-
-        self.n_outputs = action_space.shape[0]
         self.n_inputs = n_inputs
-        self.n_hidden = n_hidden
+        # self.n_hidden = n_hidden
+        self.n_hidden = 10
 
         if load_stab:
             # n_hidden = 200
 
             self.n_inputs = self.n_inputs
-            self.hidden_value1 = nn.Linear(self.n_inputs, self.n_hidden)
+            self.fc2 = nn.Linear(self.n_inputs, self.n_hidden)
             #self.hidden_value2 = nn.Linear(n_hidden, n_hidden)
             self.value = nn.Linear(self.n_hidden, 1)
 
             self.apply(init_weights)
             self.train()
         else:
-            # n_hidden = 64
 
-            self.n_inputs = self.n_inputs
-
-            self.inputs = nn.Linear(self.n_inputs, n_hidden)
-            # self.hidden_value1 = nn.Linear(n_hidden, n_hidden)
-            # self.hidden_value2 = nn.Linear(n_hidden, n_hidden)
-            # self.hidden_value3 = nn.Linear(n_hidden, n_hidden)
+            self.fc1 = nn.Linear(self.n_inputs, self.n_hidden)
+            # self.fc2 = nn.Linear(self.n_hidden, self.n_hidden)
+            # self.fc3 = nn.Linear(self.n_hidden, self.n_hidden)
+            # self.fc4 = nn.Linear(self.n_hidden, self.n_hidden)
 
             self.value = nn.Linear(self.n_hidden, 1)
 
@@ -82,12 +77,12 @@ class CriticNetwork(torch.nn.Module):
         x = x.float()
 
         if load_stab:
-            x = F.relu(self.hidden_value1(x))
+            x = F.relu(self.fc2(x))
             #x = F.relu(self.hidden_value2(x))
         else:
-            x = F.relu(self.inputs(x))
-            # x = F.relu(self.hidden_value1(x))
-            # x = F.relu(self.hidden_value2(x))
-            # x = F.relu(self.hidden_value3(x))
+            x = F.relu(self.fc1(x))
+            # x = F.relu(self.fc2(x))
+            # x = F.relu(self.fc3(x))
+            # x = F.relu(self.fc4(x))
 
         return self.value(x)

@@ -9,8 +9,9 @@ Source:\
 
 ### Pendulum-v0:  
 
-
-- network size: \[input, output\]
+- network critic: \[3, 100, 1\]
+- network actor: \[3, 200, (1,torch.Tensor(\[1e-1\]))\]
+- network init: nn.init.normal_(m.weight.data, 0, .1)
 - lr: 
     - Actor: .0001
     - Critic: .001
@@ -18,7 +19,7 @@ Source:\
 - max episode steps: 200
 - gamma: .9
 - tau: 1
-- beta: 1e-4
+- beta: 0.01
 
 ### CartpoleStabShort:  
 

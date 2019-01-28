@@ -14,9 +14,9 @@ quanser_robots
 # * installable using https://git.ias.informatik.tu-darmstadt.de/quanser/clients
 
 seed = 1
-# env_name = "Pendulum-v0"
+env_name = "Pendulum-v0"
 # env_name = "CartpoleStabShort-v0"
-env_name = "CartpoleSwingShort-v0"
+# env_name = "CartpoleSwingShort-v0"
 # env_name = "CartpoleSwingRR-v0"
 
 # env_name = "CartpoleStabRR-v0"
@@ -33,11 +33,11 @@ parser.add_argument('--lr-critic', type=float, default=0.001,
 parser.add_argument('--lr-actor-critic', type=float, default=0.0001,
                     help='learning rate for combined actor critic model,'
                          ' in paper sampled between 1e-4 to 1e-2 (default: 0.001)')
-parser.add_argument('--value_loss_coef', type=float, default=0.5,
+parser.add_argument('--value-loss-coef', type=float, default=0.5,
                     help='value loss coefficient ,'
                          'constants which defines the weighting between value and policy loss (default: 0.5)')
-parser.add_argument('--n-hidden', type=int, default=200,
-                    help='amount of hidden nodes (default: 256')
+# parser.add_argument('--n-hidden', type=int, default=200,
+#                     help='amount of hidden nodes (default: 256')
 parser.add_argument('--gamma', type=float, default=0.99,
                     help='discount factor for rewards (default: 0.99)')
 parser.add_argument('--gae', type=bool, default=True,
@@ -62,21 +62,21 @@ parser.add_argument('--env-name', default='CartpoleSwingShort-v0',
                          ' All available gym environments are supported as well as'
                          'additional gym environments: https://git.ias.informatik.tu-darmstadt.de/quanser/clients.'
                          '(default: CartpoleStabShort-v0)')
-parser.add_argument('--no-shared', default=False,
+parser.add_argument('--no-shared', type=bool, default=False,
                     help='use an non shared optimizer.')
-parser.add_argument('--optimizer', default="rmsprop",
+parser.add_argument('--optimizer', type=str, default="rmsprop",
                     help='used optimizer (default: rmsprop')
-parser.add_argument('--lr_scheduler', default='None',
+parser.add_argument('--lr_scheduler', type=str, default='None',
                     help='learning rate scheduler to use, by default no scheduler. Options [None, ExponentialLR]')
-parser.add_argument('--train', default=True,
+parser.add_argument('--train', type=bool, default=True,
                     help='decides if to do training (default: True)')
-parser.add_argument('--path_actor', default=None,
+parser.add_argument('--path_actor', type=str, default=None,
                     help='weight location for the actor (default: None)')
-parser.add_argument('--path_critic', default=None,
+parser.add_argument('--path_critic', type=str, default=None,
                     help='weight location for the critic (default: False)')
 parser.add_argument('--max-action', type=float, default=5,
                     help='maximum allowed action to use, if None the full available action range is used (default: 5)')
-parser.add_argument('--normalize', default=True,
+parser.add_argument('--normalize', type=bool, default=False,
                     help='if True the state feature space is linearly scaled to the range of [0,1],'
                          'Note: Normalizing is only supported for the environments '
                          '["CartpoleStabShort-v0", "CartpoleSwingRR-v0", "CartpoleStabShort-v0", "CartpoleStabRR-v0"]'
@@ -95,7 +95,6 @@ parser.add_argument('--normalize', default=True,
 #     path_critic="./best_models/Stabilization/Full action range/critic_finetuned_T-7285824_global-1266.9597491827692.pth.tar")
 
 if __name__ == '__main__':
-
     enable_color_logging(debug_lvl=logging.DEBUG)
     logging.info('Start Experiment')
 

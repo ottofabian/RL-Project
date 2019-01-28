@@ -8,8 +8,8 @@ import torch.nn.functional as F
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        nn.init.normal_(m.weight.data, 0, .1)
-        # nn.init.kaiming_normal_(m.weight.data)
+        # nn.init.normal_(m.weight.data, 0, .1)
+        nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
         m.bias.data.fill_(0)
 
 
@@ -56,41 +56,40 @@ def init_weights(m):
 #         mu = 10 * torch.tanh(self.mu(x))
 #         sigma = F.softplus(self.sigma(x)) + 1e-5  # avoid 0
 
-load_stab = False #True
+load_stab = False  # True
 
 
 class ActorNetwork(torch.nn.Module):
-    def __init__(self, n_inputs, action_space, n_hidden, max_action):
+    def __init__(self, n_inputs, n_outputs, max_action):
         super(ActorNetwork, self).__init__()
 
-        self.action_space = action_space
-
-        self.n_outputs = action_space.shape[0]
+        self.n_outputs = n_outputs
         self.n_inputs = n_inputs
-        self.n_hidden = n_hidden
+
+        self.n_hidden = 20
+
         self.max_action = max_action
 
         if load_stab:
-            #n_hidden = 200
+            # n_hidden = 200
 
             self.n_inputs = self.n_inputs
-            self.hidden_action1 = nn.Linear(self.n_inputs, self.n_hidden)
-            self.mu = nn.Linear(n_hidden, self.n_outputs)
-            self.sigma = nn.Linear(n_hidden, self.n_outputs)
+            self.fc2 = nn.Linear(self.n_inputs, self.n_hidden)
+            self.mu = nn.Linear(self.n_hidden, self.n_outputs)
+            self.sigma = nn.Linear(self.n_hidden, self.n_outputs)
 
             self.apply(init_weights)
             self.train()
 
         else:
-            #n_hidden = 200
+            # n_hidden = 200
 
-            self.n_inputs = self.n_inputs
-            self.inputs = nn.Linear(self.n_inputs, n_hidden)
-            # self.hidden_action1 = nn.Linear(n_hidden, n_hidden)
-            # self.hidden_action2 = nn.Linear(n_hidden, n_hidden)
-            # self.hidden_action3 = nn.Linear(n_hidden, n_hidden)
-            self.mu = nn.Linear(n_hidden, self.n_outputs)
-            self.sigma = nn.Linear(n_hidden, self.n_outputs)
+            self.fc1 = nn.Linear(self.n_inputs, self.n_hidden)
+            # self.fc2 = nn.Linear(self.n_hidden, self.n_hidden)
+            # self.fc3 = nn.Linear(self.n_hidden, self.n_hidden)
+            # self.fc4 = nn.Linear(self.n_hidden, self.n_hidden)
+            self.mu = nn.Linear(self.n_hidden, self.n_outputs)
+            self.sigma = nn.Linear(self.n_hidden, self.n_outputs)
 
             self.apply(init_weights)
             self.train()
@@ -99,17 +98,15 @@ class ActorNetwork(torch.nn.Module):
 
         if load_stab:
             x = x.float()
-            x = F.relu(self.hidden_action1(x))
+            x = F.relu(self.fc2(x))
             mu = self.max_action * torch.tanh(self.mu(x))
             sigma = F.softplus(self.sigma(x)) + 1e-5
         else:
-            x = x.float()
-            x = F.relu(self.inputs(x))
-            # x = F.relu(self.hidden_action1(x))
-            # x = F.relu(self.hidden_action2(x))
-            # x = F.relu(self.hidden_action3(x))
-            # TODO work only between [-5, 5] for cartpole
-            # mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(x))
+            x = F.relu(self.fc1(x.float()))
+            # x = F.relu(self.fc2(x))
+            # x = F.relu(self.fc3(x))
+            # x = F.relu(self.fc4(x))
+            # TODO test if no tanh is better
             mu = torch.tanh(self.mu(x)) * self.max_action
             sigma = F.softplus(self.sigma(x)) + 1e-5  # avoid 0
 
