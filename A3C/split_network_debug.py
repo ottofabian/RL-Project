@@ -301,8 +301,9 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             R = model_critic(state).detach()
 
 
-        values.append(Variable(R))
-        R = Variable(R)
+        values.append(R)
+        # values.append(Variable(R))
+        # R = Variable(R)
         # compute loss and backprop
         actor_loss = 0
         critic_loss = 0
