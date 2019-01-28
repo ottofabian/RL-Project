@@ -54,7 +54,7 @@ def test(rank, args, shared_model, T, global_reward):
                 hx = hx.detach()
 
                 with torch.no_grad():
-                    _, mu, _, (hx, cx) = model((Variable(state), (hx, cx)))
+                    _, mu, _, (hx, cx) = model((state, (hx, cx)))
 
                 action = mu
 

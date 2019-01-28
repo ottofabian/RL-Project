@@ -228,27 +228,27 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             value = model_critic(state_normalized)
             mu, variance = model_actor(state_normalized)
 
-            # dist = torch.distributions.Normal(mu, variance.sqrt())
+            dist = torch.distributions.Normal(mu, variance)
 
             # ------------------------------------------
             # # select action
-            eps = Variable(torch.randn(mu.size()))
-            action = (mu + variance.sqrt() * eps).detach()
+            # eps = Variable(torch.randn(mu.size()))
+            # action = (mu + variance.sqrt() * eps).detach()
             # action = dist.rsample().detach()
-
+            action = dist.sample()
             # ------------------------------------------
             # Compute statistics for loss
 
-            pi = Variable(torch.Tensor([math.pi])).float()
-            entropy = .5 * ((variance * 2 * pi.expand_as(variance)).log() + 1)
-            # entropy = dist.entropy()
+            # pi = Variable(torch.Tensor([math.pi])).float()
+            # entropy = .5 * ((variance * 2 * pi.expand_as(variance)).log() + 1)
+            entropy = dist.entropy()
 
-            prob = normal(Variable(action), mu, variance)
-            log_prob = (prob + 1e-6).log()
-            # log_prob = dist.log_prob(action)
+            # prob = normal(Variable(action), mu, variance)
+            # log_prob = (prob + 1e-6).log()
+            log_prob = dist.log_prob(action)
 
             # make selected move
-            state, reward, done, _ = env.step(np.clip(action.numpy(), -args.max_action, args.max_action))
+            state, reward, done, _ = env.step(np.clip(action.detach().numpy(), -args.max_action, args.max_action))
             # TODO: check if this is better
             # reward += (-state[2]+1) * np.exp(- np.abs(state[0]) ** 2)
             episode_reward += reward
@@ -300,37 +300,41 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
         if not done:
             R = model_critic(state).detach()
 
-
-        values.append(Variable(R))
-        R = Variable(R)
+        values.append(R)
         # compute loss and backprop
-        actor_loss = 0
-        critic_loss = 0
-        gae = torch.zeros(1, 1)
+        policy_loss = 0
+        value_loss = 0
+        advantages = torch.zeros(1, 1)
+
+        rewards = torch.Tensor(rewards)
+        # values = torch.Tensor(values)
 
         # iterate over rewards from most recent to the starting one
         for i in reversed(range(len(rewards))):
             R = rewards[i] + R * args.gamma
-            advantage = R - values[i]
-            critic_loss = critic_loss + 0.5 * advantage.pow(2)
+            adv = R - values[i]
+            value_loss = value_loss + .5 * adv.pow(2)
+            entropy_loss = args.beta * entropies[i]
             if args.gae:
                 # Generalized Advantage Estimation
-                delta_t = rewards[i] + args.gamma * values[i + 1].detach() - values[i].detach()
-                gae = gae * args.gamma * args.tau + delta_t
-                actor_loss = actor_loss - (log_probs[i] * Variable(gae) + args.beta * entropies[i])
+                td_error = rewards[i] + args.gamma * values[i + 1] - values[i]
+                advantages = advantages * args.gamma * args.tau + td_error
+                policy_loss = policy_loss - log_probs[i] * advantages.detach()
             else:
-                actor_loss = actor_loss - (log_probs[i] * advantage.data + args.beta * entropies[i])
+                policy_loss = policy_loss - log_probs[i] * adv.detach()
+
+            policy_loss = policy_loss - entropy_loss
 
         # zero grads to avoid computation issues in the next step
         optimizer_critic.zero_grad()
         optimizer_actor.zero_grad()
 
-        critic_loss.mean().backward()
-        actor_loss.mean().backward()
+        value_loss.mean().backward()
+        policy_loss.mean().backward()
 
-        # compute combined loss of actor_loss and critic_loss
+        # compute combined loss of policy_loss and value_loss
         # avoid overfitting on value loss by scaling it down
-        # (actor_loss + value_loss_coef * critic_loss).mean().backward()
+        # (policy_loss + value_loss_coef * value_loss).mean().backward()
 
         torch.nn.utils.clip_grad_norm_(model_critic.parameters(), args.max_grad_norm)
         torch.nn.utils.clip_grad_norm_(model_actor.parameters(), args.max_grad_norm)
@@ -358,8 +362,8 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             writer.add_scalar("min_values", np.min(valuelist), iter_)
             writer.add_scalar("max_values", np.max(valuelist), iter_)
             writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
-            writer.add_scalar("loss_policy", actor_loss, iter_)
-            writer.add_scalar("loss_value", critic_loss, iter_)
+            writer.add_scalar("loss_policy", policy_loss, iter_)
+            writer.add_scalar("loss_value", value_loss, iter_)
             writer.add_scalar("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), iter_)
             writer.add_scalar("grad_max_actor", np.max(np.abs(grads_actor)), iter_)
             writer.add_scalar("grad_var_actor", np.var(grads_actor), iter_)

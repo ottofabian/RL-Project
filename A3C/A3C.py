@@ -13,7 +13,7 @@ from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Optimizers.SharedAdam import SharedAdam
 from A3C.Optimizers.SharedRMSProp import SharedRMSProp
 from A3C.Worker import Worker
-from A3C.split_network_debug import test, train
+from A3C.train_test import test, train
 from Experiments.util.model_save import load_saved_model, save_checkpoint
 from Experiments.util.MinMaxScaler import MinMaxScaler
 
