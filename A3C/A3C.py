@@ -52,6 +52,10 @@ class A3C(object):
 
     def run(self):
 
+        shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
+                                          action_space=env.action_space,
+                                          max_action=self.args.max_action)
+
         if "RR" in self.args.env_name:
             env = quanser_robots.GentlyTerminating(gym.make(self.args.env_name))
         else:
@@ -106,6 +110,7 @@ class A3C(object):
 
         min_max_scaler = None
         # define the minimum maximum state representation for min/max scaling
+
         if self.args.normalize:
 
             if self.args.env_name in ["CartpoleStabShort-v0", "CartpoleStabRR-v0",
@@ -124,15 +129,9 @@ class A3C(object):
             else:
                 logging.warning("You're given environment %s isn't supported for normalization" % self.args.env_name)
 
-        shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
-                                          action_space=env.action_space,
-                                          n_hidden=64,
+        shared_model_critic = CriticNetwork(n_inputs=env.observation_space.shape[0])
+        shared_model_actor = ActorNetwork(n_inputs=env.observation_space.shape[0], n_outputs=env.action_space.shape[0],
                                           max_action=self.args.max_action)
-
-        shared_model_critic = CriticNetwork(env.observation_space.shape[0],
-                                            env.action_space, self.args.n_hidden)
-        shared_model_actor = ActorNetwork(env.observation_space.shape[0],
-                                          env.action_space, self.args.n_hidden, self.args.max_action)
 
         shared_model_critic.share_memory()
         shared_model_actor.share_memory()

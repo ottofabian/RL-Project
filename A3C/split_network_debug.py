@@ -31,10 +31,9 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
         shared_param._grad = param.grad  #
 
 
-pi = Variable(torch.Tensor([math.pi])).float()
-
-
 def normal(x, mu, variance):
+    pi = Variable(torch.Tensor([math.pi])).float()
+
     a = (-1 * (x - mu).pow(2) / (2 * variance)).exp()
     b = 1 / (2 * variance * pi.expand_as(variance)).sqrt()
     return a * b
@@ -58,18 +57,21 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
     env.seed(args.seed + worker_id)
 
     # get an instance of the current global model state
-    model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, args.n_hidden, args.max_action)
-    model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, args.n_hidden)
+    model_actor = ActorNetwork(n_inputs=env.observation_space.shape[0], n_outputs=env.action_space.shape[0],
+                               max_action=args.max_action)
+    model_critic = CriticNetwork(n_inputs=env.observation_space.shape[0])
+
     model_actor.eval()
     model_critic.eval()
-    # model.load_state_dict(global_model.state_dict())
 
     state = torch.from_numpy(env.reset())
 
-    reward_sum = 0
     writer = SummaryWriter(comment='_test')
+    start_time = time.time()
 
     t = 0
+    episode_reward = 0
+
     done = False
     iter_ = 0
     best_global_reward = None
@@ -80,58 +82,58 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
         model_critic.load_state_dict(shared_model_critic.state_dict())
         model_actor.load_state_dict(shared_model_actor.state_dict())
 
-        rewards = np.zeros(10)
-        eps_len = np.zeros(10)
+        rewards = []
+        eps_len = []
 
         # make 10 runs to get current avg performance
         for i in range(10):
             while not done:
                 t += 1
 
-                if i == 0 and t % 24 == 0:
+                if i == 0 and t % 1 == 0:
                     env.render()
+
+                # apply min/max scaling on the environment
+                if min_max_scaler:
+                    state_normalized = min_max_scaler.normalize_state(state)
+                else:
+                    state_normalized = state
 
                 with torch.no_grad():
 
-                    # apply min/max scaling on the environment
-                    if min_max_scaler:
-                        state_normalized = min_max_scaler.normalize_state(state)
-                    else:
-                        state_normalized = state
-
                     # select mean of normal dist as action --> Expectation
-                    mu, _ = model_actor(Variable(state_normalized))
-                    # mu = torch.clamp(mu, -5., 5.)
+                    mu, _ = model_actor(state_normalized)
                     action = mu.detach()
 
-                state, reward, done, _ = env.step(action.numpy())
+                state, reward, done, _ = env.step(np.clip(action.numpy(), -args.max_action, args.max_action))
 
-                # TODO: check if this is better
-                # reward -= state[0]
-                # reward += .5 * np.exp(- np.abs(state[0]) ** 2)
                 done = done or t >= args.max_episode_length
-                reward_sum += reward
+                episode_reward += reward
 
                 if done:
                     # reset current cumulated reward and episode counter as well as env
-                    rewards[i] = reward_sum
-                    reward_sum = 0
+                    rewards.append(episode_reward)
+                    episode_reward = 0
 
-                    eps_len[i] = t
+                    eps_len.append(t)
                     t = 0
 
                     state = env.reset()
 
                 state = torch.from_numpy(state)
+
+            # necessary to make more than one run
             done = False
 
-        print("T={} -- mean reward={} -- mean episode length={} -- global reward={}".format(T.value,
-                                                                                            rewards.mean(),
-                                                                                            eps_len.mean(),
-                                                                                            global_reward.value))
+        time_print = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start_time))
 
-        writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
-        writer.add_scalar("mean_test_reward", rewards.mean(), int(T.value))
+        rewards = np.mean(rewards)
+
+        print(f"Time: {time_print}, T={T.value} -- mean reward={rewards}"
+              f"-- mean episode length={np.mean(eps_len)} -- global reward={global_reward.value}")
+
+        writer.add_scalar("mean_test_reward", rewards, int(T.value))
+        writer.add_scalar("mean_test_reward", rewards, int(T.value))
 
         if best_global_reward is None or global_reward.value > best_global_reward:
             best_global_reward = global_reward.value
@@ -140,14 +142,14 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
                 'state_dict': shared_model_actor.state_dict(),
                 'global_reward': global_reward.value,
                 'optimizer': optimizer_actor.state_dict() if optimizer_actor is not None else None,
-            }, filename="./checkpoints/actor_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
+            }, filename=f"./checkpoints/actor_T-{T.value}_global-{global_reward.value}.pth.tar")
 
             save_checkpoint({
                 'epoch': T.value,
                 'state_dict': shared_model_critic.state_dict(),
                 'global_reward': global_reward.value,
                 'optimizer': optimizer_critic.state_dict() if optimizer_critic is not None else None,
-            }, filename="./checkpoints/critic_T-{}_global-{}.pth.tar".format(T.value, global_reward.value))
+            }, filename=f"./checkpoints/critic_T-{T.value}_global-{global_reward.value}.pth.tar")
 
         # delay _test run for 10s to give the network some time to train
         time.sleep(10)
@@ -159,7 +161,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
           optimizer_actor: Optimizer = None,
           optimizer_critic: Optimizer = None, scheduler_actor: torch.optim.lr_scheduler = None,
           scheduler_critic: torch.optim.lr_scheduler = None,
-          global_reward=None, min_max_scaler: MinMaxScaler = None ):
+          global_reward=None, min_max_scaler: MinMaxScaler = None):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
@@ -173,15 +175,22 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
     env.seed(args.seed + worker_id)
 
     # init local NN instance for worker thread
-    model_actor = ActorNetwork(env.observation_space.shape[0], env.action_space, args.n_hidden, args.max_action)
-    model_critic = CriticNetwork(env.observation_space.shape[0], env.action_space, args.n_hidden)
+    model_actor = ActorNetwork(n_inputs=env.observation_space.shape[0], n_outputs=env.action_space.shape[0],
+                               max_action=args.max_action)
+    model_critic = CriticNetwork(n_inputs=env.observation_space.shape[0])
 
     # if no shared optimizer is provided use individual one
     if optimizer_actor is None:
-        optimizer_actor = torch.optim.RMSprop(shared_model_actor.parameters(), lr=0.0001)
+        if args.optimizer == "rmsprop":
+            optimizer_actor = torch.optim.RMSprop(shared_model_actor.parameters(), lr=args.lr_actor)
+        elif args.optimizer == "adam":
+            optimizer_actor = torch.optim.Adam(shared_model_actor.parameters(), lr=args.lr_actor)
+
     if optimizer_critic is None:
-        optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=0.001)
-        # optimizer = torch.optim.Adam(global_model.parameters(), lr=lr)
+        if args.optimizer == "rmsprop":
+            optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=args.lr_critic)
+        elif args.optimizer == "adam":
+            optimizer_critic = torch.optim.Adam(shared_model_critic.parameters(), lr=args.lr_critic)
 
     model_actor.train()
     model_critic.train()
@@ -192,7 +201,8 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
     iter_ = 0
     episode_reward = 0
 
-    writer = SummaryWriter()
+    if worker_id == 0:
+        writer = SummaryWriter()
 
     while True:
         # Get state of the global model
@@ -215,9 +225,8 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             else:
                 state_normalized = state
 
-            value = model_critic(Variable(state_normalized))
-            mu, variance = model_actor(Variable(state_normalized))
-            # mu = torch.clamp(mu, -5.0, 5.0)
+            value = model_critic(state_normalized)
+            mu, variance = model_actor(state_normalized)
 
             # dist = torch.distributions.Normal(mu, variance.sqrt())
 
@@ -225,28 +234,22 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             # # select action
             eps = Variable(torch.randn(mu.size()))
             action = (mu + variance.sqrt() * eps).detach()
-            # action = dist.rsample()
-            if args.max_action:
-                action = torch.clamp(action, -args.max_action, args.max_action).detach()
-            else:
-                action = torch.clamp(action, float(env.action_space.low[0]), float(env.action_space.high[0])).detach()
+            # action = dist.rsample().detach()
 
             # ------------------------------------------
             # Compute statistics for loss
 
+            pi = Variable(torch.Tensor([math.pi])).float()
             entropy = .5 * ((variance * 2 * pi.expand_as(variance)).log() + 1)
-            # print("entropy:", entropy, dist.entropy())
             # entropy = dist.entropy()
-            entropies.append(entropy)
 
             prob = normal(Variable(action), mu, variance)
             log_prob = (prob + 1e-6).log()
             # log_prob = dist.log_prob(action)
 
             # make selected move
-            state, reward, done, _ = env.step(action.numpy())
+            state, reward, done, _ = env.step(np.clip(action.numpy(), -args.max_action, args.max_action))
             # TODO: check if this is better
-            # reward -= state[0]
             # reward += (-state[2]+1) * np.exp(- np.abs(state[0]) ** 2)
             episode_reward += reward
 
@@ -268,6 +271,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             values.append(value)
             log_probs.append(log_prob)
             rewards.append(reward)
+            entropies.append(entropy)
 
             # reset env to beginning if done
             if done:
@@ -294,10 +298,10 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
 
         # if non terminal state is present set R to be value of current state
         if not done:
-            R = model_critic(Variable(state)).detach()
+            R = model_critic(state).detach()
+
 
         values.append(Variable(R))
-        # values.append(R)
         R = Variable(R)
         # compute loss and backprop
         actor_loss = 0
@@ -311,7 +315,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             critic_loss = critic_loss + 0.5 * advantage.pow(2)
             if args.gae:
                 # Generalized Advantage Estimation
-                delta_t = rewards[i] + args.gamma * values[i + 1].data - values[i].data
+                delta_t = rewards[i] + args.gamma * values[i + 1].detach() - values[i].detach()
                 gae = gae * args.gamma * args.tau + delta_t
                 actor_loss = actor_loss - (log_probs[i] * Variable(gae) + args.beta * entropies[i])
             else:
@@ -321,20 +325,19 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
         optimizer_critic.zero_grad()
         optimizer_actor.zero_grad()
 
-        critic_loss.backward()
-        actor_loss.backward()
+        critic_loss.mean().backward()
+        actor_loss.mean().backward()
 
         # compute combined loss of actor_loss and critic_loss
         # avoid overfitting on value loss by scaling it down
-        # (actor_loss + value_loss_coef * critic_loss).backward()
-        # combined_loss.mean().backward()
-        # combined_loss.backward()
+        # (actor_loss + value_loss_coef * critic_loss).mean().backward()
 
-        # torch.nn.utils.clip_grad_norm_(model_critic.parameters(), 1)
-        # torch.nn.utils.clip_grad_norm_(model_actor.parameters(), 1)
+        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), args.max_grad_norm)
+        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), args.max_grad_norm)
 
         sync_grads(model_critic, shared_model_critic)
         sync_grads(model_actor, shared_model_actor)
+
         optimizer_critic.step()
         optimizer_actor.step()
 
