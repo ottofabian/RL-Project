@@ -21,7 +21,7 @@ class MinMaxScaler:
         :param state: Pytorch tensor which defines the state
         :return: Normalized version of the state in which all entries are within the range [0,1]
         """
-        return (state - self.min_state) / (self.min_state - self.max_state)
+        return (state - self.min_state) / (self.max_state - self.min_state)
 
     def unormalize_state(self, state: torch.Tensor) -> torch.Tensor:
         """
@@ -29,4 +29,4 @@ class MinMaxScaler:
         :param state: Pytorch tensor which defines the state
         :return: Original state representation of the environment
         """
-        return state * (self.min_state - self.max_state) + self.min_state
+        return state * (self.max_state - self.min_state) + self.min_state

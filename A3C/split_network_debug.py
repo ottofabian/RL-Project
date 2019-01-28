@@ -255,7 +255,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
 
             # reward = min(max(-1, reward), 1)
 
-            done = done or t >= args.max_episode_length
+            done = done or t >= args.max_episode_length  # probably don't set terminal state if max_episode length
 
             with T.get_lock():
                 T.value += 1

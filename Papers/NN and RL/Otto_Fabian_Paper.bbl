@@ -14,6 +14,20 @@ Bellemare, M.G., Naddaf, Y., Veness, J., Bowling, M.: {The Arcade Learning
 \newblock \doi{10.1613/jair.3912}.
 \newblock \urlprefix\url{http://arxiv.org/abs/1207.4708}
 
+\bibitem{Fujimoto2018}
+Fujimoto, S., van Hoof, H., Meger, D.: {Addressing Function Approximation Error
+  in Actor-Critic Methods}.
+\newblock In: International Conference for Machine Learning (2018).
+\newblock \urlprefix\url{http://arxiv.org/abs/1802.09477}
+
+\bibitem{Grosse2016}
+Grosse, R., Martens, J.: {A Kronecker-factored Approximate Fisher Matrix for
+  Convolution Layers}.
+\newblock In: Proceedings of the 33rd International Conference on International
+  Conference on Machine Learning - Volume 48, ICML'16, pp. 573--582. JMLR.org
+  (2016).
+\newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=3045390.3045452}
+
 \bibitem{Gu2016}
 Gu, S., Lillicrap, T., Sutskever, I., Levine, S.: {Continuous Deep Q-Learning
   with Model-based Acceleration}.
@@ -27,6 +41,14 @@ Haarnoja, T., Zhou, A., Hartikainen, K., Tucker, G., Ha, S., Tan, J., Kumar,
   V., Zhu, H., Gupta, A., Abbeel, P., Levine, S.: {Soft Actor-Critic Algorithms
   and Applications}  (2018).
 \newblock \urlprefix\url{http://arxiv.org/abs/1812.05905}
+
+\bibitem{VanHasselt2010}
+van Hasselt, H.: {Double Q-learning}.
+\newblock In: J.D. Lafferty, C.K.I. Williams, J.~Shawe-Taylor, R.S. Zemel,
+  A.~Culotta (eds.) Advances in Neural Information Processing Systems 23, pp.
+  2613--2621. Curran Associates, Inc. (2010).
+\newblock
+  \urlprefix\url{http://papers.nips.cc/paper/3964-double-q-learning.pdf}
 
 \bibitem{VanHasselt2016}
 van Hasselt, H., Guez, A., Silver, D.: {Deep Reinforcement Learning with Double
@@ -78,6 +100,22 @@ Lin, L.J.: {Self-improving reactive agents based on reinforcement learning,
 \newblock \doi{10.1007/BF00992699}.
 \newblock \urlprefix\url{https://doi.org/10.1007/BF00992699}
 
+\bibitem{Martens2015}
+Martens, J., Grosse, R.: {Optimizing Neural Networks with Kronecker-factored
+  Approximate Curvature}  (2015).
+\newblock \urlprefix\url{http://arxiv.org/abs/1503.05671}
+
+\bibitem{Mnih2016}
+Mnih, V., Badia, A.P.A.P., Mirza, M., Graves, A., Lillicrap, T.P., Harley, T.,
+  Silver, D., Kavukcuoglu, K.: {Asynchronous Methods for Deep Reinforcement
+  Learning}.
+\newblock In: M.F. Balcan, K.Q. Weinberger (eds.) Proceedings of The 33rd
+  International Conference on Machine Learning, \emph{Proceedings of Machine
+  Learning Research}, vol.~48, pp. 1928--1937. PMLR, New York, New York, USA
+  (2016).
+\newblock \urlprefix\url{http://proceedings.mlr.press/v48/mniha16.html
+  http://arxiv.org/abs/1602.01783}
+
 \bibitem{Mnih2013}
 Mnih, V., Kavukcuoglu, K., Silver, D., Graves, A., Antonoglou, I., Wierstra,
   D., Riedmiller, M.: {Playing Atari with Deep Reinforcement Learning}.
@@ -127,6 +165,13 @@ Schulman, J., Wolski, F., Dhariwal, P., Radford, A., Klimov, O.: {Proximal
   Policy Optimization Algorithms}  (2017).
 \newblock \urlprefix\url{http://arxiv.org/abs/1707.06347}
 
+\bibitem{VanSeijen2009}
+van Seijen, H., van Hasselt, H., Whiteson, S., Wiering, M.: {A theoretical and
+  empirical analysis of Expected Sarsa}.
+\newblock In: 2009 IEEE Symposium on Adaptive Dynamic Programming and
+  Reinforcement Learning, pp. 177--184 (2009).
+\newblock \doi{10.1109/ADPRL.2009.4927542}
+
 \bibitem{Silver2014}
 Silver, D., Lever, G., Heess, N., Degris, T., Wierstra, D., Riedmiller, M.:
   {Deterministic Policy Gradient Algorithms}.
@@ -170,5 +215,15 @@ Wang, Z., Schaul, T., Hessel, M., {Van Hasselt}, H., Lanctot, M., {De Freitas},
 \bibitem{Watkins1989}
 Watkins, C.J.C.H.: {Learning from delayed rewards}.
 \newblock Ph.D. thesis, King's College, Cambridge (1989)
+
+\bibitem{Wu2017}
+Wu, Y., Mansimov, E., Grosse, R.B., Liao, S., Ba, J.: {Scalable trust-region
+  method for deep reinforcement learning using Kronecker-factored
+  approximation}.
+\newblock In: I.~Guyon, U.V. Luxburg, S.~Bengio, H.~Wallach, R.~Fergus,
+  S.~Vishwanathan, R.~Garnett (eds.) Advances in Neural Information Processing
+  Systems 30, pp. 5279--5288. Curran Associates, Inc. (2017).
+\newblock
+  \urlprefix\url{http://papers.nips.cc/paper/7112-scalable-trust-region-method-for-deep-reinforcement-learning-using-kronecker-factored-approximation.pdf}
 
 \end{thebibliography}
