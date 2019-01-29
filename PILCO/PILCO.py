@@ -10,12 +10,14 @@ from PILCO.Controller.RBFController import RBFController
 from PILCO.CostFunctions.Loss import Loss
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
+from PILCO.GaussianProcess.SparseMultivariateGP import SparseMultivariateGP
 
 
 class PILCO(object):
 
     def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, start_mu: np.ndarray = None,
-                 start_cov: np.ndarray = None, gamma=1, max_episode_steps: int = None, bound: np.ndarray = None):
+                 start_cov: np.ndarray = None, gamma=1, max_episode_steps: int = None, bound: np.ndarray = None,
+                 n_inducing_points: int = None):
         """
 
         :param env_name: gym env to work with
@@ -68,6 +70,7 @@ class PILCO(object):
         # -----------------------------------------------------
         # dynamics
         self.dynamics_model = None
+        self.n_inducing_points = n_inducing_points
 
         # -----------------------------------------------------
         # policy
@@ -181,10 +184,21 @@ class PILCO(object):
 
         if self.dynamics_model is None:
             l, sigma_f, sigma_eps = self.get_init_hyperparams()
-            self.dynamics_model = MultivariateGP(n_targets=self.state_dim, container=GaussianProcess, length_scales=l,
-                                                 sigma_f=sigma_f, sigma_eps=sigma_eps)
+            if self.n_inducing_points:
+                self.dynamics_model = SparseMultivariateGP(X=self.state_action_pairs, y=self.state_delta,
+                                                           n_targets=self.state_dim, container=GaussianProcess,
+                                                           length_scales=l, sigma_f=sigma_f, sigma_eps=sigma_eps,
+                                                           n_inducing_points=self.n_inducing_points)
+            else:
+                self.dynamics_model = MultivariateGP(n_targets=self.state_dim, container=GaussianProcess,
+                                                     length_scales=l,
+                                                     sigma_f=sigma_f, sigma_eps=sigma_eps)
 
-        self.dynamics_model.fit(self.state_action_pairs, self.state_delta)
+                self.dynamics_model.fit(self.state_action_pairs, self.state_delta)
+
+        else:
+            self.dynamics_model.fit(self.state_action_pairs, self.state_delta)
+
         self.dynamics_model.optimize()
 
     def learn_policy(self, mu: float = 0, sigma: float = 0.1 ** 2, target_noise: float = 0.1) -> None:

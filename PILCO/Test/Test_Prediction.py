@@ -44,9 +44,9 @@ def test_mgpr():
     M, S, V = mgpr.predict_from_dist(mu, sigma)
 
     # convert data to the struct expected by the MATLAB implementation
-    length_scales = mgpr.get_length_scales()
-    sigma_f = mgpr.get_sigma_fs()
-    sigma_eps = mgpr.get_sigma_eps()
+    length_scales = mgpr.length_scales()
+    sigma_f = mgpr.sigma_fs()
+    sigma_eps = mgpr.sigma_eps()
 
     hyp = np.hstack(
         (length_scales,

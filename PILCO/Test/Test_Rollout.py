@@ -94,9 +94,9 @@ def test_rollout():
     # ---------------------------------------------------------------------------------------
 
     # generate dynmodel for matlab
-    length_scales_dyn = pilco.dynamics_model.get_length_scales()
-    sigma_f_dyn = pilco.dynamics_model.get_sigma_fs()
-    sigma_eps_dyn = pilco.dynamics_model.get_sigma_eps()
+    length_scales_dyn = pilco.dynamics_model.length_scales()
+    sigma_f_dyn = pilco.dynamics_model.sigma_fs()
+    sigma_eps_dyn = pilco.dynamics_model.sigma_eps()
 
     hyp_dyn = np.hstack(
         (length_scales_dyn,
@@ -112,9 +112,9 @@ def test_rollout():
     # ---------------------------------------------------------------------------------------
 
     # generate rbf policy for matlab
-    length_scales_rbf = rbf.get_length_scales()
-    sigma_f_rbf = rbf.get_sigma_fs()
-    sigma_eps_rbf = rbf.get_sigma_eps()
+    length_scales_rbf = rbf.length_scales()
+    sigma_f_rbf = rbf.sigma_fs()
+    sigma_eps_rbf = rbf.sigma_eps()
 
     hyp_rbf = np.hstack(
         (length_scales_rbf,
