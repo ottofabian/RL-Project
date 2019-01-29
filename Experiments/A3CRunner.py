@@ -101,4 +101,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     a3c = A3C(args)
 
-    a3c.run_debug()
+    a3c.run_split_network()

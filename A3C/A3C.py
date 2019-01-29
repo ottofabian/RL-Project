@@ -99,7 +99,7 @@ class A3C(object):
         for w in self.worker_pool:
             w.join()
 
-    def run_debug(self):
+    def run_split_network(self):
 
         torch.manual_seed(self.args.seed)
 

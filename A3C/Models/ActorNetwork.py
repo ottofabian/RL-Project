@@ -99,10 +99,7 @@ class ActorNetwork(torch.nn.Module):
                 nn.Linear(self.n_hidden, self.n_outputs)
             )
 
-            self.sigma = nn.Sequential(
-                nn.Parameter(torch.zeros(self.n_outputs)),
-                nn.Softplus()
-            )
+            self.sigma = nn.Parameter(torch.zeros(self.n_outputs))
 
             self.apply(init_weights)
             self.train()
@@ -114,10 +111,9 @@ class ActorNetwork(torch.nn.Module):
             x = F.relu(self.fc2(x))
             mu = self.max_action * torch.tanh(self.mu(x))
             sigma = F.softplus(self.sigma(x)) + 1e-5
+            return mu, sigma
         else:
 
             body = self.body(x)
             mu = self.mu(body)
-            sigma = self.sigma(body)
-
-        return mu, sigma
+            return mu, F.softplus(self.sigma)
