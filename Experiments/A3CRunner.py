@@ -33,9 +33,6 @@ parser.add_argument('--lr-critic', type=float, default=0.001,
 parser.add_argument('--lr-actor-critic', type=float, default=0.0001,
                     help='learning rate for combined actor critic model,'
                          ' in paper sampled between 1e-4 to 1e-2 (default: 0.001)')
-parser.add_argument('--lr-actor-critic', type=float, default=0.0001,
-                    help='learning rate for combined actor critic model,'
-                         ' in paper sampled between 1e-4 to 1e-2 (default: 0.001)')
 parser.add_argument('--value-loss-coef', type=float, default=0.5,
                     help='value loss coefficient ,'
                          'constants which defines the weighting between value and policy loss (default: 0.5)')
