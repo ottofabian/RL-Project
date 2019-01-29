@@ -23,14 +23,22 @@ Source:\
 
 ### CartpoleStabShort:  
 
+Mean reward over 10 episodes: 9999.1377045691
+
+- network critic: \[5, 100, 1\]
+- network actor: \[5, 200, (1,1)\]
+- network init: nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
+- optimizer: 
+- max-grad-norm: 
 - lr: 
-    - Actor: .00001
-    - Critic: .0001
-- t_max/batch size: 128
+    - Actor: .0001
+    - Critic: .001
+- t_max/batch size: 50
 - max episode steps: 5000
 - gamma: .99
 - tau: 1
 - beta: .01
+- max_action: 5
     
 ### CartpoleStabLong:  
 TODO

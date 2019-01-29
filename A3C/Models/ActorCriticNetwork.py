@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,45 +16,45 @@ def init_weights(m):
 
 
 class ActorCriticNetwork(torch.nn.Module):
-    def __init__(self, n_inputs, n_actions, max_action):
+    def __init__(self, n_inputs, n_actions):
         super(ActorCriticNetwork, self).__init__()
-
-        self.max_action = max_action
 
         self.n_actions = n_actions
         self.n_inputs = n_inputs
         self.n_hidden = 20
 
-        self.input = nn.Linear(self.n_inputs, self.n_hidden)
-        self.hidden_1 = nn.Linear(self.n_hidden, self.n_hidden)
-        # self.hidden_2 = nn.Linear(self.n_hidden, self.n_hidden)
-        # self.hidden_3 = nn.Linear(self.n_hidden, self.n_hidden)
+        act = nn.LeakyReLU()
+        # act = nn.ReLU
 
-        self.value = nn.Linear(self.n_hidden, 1)
+        self.body = nn.Sequential(
+            nn.Linear(self.n_inputs, self.n_hidden),
+            act,
+            # nn.Linear(self.n_hidden, self.n_hidden),
+            # act,
+            # nn.Linear(self.n_hidden, self.n_hidden),
+        )
 
-        self.mu = nn.Linear(self.n_hidden, self.n_actions)
-        self.sigma = nn.Linear(self.n_hidden, self.n_actions)
+        self.mu = nn.Sequential(
+            nn.Linear(self.n_hidden, self.n_actions)
+        )
+
+        self.sigma = nn.Parameter(torch.zeros(self.n_actions))
+
+        self.value = nn.Sequential(
+            nn.Linear(self.n_hidden, self.n_actions)
+        )
 
         self.apply(init_weights)
         self.train()
 
-    def forward(self, inputs):
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Defines the forward pass of the network.
 
-        :param inputs: Input array object which sufficiently represents the full state of the environment.
-        :return: In the discrete case: value, policy
-                 In the continuous case: value, mu, sigma
+        :param x: Input array object which sufficiently represents the full state of the environment.
+        :return: value, mu, sigma
         """
 
-        x = F.relu(self.input(inputs.float()))
-        x = F.relu(self.hidden_1(x))
-        # x = F.leaky_relu(self.hidden_2(x), .0)
-        # x = F.leaky_relu(self.hidden_3(x), .0)
+        body = self.body(x)
 
-        mu = self.max_action * torch.tanh(self.mu(x))
-        sigma = F.softplus(self.sigma(x)) + 1e-5
-
-        value = self.value(x)
-
-        return value, mu, sigma
+        return self.value(body), self.mu(body), F.softplus(self.sigma)

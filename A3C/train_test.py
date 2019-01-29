@@ -1,3 +1,4 @@
+import copy
 import math
 import time
 
@@ -10,11 +11,13 @@ from torch.multiprocessing import Value
 from torch.optim import Optimizer
 
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
-from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
-from Experiments.util.MinMaxScaler import MinMaxScaler
+
+from A3C.util.normalizer.base_normalizer import BaseNormalizer
+from A3C.util.normalizer.mean_std_normalizer import MeanStdNormalizer
+from A3C.util.save_and_load.model_save import get_normalizer
 
 
 def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
@@ -31,29 +34,19 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
         shared_param._grad = param.grad  #
 
 
-def normal(x, mu, variance):
-    pi = Variable(torch.Tensor([math.pi])).float()
-
-    a = (-1 * (x - mu).pow(2) / (2 * variance)).exp()
-    b = 1 / (2 * variance * pi.expand_as(variance)).sqrt()
-    return a * b
-
-
-def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
-         T: Value, optimizer_actor: Optimizer = None,
-         optimizer_critic: Optimizer = None, global_reward: Value = None, min_max_scaler: MinMaxScaler = None):
+def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_reward: Value = None,
+         optimizer: Optimizer = None, shared_model_critic: CriticNetwork = None, optimizer_critic: Optimizer = None):
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/_test.py
     :param args:
     :param worker_id:
-    :param shared_model_actor:
+    :param shared_model:
     :param shared_model_critic:
     :param T:
-    :param optimizer_actor:
+    :param optimizer:
     :param optimizer_critic:
     :param global_reward:
-    :param min_max_scaler:
     :return:
     """
     torch.manual_seed(args.seed + worker_id)
@@ -65,13 +58,15 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
 
     env.seed(args.seed + worker_id)
 
-    # get an instance of the current global model state
-    model_actor = ActorNetwork(n_inputs=env.observation_space.shape[0], n_outputs=env.action_space.shape[0],
-                               max_action=args.max_action)
-    model_critic = CriticNetwork(n_inputs=env.observation_space.shape[0])
+    normalizer = get_normalizer(args.normalizer)
 
-    model_actor.eval()
-    model_critic.eval()
+    # get an instance of the current global model state
+    model = copy.deepcopy(shared_model)
+    model.eval()
+
+    if shared_model_critic:
+        model_critic = copy.deepcopy(shared_model_critic)
+        model_critic.eval()
 
     state = torch.from_numpy(env.reset())
 
@@ -88,8 +83,9 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
     while True:
 
         # Get params from shared global model
-        model_critic.load_state_dict(shared_model_critic.state_dict())
-        model_actor.load_state_dict(shared_model_actor.state_dict())
+        model.load_state_dict(shared_model.state_dict())
+        if not args.shared_model:
+            model_critic.load_state_dict(shared_model_critic.state_dict())
 
         rewards = []
         eps_len = []
@@ -103,15 +99,15 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
                     env.render()
 
                 # apply min/max scaling on the environment
-                if min_max_scaler:
-                    state_normalized = min_max_scaler.normalize_state(state)
-                else:
-                    state_normalized = state
 
                 with torch.no_grad():
 
                     # select mean of normal dist as action --> Expectation
-                    mu, _ = model_actor(state_normalized)
+                    if args.shared_model:
+                        _, mu, _ = model(normalizer(state))
+                    else:
+                        mu, _ = model(normalizer(state))
+
                     action = mu.detach()
 
                 state, reward, done, _ = env.step(np.clip(action.numpy(), -args.max_action, args.max_action))
@@ -142,35 +138,29 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
               f"-- mean episode length={np.mean(eps_len)} -- global reward={global_reward.value}")
 
         writer.add_scalar("mean_test_reward", rewards, int(T.value))
-        writer.add_scalar("mean_test_reward", rewards, int(T.value))
 
         if best_global_reward is None or global_reward.value > best_global_reward:
             best_global_reward = global_reward.value
-            save_checkpoint({
-                'epoch': T.value,
-                'state_dict': shared_model_actor.state_dict(),
-                'global_reward': global_reward.value,
-                'optimizer': optimizer_actor.state_dict() if optimizer_actor is not None else None,
-            }, filename=f"./checkpoints/actor_T-{T.value}_global-{global_reward.value}.pth.tar")
+            model_type = 'shared' if args.shared_model else 'split'
 
             save_checkpoint({
                 'epoch': T.value,
-                'state_dict': shared_model_critic.state_dict(),
+                'model': shared_model.state_dict(),
+                'model_critic': shared_model_critic.state_dict() if shared_model_critic else None,
                 'global_reward': global_reward.value,
-                'optimizer': optimizer_critic.state_dict() if optimizer_critic is not None else None,
-            }, filename=f"./checkpoints/critic_T-{T.value}_global-{global_reward.value}.pth.tar")
+                # only save optimizers if shared ones are used
+                'optimizer': optimizer.state_dict() if optimizer else None,
+                'optimizer_critic': optimizer_critic.state_dict() if optimizer_critic else None,
+            }, filename=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value}.pth.tar")
 
         # delay _test run for 10s to give the network some time to train
-        time.sleep(10)
+        # time.sleep(10)
         iter_ += 1
 
 
-def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_critic: CriticNetwork,
-          T: Value,
-          optimizer_actor: Optimizer = None,
-          optimizer_critic: Optimizer = None, scheduler_actor: torch.optim.lr_scheduler = None,
-          scheduler_critic: torch.optim.lr_scheduler = None,
-          global_reward=None, min_max_scaler: MinMaxScaler = None):
+def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_reward: Value,
+          optimizer: Optimizer = None, shared_model_critic: CriticNetwork = None, optimizer_critic: Optimizer = None,
+          lr_scheduler: torch.optim.lr_scheduler = None, lr_scheduler_critic: torch.optim.lr_scheduler = None):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
@@ -183,26 +173,28 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
     # ensure different seed for each worker thread
     env.seed(args.seed + worker_id)
 
+    normalizer = get_normalizer(args.normalizer)
+
     # init local NN instance for worker thread
-    model_actor = ActorNetwork(n_inputs=env.observation_space.shape[0], n_outputs=env.action_space.shape[0],
-                               max_action=args.max_action)
-    model_critic = CriticNetwork(n_inputs=env.observation_space.shape[0])
+    model = copy.deepcopy(shared_model)
+    model.train()
+
+    if shared_model_critic:
+        model_critic = copy.deepcopy(shared_model_critic)
+        model_critic.train()
 
     # if no shared optimizer is provided use individual one
-    if optimizer_actor is None:
+    if not optimizer:
         if args.optimizer == "rmsprop":
-            optimizer_actor = torch.optim.RMSprop(shared_model_actor.parameters(), lr=args.lr_actor)
+            optimizer = torch.optim.RMSprop(shared_model.parameters(), lr=args.lr)
         elif args.optimizer == "adam":
-            optimizer_actor = torch.optim.Adam(shared_model_actor.parameters(), lr=args.lr_actor)
+            optimizer = torch.optim.Adam(shared_model.parameters(), lr=args.lr)
 
-    if optimizer_critic is None:
+    if shared_model_critic and not optimizer_critic:
         if args.optimizer == "rmsprop":
             optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=args.lr_critic)
         elif args.optimizer == "adam":
             optimizer_critic = torch.optim.Adam(shared_model_critic.parameters(), lr=args.lr_critic)
-
-    model_actor.train()
-    model_critic.train()
 
     state = torch.from_numpy(env.reset())
 
@@ -215,8 +207,9 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
 
     while True:
         # Get state of the global model
-        model_critic.load_state_dict(shared_model_critic.state_dict())
-        model_actor.load_state_dict(shared_model_actor.state_dict())
+        model.load_state_dict(shared_model.state_dict())
+        if not args.shared_model:
+            model_critic.load_state_dict(shared_model_critic.state_dict())
 
         # containers for computing loss
         values = []
@@ -228,16 +221,13 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
         for step in range(args.t_max):
             t += 1
 
-            # apply min/max scaling on the environment
-            if min_max_scaler:
-                state_normalized = min_max_scaler.normalize_state(state)
+            if args.shared_model:
+                value, mu, std = model(normalizer(state))
             else:
-                state_normalized = state
+                mu, std = model(normalizer(state))
+                value = model_critic(normalizer(state))
 
-            value = model_critic(state_normalized)
-            mu, variance = model_actor(state_normalized)
-
-            dist = torch.distributions.Normal(mu, variance)
+            dist = torch.distributions.Normal(mu, std)
 
             # ------------------------------------------
             # # select action
@@ -261,12 +251,12 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
                 T.value += 1
 
             if worker_id == 0 and T.value % 500000 and iter_ != 0:
-                if scheduler_actor is not None:
+                if lr_scheduler:
                     # TODO improve the call frequency
-                    scheduler_actor.step(T.value / 500000)
-                if scheduler_critic is not None:
+                    lr_scheduler.step(T.value / 500000)
+                if lr_scheduler_critic:
                     # TODO improve the call frequency
-                    scheduler_critic.step(T.value / 500000)
+                    lr_scheduler_critic.step(T.value / 500000)
 
             values.append(value)
             log_probs.append(log_prob)
@@ -285,7 +275,7 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
                     else:
                         global_reward.value = .99 * global_reward.value + 0.01 * episode_reward
                 if worker_id == 0:
-                    writer.add_scalar("global_reward", global_reward.value, iter_)
+                    writer.add_scalar("global_reward", global_reward.value, T.value)
                 episode_reward = 0
 
             state = torch.from_numpy(state)
@@ -325,24 +315,24 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             policy_loss = policy_loss - entropy_loss
 
         # zero grads to avoid computation issues in the next step
-        optimizer_critic.zero_grad()
-        optimizer_actor.zero_grad()
+        optimizer.zero_grad()
 
-        value_loss.mean().backward()
-        policy_loss.mean().backward()
+        if args.shared_model:
+            (policy_loss + args.value_loss_coef * value_loss).mean().backward()
+        else:
+            optimizer_critic.zero_grad()
 
-        # compute combined loss of policy_loss and value_loss
-        # avoid overfitting on value loss by scaling it down
-        # (policy_loss + value_loss_coef * value_loss).mean().backward()
+            value_loss.mean().backward()
+            policy_loss.mean().backward()
 
-        torch.nn.utils.clip_grad_norm_(model_critic.parameters(), args.max_grad_norm)
-        torch.nn.utils.clip_grad_norm_(model_actor.parameters(), args.max_grad_norm)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+        sync_grads(model, shared_model)
+        optimizer.step()
 
-        sync_grads(model_critic, shared_model_critic)
-        sync_grads(model_actor, shared_model_actor)
-
-        optimizer_critic.step()
-        optimizer_actor.step()
+        if not args.shared_model:
+            torch.nn.utils.clip_grad_norm_(model_critic.parameters(), args.max_grad_norm)
+            sync_grads(model_critic, shared_model_critic)
+            optimizer_critic.step()
 
         iter_ += 1
 
@@ -352,24 +342,25 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
                                            if p.grad is not None])
 
             grads_actor = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                          for p in model_actor.parameters()
+                                          for p in model.parameters()
                                           if p.grad is not None])
 
             valuelist = [v.data for v in values]
+            temp_T = T.value
 
-            writer.add_scalar("mean_values", np.mean(valuelist), iter_)
-            writer.add_scalar("min_values", np.min(valuelist), iter_)
-            writer.add_scalar("max_values", np.max(valuelist), iter_)
-            writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
-            writer.add_scalar("loss_policy", policy_loss, iter_)
-            writer.add_scalar("loss_value", value_loss, iter_)
-            writer.add_scalar("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), iter_)
-            writer.add_scalar("grad_max_actor", np.max(np.abs(grads_actor)), iter_)
-            writer.add_scalar("grad_var_actor", np.var(grads_actor), iter_)
-            writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), iter_)
-            writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), iter_)
-            writer.add_scalar("grad_var_critic", np.var(grads_critic), iter_)
-            for param_group in optimizer_actor.param_groups:
-                writer.add_scalar("lr_actor", param_group['lr'], iter_)
+            writer.add_scalar("mean_values", np.mean(valuelist), temp_T)
+            writer.add_scalar("min_values", np.min(valuelist), temp_T)
+            writer.add_scalar("max_values", np.max(valuelist), temp_T)
+            writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), temp_T)
+            writer.add_scalar("loss_policy", policy_loss, temp_T)
+            writer.add_scalar("loss_value", value_loss, temp_T)
+            writer.add_scalar("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), temp_T)
+            writer.add_scalar("grad_max_actor", np.max(np.abs(grads_actor)), temp_T)
+            writer.add_scalar("grad_var_actor", np.var(grads_actor), temp_T)
+            writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), temp_T)
+            writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), temp_T)
+            writer.add_scalar("grad_var_critic", np.var(grads_critic), temp_T)
+            for param_group in optimizer.param_groups:
+                writer.add_scalar("lr_actor", param_group['lr'], temp_T)
             for param_group in optimizer_critic.param_groups:
-                writer.add_scalar("lr_critic", param_group['lr'], iter_)
+                writer.add_scalar("lr_critic", param_group['lr'], temp_T)

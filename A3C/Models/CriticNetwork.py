@@ -71,8 +71,8 @@ class CriticNetwork(torch.nn.Module):
                 nn.Linear(self.n_hidden, 1)
             )
 
-            self.apply(init_weights)
-            self.train()
+        self.apply(init_weights)
+        self.train()
 
     def forward(self, x):
         """

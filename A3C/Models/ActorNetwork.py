@@ -62,15 +62,13 @@ load_stab = False  # True
 
 
 class ActorNetwork(torch.nn.Module):
-    def __init__(self, n_inputs, n_outputs, max_action):
+    def __init__(self, n_inputs, n_actions):
         super(ActorNetwork, self).__init__()
 
-        self.n_outputs = n_outputs
+        self.n_outputs = n_actions
         self.n_inputs = n_inputs
 
         self.n_hidden = 200
-
-        self.max_action = max_action
 
         if load_stab:
             # n_hidden = 200
@@ -101,8 +99,8 @@ class ActorNetwork(torch.nn.Module):
 
             self.sigma = nn.Parameter(torch.zeros(self.n_outputs))
 
-            self.apply(init_weights)
-            self.train()
+        self.apply(init_weights)
+        self.train()
 
     def forward(self, x):
         x = x.float()
