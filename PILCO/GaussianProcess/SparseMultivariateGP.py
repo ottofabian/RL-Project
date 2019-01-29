@@ -49,7 +49,8 @@ class SparseMultivariateGP(MultivariateGP):
 
         for i in range(self.n_targets):
             input_dim = length_scales.shape[1]
-            kernel = GPy.kern.RBF(input_dim=input_dim, lengthscale=np.exp(length_scales[i]), ARD=True)
+            kernel = GPy.kern.RBF(input_dim=input_dim, lengthscale=np.exp(length_scales[i]), ARD=True,
+                                  variance=np.exp(sigma_f[i]))
 
             kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
             model = GPy.models.SparseGPRegression(X=X, Y=y[:, i:i + 1], kernel=kernel, Z=Z)
@@ -192,10 +193,10 @@ class SparseMultivariateGP(MultivariateGP):
             self.logger.info("Optimization for GP (output={}) started.".format(i))
             try:
                 self.logger.info("Optimization with L-BFGS-B started.")
-                gp.optimize("lbfgsb")
+                gp.optimize("lbfgsb", messages=1)
             except Exception:
                 self.logger.info("Optimization with SCG started.")
-                gp.optimize('scg')
+                gp.optimize('scg', messages=1)
 
             print(gp)
 
