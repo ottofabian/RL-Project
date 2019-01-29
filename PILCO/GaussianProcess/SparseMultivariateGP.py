@@ -82,26 +82,27 @@ class SparseMultivariateGP(MultivariateGP):
 
         state_dim = self.X.shape[1]
         target_dim = self.y.shape[1]
+        induced_dim = np.array(self.gp_container[0].Z).shape[0]
 
         # TODO move this part somewhere else
 
-        Kmm = np.stack([gp.kern.rbf.K(gp.Z) + 1e-6 * np.identity(self.n_inducing_points) for gp in self.gp_container])
+        Kmm = np.stack([gp.kern.rbf.K(gp.Z) + 1e-6 * np.identity(induced_dim) for gp in self.gp_container])
         Kmn = np.stack([gp.kern.rbf.K(gp.Z, gp.X) for gp in self.gp_container])
 
         L = np.linalg.cholesky(Kmm)
 
         V = np.stack([np.linalg.solve(L[i], Kmn[i]) for i in range(target_dim)])  # inv(sqrt(Kmm)) * Kmn
         G = np.exp(2 * self.sigma_fs()) - np.sum(V ** 2, axis=1)
-        G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))
+        G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))  # this is nan for theta_dot, fuck this algorithm
         V_scaled = V / G[:, None]
 
         # noise = np.expand_dims(np.identity(self.n_inducing_points), 0) * np.expand_dims(np.exp(2 * self.sigma_eps()), 1)
         Am = np.linalg.cholesky(np.stack(
-            [V_scaled[i] @ V_scaled[i].T + np.identity(self.n_inducing_points) * np.exp(2 * self.sigma_eps()[i]) for i
+            [V_scaled[i] @ V_scaled[i].T + np.identity(induced_dim) * np.exp(2 * self.sigma_eps()[i]) for i
              in range(target_dim)]))
 
         At = L @ Am
-        iAt = np.stack([np.linalg.solve(At[i], np.identity(self.n_inducing_points)) for i in range(target_dim)])
+        iAt = np.stack([np.linalg.solve(At[i], np.identity(induced_dim)) for i in range(target_dim)])
 
         V_scaled = V / G[:, None]
         # one big ugly loopy, because numpy cannot do it differently
@@ -109,7 +110,7 @@ class SparseMultivariateGP(MultivariateGP):
                          enumerate(self.gp_container)])[:, :, 0]
 
         iB = np.stack([iAt[i] @ iAt[i].T for i in range(target_dim)]) * self.sigma_eps()[:, None, None]
-        iK = np.stack([np.linalg.solve(L[i], np.identity(self.n_inducing_points)) for i in range(target_dim)]) - iB
+        iK = np.stack([np.linalg.solve(L[i], np.identity(induced_dim)) for i in range(target_dim)]) - iB
 
         # ----------------------------------------------------------------------------------------------------
         # Helper

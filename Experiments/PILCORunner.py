@@ -24,7 +24,7 @@ def main():
     env = gym.make(env_name)
     max_episode_steps = 200
 
-    n_inducing_points = 200
+    n_inducing_points = 500
 
     # get target state value for computing loss
     if "Cartpole" in env_name:
