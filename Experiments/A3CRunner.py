@@ -33,6 +33,9 @@ parser.add_argument('--lr-critic', type=float, default=0.001,
 parser.add_argument('--lr-actor-critic', type=float, default=0.0001,
                     help='learning rate for combined actor critic model,'
                          ' in paper sampled between 1e-4 to 1e-2 (default: 0.001)')
+parser.add_argument('--lr-actor-critic', type=float, default=0.0001,
+                    help='learning rate for combined actor critic model,'
+                         ' in paper sampled between 1e-4 to 1e-2 (default: 0.001)')
 parser.add_argument('--value-loss-coef', type=float, default=0.5,
                     help='value loss coefficient ,'
                          'constants which defines the weighting between value and policy loss (default: 0.5)')
@@ -55,8 +58,8 @@ parser.add_argument('--worker', type=int, default=max(multiprocessing.cpu_count(
                          max(multiprocessing.cpu_count() - 2, 1))
 parser.add_argument('--t-max', type=int, default=20,
                     help='number of forward steps in A3C (default: 20)')
-parser.add_argument('--max-episode-length', type=int, default=5000,
-                    help='maximum length of an episode (default: 5000)')
+parser.add_argument('--max-episode-length', type=int, default=10000,
+                    help='maximum length of an episode (default: 10000)')
 parser.add_argument('--env-name', default='CartpoleSwingShort-v0',
                     help='name of the gym environment to use.'
                          ' All available gym environments are supported as well as'

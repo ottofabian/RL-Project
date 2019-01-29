@@ -9,10 +9,10 @@ import torch.nn.functional as F
 def init_weights(m):
     if isinstance(m, nn.Linear):
         # nn.init.normal_(m.weight.data, 0, .1)
-        # nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
-        nn.init.orthogonal_(m.weight.data)
-        m.weight.data.mul_(1e-3)
-        m.bias.data.fill_(0)
+        nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
+        # nn.init.orthogonal_(m.weight.data)
+        # m.weight.data.mul_(1e-3)
+        # m.bias.data.fill_(0)
 
 
 # for loading stab policy:
@@ -44,7 +44,7 @@ class CriticNetwork(torch.nn.Module):
 
         self.n_inputs = n_inputs
         # self.n_hidden = n_hidden
-        self.n_hidden = 10
+        self.n_hidden = 100
 
         if load_stab:
             # n_hidden = 200
@@ -58,12 +58,18 @@ class CriticNetwork(torch.nn.Module):
             self.train()
         else:
 
-            self.fc1 = nn.Linear(self.n_inputs, self.n_hidden)
-            # self.fc2 = nn.Linear(self.n_hidden, self.n_hidden)
-            # self.fc3 = nn.Linear(self.n_hidden, self.n_hidden)
-            # self.fc4 = nn.Linear(self.n_hidden, self.n_hidden)
+            act = nn.LeakyReLU()
+            # act = nn.ReLU
 
-            self.value = nn.Linear(self.n_hidden, 1)
+            self.model = nn.Sequential(
+                nn.Linear(self.n_inputs, self.n_hidden),
+                act,
+                # nn.Linear(self.n_hidden, self.n_hidden),
+                # act,
+                # nn.Linear(self.n_hidden, self.n_hidden),
+                # act,
+                nn.Linear(self.n_hidden, 1)
+            )
 
             self.apply(init_weights)
             self.train()
@@ -81,10 +87,7 @@ class CriticNetwork(torch.nn.Module):
         if load_stab:
             x = F.relu(self.fc2(x))
             #x = F.relu(self.hidden_value2(x))
+            return self.value(x)
         else:
-            x = F.relu(self.fc1(x))
-            # x = F.relu(self.fc2(x))
-            # x = F.relu(self.fc3(x))
-            # x = F.relu(self.fc4(x))
+            return self.model(x)
 
-        return self.value(x)

@@ -45,6 +45,15 @@ def test(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_cr
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/_test.py
+    :param args:
+    :param worker_id:
+    :param shared_model_actor:
+    :param shared_model_critic:
+    :param T:
+    :param optimizer_actor:
+    :param optimizer_critic:
+    :param global_reward:
+    :param min_max_scaler:
     :return:
     """
     torch.manual_seed(args.seed + worker_id)
@@ -232,19 +241,10 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
 
             # ------------------------------------------
             # # select action
-            # eps = Variable(torch.randn(mu.size()))
-            # action = (mu + variance.sqrt() * eps).detach()
-            # action = dist.rsample().detach()
             action = dist.sample()
             # ------------------------------------------
             # Compute statistics for loss
-
-            # pi = Variable(torch.Tensor([math.pi])).float()
-            # entropy = .5 * ((variance * 2 * pi.expand_as(variance)).log() + 1)
             entropy = dist.entropy()
-
-            # prob = normal(Variable(action), mu, variance)
-            # log_prob = (prob + 1e-6).log()
             log_prob = dist.log_prob(action)
 
             # make selected move
@@ -294,25 +294,24 @@ def train(args, worker_id: int, shared_model_actor: ActorNetwork, shared_model_c
             if done:
                 break
 
-        R = torch.zeros(1, 1)
+        G = torch.zeros(1, 1)
 
-        # if non terminal state is present set R to be value of current state
+        # if non terminal state is present set G to be value of current state
         if not done:
-            R = model_critic(state).detach()
+            G = model_critic(state).detach()
 
-        values.append(R)
+        values.append(G)
         # compute loss and backprop
         policy_loss = 0
         value_loss = 0
         advantages = torch.zeros(1, 1)
 
         rewards = torch.Tensor(rewards)
-        # values = torch.Tensor(values)
 
         # iterate over rewards from most recent to the starting one
         for i in reversed(range(len(rewards))):
-            R = rewards[i] + R * args.gamma
-            adv = R - values[i]
+            G = rewards[i] + G * args.gamma
+            adv = G - values[i]
             value_loss = value_loss + .5 * adv.pow(2)
             entropy_loss = args.beta * entropies[i]
             if args.gae:
