@@ -55,6 +55,6 @@ class ActorCriticNetwork(torch.nn.Module):
         :return: value, mu, sigma
         """
 
-        body = self.body(x)
+        body = self.body(x.float())
 
         return self.value(body), self.mu(body), F.softplus(self.sigma)

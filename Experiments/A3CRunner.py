@@ -30,7 +30,7 @@ parser.add_argument('--lr', type=float, default=0.0001,
 parser.add_argument('--lr-critic', type=float, default=0.001,
                     help='separate critic learning rate, if non shared network is used (default: 0.001)')
 # TODO: Add this to combined network
-parser.add_argument('--shared-model', type=bool, default=False,
+parser.add_argument('--shared-model', default=False, action='store_true',
                     help='use shared network for actor and critic (default: False)')
 parser.add_argument('--value-loss-coef', type=float, default=0.5,
                     help='value loss coefficient ,'
@@ -39,7 +39,7 @@ parser.add_argument('--value-loss-coef', type=float, default=0.5,
 #                     help='amount of hidden nodes (default: 256')
 parser.add_argument('--gamma', type=float, default=0.99,
                     help='discount factor for rewards (default: 0.99)')
-parser.add_argument('--gae', type=bool, default=True,
+parser.add_argument('--gae', default=True, action='store_true',
                     help='use general advantage estimation (default: True)')
 parser.add_argument('--tau', type=float, default=1.0,
                     help='parameter for GAE (default: 1.00)')
@@ -61,14 +61,14 @@ parser.add_argument('--env-name', default='CartpoleSwingShort-v0',
                          ' All available gym environments are supported as well as'
                          'additional gym environments: https://git.ias.informatik.tu-darmstadt.de/quanser/clients.'
                          '(default: CartpoleStabShort-v0)')
-parser.add_argument('--shared-optimizer', type=bool, default=True,
+parser.add_argument('--shared-optimizer', default=True, action='store_true',
                     help='use an non shared optimizer. (default: True)')
 parser.add_argument('--optimizer', type=str, default="rmsprop",
                     help='used optimizer (default: rmsprop')
 parser.add_argument('--lr-scheduler', type=str, default=None,
                     help='learning rate scheduler to use, by default no scheduler. '
                          'Options [None, ExponentialLR] (default: None)')
-parser.add_argument('--train', type=bool, default=True,
+parser.add_argument('--train', default=True, action='store_true',
                     help='decides if to do training (default: True)')
 parser.add_argument('--path', type=str, default=None,
                     help='weight location for the models to load (default: None)')

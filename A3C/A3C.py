@@ -147,7 +147,7 @@ class A3C(object):
         if self.args.train:
             for wid in range(0, self.args.worker):
                 p = Process(target=train, args=(
-                    self.args, self.args.worker, model, self.T, self.global_reward, optimizer, model_critic,
+                    self.args, wid, model, self.T, self.global_reward, optimizer, model_critic,
                     critic_optimizer, lr_scheduler, lr_scheduler_critic))
                 p.start()
                 self.worker_pool.append(p)

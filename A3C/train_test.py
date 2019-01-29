@@ -288,7 +288,11 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
 
         # if non terminal state is present set G to be value of current state
         if not done:
-            G = model_critic(state).detach()
+            if args.shared_model:
+                v, _, _ = model(normalizer(state))
+                G = v.detach()
+            else:
+                G = model_critic(normalizer(state)).detach()
 
         values.append(G)
         # compute loss and backprop
@@ -337,16 +341,39 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
         iter_ += 1
 
         if worker_id == 0:
-            grads_critic = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                           for p in model_critic.parameters()
-                                           if p.grad is not None])
+            temp_T = T.value
 
-            grads_actor = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                          for p in model.parameters()
-                                          if p.grad is not None])
+            if args.shared_model:
+                grads = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                        for p in model.parameters()
+                                        if p.grad is not None])
+
+                writer.add_scalar("grad_l2", np.sqrt(np.mean(np.square(grads))), temp_T)
+                writer.add_scalar("grad_max", np.max(np.abs(grads)), temp_T)
+                writer.add_scalar("grad_var", np.var(grads), temp_T)
+                for param_group in optimizer.param_groups:
+                    writer.add_scalar("lr", param_group['lr'], temp_T)
+            else:
+                grads_critic = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                               for p in model_critic.parameters()
+                                               if p.grad is not None])
+
+                grads_actor = np.concatenate([p.grad.data.cpu().numpy().flatten()
+                                              for p in model.parameters()
+                                              if p.grad is not None])
+
+                writer.add_scalar("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), temp_T)
+                writer.add_scalar("grad_max_actor", np.max(np.abs(grads_actor)), temp_T)
+                writer.add_scalar("grad_var_actor", np.var(grads_actor), temp_T)
+                writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), temp_T)
+                writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), temp_T)
+                writer.add_scalar("grad_var_critic", np.var(grads_critic), temp_T)
+                for param_group in optimizer.param_groups:
+                    writer.add_scalar("lr_actor", param_group['lr'], temp_T)
+                for param_group in optimizer_critic.param_groups:
+                    writer.add_scalar("lr_critic", param_group['lr'], temp_T)
 
             valuelist = [v.data for v in values]
-            temp_T = T.value
 
             writer.add_scalar("mean_values", np.mean(valuelist), temp_T)
             writer.add_scalar("min_values", np.min(valuelist), temp_T)
@@ -354,13 +381,3 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), temp_T)
             writer.add_scalar("loss_policy", policy_loss, temp_T)
             writer.add_scalar("loss_value", value_loss, temp_T)
-            writer.add_scalar("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), temp_T)
-            writer.add_scalar("grad_max_actor", np.max(np.abs(grads_actor)), temp_T)
-            writer.add_scalar("grad_var_actor", np.var(grads_actor), temp_T)
-            writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), temp_T)
-            writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), temp_T)
-            writer.add_scalar("grad_var_critic", np.var(grads_critic), temp_T)
-            for param_group in optimizer.param_groups:
-                writer.add_scalar("lr_actor", param_group['lr'], temp_T)
-            for param_group in optimizer_critic.param_groups:
-                writer.add_scalar("lr_critic", param_group['lr'], temp_T)
