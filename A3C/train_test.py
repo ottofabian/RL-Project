@@ -9,32 +9,18 @@ import torch
 from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from torch.multiprocessing import Value
-from torch.optim import Optimizer
 
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
 
-from A3C.util.util import get_normalizer, make_env
-
-
-def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
-    """
-    This method synchronizes the grads of the local network with the global network.
-    :return:
-    :param model: local worker model
-    :param shared_model: shared global model
-    :return:
-    """
-    for param, shared_param in zip(model.parameters(), shared_model.parameters()):
-        if shared_param.grad is not None:
-            return
-        shared_param._grad = param.grad  #
+from A3C.util.util import get_normalizer, make_env, sync_grads, log_to_tensorboard, get_optimizer
 
 
 def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_reward: Value = None,
-         optimizer: Optimizer = None, shared_model_critic: CriticNetwork = None, optimizer_critic: Optimizer = None):
+         optimizer: torch.optim.Optimizer = None, shared_model_critic: CriticNetwork = None,
+         optimizer_critic: torch.optim.Optimizer = None):
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/_test.py
@@ -48,6 +34,8 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
     :param global_reward:
     :return:
     """
+
+    logging.info("Test worker started.")
     torch.manual_seed(args.seed + worker_id)
 
     if "RR" in args.env_name:
@@ -76,7 +64,7 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
     episode_reward = 0
 
     done = False
-    iter_ = 0
+    global_iter = 0
     best_global_reward = None
 
     while True:
@@ -154,12 +142,13 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
 
         # delay _test run for 10s to give the network some time to train
         # time.sleep(10)
-        iter_ += 1
+        global_iter += 1
 
 
 def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_reward: Value,
-          optimizer: Optimizer = None, shared_model_critic: CriticNetwork = None, optimizer_critic: Optimizer = None,
-          lr_scheduler: torch.optim.lr_scheduler = None, lr_scheduler_critic: torch.optim.lr_scheduler = None):
+          optimizer: torch.optim.Optimizer = None, shared_model_critic: CriticNetwork = None,
+          optimizer_critic: torch.optim.Optimizer = None, lr_scheduler: torch.optim.lr_scheduler = None,
+          lr_scheduler_critic: torch.optim.lr_scheduler = None):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
@@ -167,7 +156,7 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
     """
     torch.manual_seed(args.seed + worker_id)
 
-    if args.n_worker == 1:
+    if args.worker == 1:
         logging.info(f"Running A2C with {args.n_envs} environments.")
         env = SubprocVecEnv([make_env(args.env_name, args.seed, i, args.log_dir) for i in range(args.n_envs)])
     else:
@@ -182,27 +171,21 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
     model = copy.deepcopy(shared_model)
     model.train()
 
+    model_critic = None
+
     if shared_model_critic:
         model_critic = copy.deepcopy(shared_model_critic)
         model_critic.train()
 
     # if no shared optimizer is provided use individual one
     if not optimizer:
-        if args.optimizer == "rmsprop":
-            optimizer = torch.optim.RMSprop(shared_model.parameters(), lr=args.lr)
-        elif args.optimizer == "adam":
-            optimizer = torch.optim.Adam(shared_model.parameters(), lr=args.lr)
+        optimizer, optimizer_critic = get_optimizer(args.optimizer, shared_model, args.lr,
+                                                    shared_model_critic=shared_model_critic, lr_critic=args.lr_critic)
 
-    if shared_model_critic and not optimizer_critic:
-        if args.optimizer == "rmsprop":
-            optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=args.lr_critic)
-        elif args.optimizer == "adam":
-            optimizer_critic = torch.optim.Adam(shared_model_critic.parameters(), lr=args.lr_critic)
-
-    state = torch.from_numpy(env.reset())
+    state = torch.Tensor(env.reset())
 
     t = np.zeros(args.n_envs)
-    iter_ = 0
+    global_iter = 0
     episode_reward = np.zeros(args.n_envs)
 
     if worker_id == 0:
@@ -219,9 +202,11 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
         log_probs = []
         rewards = []
         entropies = []
+        # container to check whether a terminal state was reached from one of the envs
+        terminals = []
 
         # reward_sum = 0
-        for step in range(args.t_max):
+        for step in range(args.rollout_steps):
             t += 1
 
             if args.shared_model:
@@ -238,8 +223,8 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
 
             # ------------------------------------------
             # Compute statistics for loss
-            entropy = dist.entropy()
-            log_prob = dist.log_prob(action)
+            entropy = dist.entropy().sum(-1).unsqueeze(-1)
+            log_prob = dist.log_prob(action).sum(-1).unsqueeze(-1)
 
             # make selected move
             state, reward, dones, _ = env.step(np.clip(action.detach().numpy(), -args.max_action, args.max_action))
@@ -250,91 +235,91 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             episode_reward += reward
 
             # probably don't set terminal state if max_episode length
-            if t >= args.max_episode_length:
-                dones[:] = True
+            dones = np.logical_or(dones, t >= args.max_episode_length)
+
+            values.append(value)
+            log_probs.append(log_prob)
+            rewards.append(torch.Tensor(reward).unsqueeze(-1))
+            entropies.append(entropy)
+            terminals.append(torch.Tensor(1 - dones).unsqueeze(-1))
 
             for i, done in enumerate(dones):
                 if done:
-                    t = 0
-                    state = env.reset()
-
+                    t[i] = 0
                     # keep track of the avg overall global reward
                     with global_reward.get_lock():
-                        if global_reward.value == 0:
-                            global_reward.value = episode_reward
+                        if global_reward.value == -np.inf:
+                            global_reward.value = episode_reward[i]
                         else:
-                            global_reward.value = .99 * global_reward.value + 0.01 * episode_reward
+                            global_reward.value = .99 * global_reward.value + .01 * episode_reward[i]
                     if worker_id == 0:
                         writer.add_scalar("reward/global", global_reward.value, T.value)
 
                     episode_reward[i] = 0
 
             with T.get_lock():
-                T.value += 1
+                # this is one for A3C and n for A2C (actually the lock is not needed for A2C)
+                T.value += args.n_envs
 
-            if worker_id == 0 and T.value % 500000 and iter_ != 0:
-                if lr_scheduler:
-                    # TODO improve the call frequency
-                    lr_scheduler.step(T.value / 500000)
+            if lr_scheduler and worker_id == 0 and T.value % args.lr_schedule_step and global_iter != 0:
+                lr_scheduler.step(T.value / args.lr_schedule_step)
+
                 if lr_scheduler_critic:
-                    # TODO improve the call frequency
-                    lr_scheduler_critic.step(T.value / 500000)
+                    lr_scheduler_critic.step(T.value / args.lr_schedule_step)
 
-            values.append(value)
-            log_probs.append(log_prob)
-            rewards.append(reward)
-            entropies.append(entropy)
+            state = torch.Tensor(state)
 
-            state = torch.from_numpy(state)
-
-            # end if terminal state or max episodes are reached
-            if dones:
-                break
-
-        G = torch.zeros(1, 1)
-
-        # if non terminal state is present set G to be value of current state
-        if not dones:
-            if args.shared_model:
-                v, _, _ = model(normalizer(state))
-                G = v.detach()
-            else:
-                G = model_critic(normalizer(state)).detach()
+        if args.shared_model:
+            v, _, _ = model(normalizer(state))
+            G = v.detach()
+        else:
+            G = model_critic(normalizer(state)).detach()
 
         values.append(G)
         # compute loss and backprop
-        policy_loss = 0
-        value_loss = 0
-        entropy_loss = 0
-        advantages = torch.zeros(1, 1)
+        # policy_loss = 0
+        # value_loss = 0
+        # entropy_loss = 0
+        advantages = torch.zeros((args.n_envs, 1))
 
-        rewards = torch.Tensor(rewards)
+        ret = torch.zeros((args.rollout_steps, args.n_envs, 1))
+        adv = torch.zeros((args.rollout_steps, args.n_envs, 1))
 
-        # iterate over rewards from most recent to the starting one
-        for i in reversed(range(len(rewards))):
-            G = rewards[i] + G * args.gamma
-            adv = G - values[i]
-            value_loss = value_loss + .5 * adv.pow(2)
-            entropy_loss = entropy_loss + entropies[i]
+        # iterate over all time steps from most recent to the starting one
+        for i in reversed(range(args.rollout_steps)):
+            G = rewards[i] + args.discount * terminals[i] * G
             if args.gae:
                 # Generalized Advantage Estimation
-                td_error = rewards[i] + args.gamma * values[i + 1] - values[i]
-                advantages = advantages * args.gamma * args.tau + td_error
-                policy_loss = policy_loss - log_probs[i] * advantages.detach()
+                td_error = rewards[i] + args.discount * terminals[i] * values[i + 1] - values[i]
+                # terminals here to "reset" advantages to 0, because reset ist called internally in the env
+                # and new trajectroy started
+                advantages = advantages * args.discount * args.tau * terminals[i] + td_error
             else:
-                policy_loss = policy_loss - log_probs[i] * adv.detach()
+                advantages = G - values[i].detach()
+
+            adv[i] = advantages.detach()
+            ret[i] = G.detach()
+
+        policy_loss = -(torch.stack(log_probs) * adv).mean()
+        # minus 1 in order to remove the last element, which is only necessary for next timestep value
+        value_loss = .5 * (ret - torch.stack(values[:-1])).pow(2).mean()
+        entropy_loss = torch.stack(entropies).mean()
 
         # zero grads to reset the gradients
         optimizer.zero_grad()
 
         if args.shared_model:
             # combined loss for shared architecture
-            (policy_loss + args.value_loss_coef * value_loss - args.beta * entropy_loss).mean().backward()
+            total_loss = policy_loss + args.value_loss_weight * value_loss - args.entropy_loss_weight * entropy_loss
+            total_loss.backward()
         else:
             optimizer_critic.zero_grad()
 
-            value_loss.mean().backward()
-            (policy_loss - args.beta * entropy_loss).mean().backward()
+            value_loss.backward()
+            (policy_loss - args.entropy_loss_weight * entropy_loss).backward()
+
+            # this is just used for plotting in tensorboard
+            total_loss = policy_loss + args.value_loss_weight * value_loss - args.entropy_loss_weight * entropy_loss
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
         sync_grads(model, shared_model)
@@ -345,51 +330,8 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             sync_grads(model_critic, shared_model_critic)
             optimizer_critic.step()
 
-        iter_ += 1
+        global_iter += 1
 
         if worker_id == 0:
-            temp_T = T.value
-
-            if args.shared_model:
-                grads = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                        for p in model.parameters()
-                                        if p.grad is not None])
-
-                writer.add_scalar("grad/mean", np.mean(grads), temp_T)
-                writer.add_scalar("grad/l2", np.sqrt(np.mean(np.square(grads))), temp_T)
-                writer.add_scalar("grad/max", np.max(np.abs(grads)), temp_T)
-                writer.add_scalar("grad/var", np.var(grads), temp_T)
-                for param_group in optimizer.param_groups:
-                    writer.add_scalar("lr", param_group['lr'], temp_T)
-            else:
-                grads_critic = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                               for p in model_critic.parameters()
-                                               if p.grad is not None])
-
-                grads_actor = np.concatenate([p.grad.data.cpu().numpy().flatten()
-                                              for p in model.parameters()
-                                              if p.grad is not None])
-
-                writer.add_scalar("grad/actor/mean", np.mean(grads_actor), temp_T)
-                writer.add_scalar("grad/actor/l2", np.sqrt(np.mean(np.square(grads_actor))), temp_T)
-                writer.add_scalar("grad/actor/max", np.max(np.abs(grads_actor)), temp_T)
-                writer.add_scalar("grad/actor/var", np.var(grads_actor), temp_T)
-
-                writer.add_scalar("grad/critic/mean", np.mean(grads_critic), temp_T)
-                writer.add_scalar("grad/critic/l2", np.sqrt(np.mean(np.square(grads_critic))), temp_T)
-                writer.add_scalar("grad/critic/max", np.max(np.abs(grads_critic)), temp_T)
-                writer.add_scalar("grad/critic/var", np.var(grads_critic), temp_T)
-                for param_group in optimizer.param_groups:
-                    writer.add_scalar("lr/actor", param_group['lr'], temp_T)
-                for param_group in optimizer_critic.param_groups:
-                    writer.add_scalar("lr/critic", param_group['lr'], temp_T)
-
-            valuelist = [v.data for v in values]
-
-            writer.add_scalar("values/mean", np.mean(valuelist), temp_T)
-            writer.add_scalar("values/min", np.min(valuelist), temp_T)
-            writer.add_scalar("values/max", np.max(valuelist), temp_T)
-            writer.add_scalar("reward/batch", np.mean(np.array(rewards)), temp_T)
-            writer.add_scalar("loss/policy", policy_loss, temp_T)
-            writer.add_scalar("loss/value", value_loss, temp_T)
-            writer.add_scalar("loss/entropy", entropy_loss, temp_T)
+            log_to_tensorboard(writer, model, optimizer, rewards, values, total_loss, policy_loss, value_loss,
+                               entropy_loss, T.value, model_critic=model_critic, optimizer_critic=optimizer_critic)

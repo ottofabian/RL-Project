@@ -1,14 +1,16 @@
 import logging
 import time
 
+import numpy as np
+
 import torch
 
 import gym
 import quanser_robots
-from torch.multiprocessing import Value, Lock, Process
+from torch.multiprocessing import Value, Process
 
-from A3C.train_test import test, train
-from A3C.util.util import get_model, get_optimizer
+from A3C.train_test import train, test
+from A3C.util.util import get_model, get_shared_optimizer
 
 
 class A3C(object):
@@ -30,11 +32,10 @@ class A3C(object):
 
         # global counter
         self.T = Value('i', 0)
-        self.global_reward = Value('d', 0)
+        self.global_reward = Value('d', -np.inf)
 
         # worker handling
         self.worker_pool = []
-        self.lock = Lock()
 
         self.logger = logging.getLogger(__name__)
 
@@ -106,17 +107,20 @@ class A3C(object):
         model_critic = None
 
         if self.args.shared_model:
-            model = get_model(env=env, shared=self.args.shared_model, path=self.args.path, T=self.T, global_reward=self.global_reward)
+            model = get_model(env=env, shared=self.args.shared_model, path=self.args.path, T=self.T,
+                              global_reward=self.global_reward)
             if self.args.shared_optimizer:
-                optimizer = get_optimizer(model=model, optimizer_name=self.args.optimizer, lr=self.args.lr,
-                                          path=self.args.path)
+                optimizer = get_shared_optimizer(model=model, optimizer_name=self.args.optimizer, lr=self.args.lr,
+                                                 path=self.args.path)
         else:
             model, model_critic = get_model(env=env, shared=self.args.shared_model, path=self.args.path, T=self.T,
                                             global_reward=self.global_reward)
-            optimizer, critic_optimizer = get_optimizer(model=model, optimizer_name=self.args.optimizer,
-                                                        lr=self.args.lr, path=self.args.path, model_critic=model_critic,
-                                                        optimizer_name_critic=self.args.optimizer,
-                                                        lr_critic=self.args.lr_critic)
+            if self.args.shared_optimizer:
+                optimizer, critic_optimizer = get_shared_optimizer(model=model, optimizer_name=self.args.optimizer,
+                                                                   lr=self.args.lr, path=self.args.path,
+                                                                   model_critic=model_critic,
+                                                                   optimizer_name_critic=self.args.optimizer,
+                                                                   lr_critic=self.args.lr_critic)
 
         # okish swing up:
         # optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)

@@ -69,7 +69,7 @@ def train(worker_id, args, shared_model, T, global_reward, optimizer=None):
         rewards = []
         entropies = []
 
-        for step in range(args.t_max):
+        for step in range(args.rollout_steps):
             episode_length += 1
             value, mu, variance, (hx, cx) = model((state, (hx, cx)))
             # mu = torch.clamp(mu, -5., 5.)
@@ -138,20 +138,20 @@ def train(worker_id, args, shared_model, T, global_reward, optimizer=None):
 
         # iterate over rewards from most recent to the starting one
         for i in reversed(range(len(rewards))):
-            R = rewards[i] + R * args.gamma
+            R = rewards[i] + R * args.discount
             advantage = R - values[i]
             critic_loss = critic_loss + 0.5 * advantage.pow(2)
             if args.gae:
                 # Generalized Advantage Estimation
-                delta_t = rewards[i] + args.gamma * values[i + 1].data - values[i].data
-                gae = gae * args.gamma * args.tau + delta_t
-                policy_loss = policy_loss - log_probs[i] * Variable(gae) - args.beta * entropies[i]
+                delta_t = rewards[i] + args.discount * values[i + 1].data - values[i].data
+                gae = gae * args.discount * args.tau + delta_t
+                policy_loss = policy_loss - log_probs[i] * Variable(gae) - args.entropy_loss_weight * entropies[i]
             else:
-                policy_loss = policy_loss - log_probs[i] * advantage.data - args.beta * entropies[i]
+                policy_loss = policy_loss - log_probs[i] * advantage.data - args.entropy_loss_weight * entropies[i]
 
         optimizer.zero_grad()
 
-        (policy_loss + args.value_loss_coef * critic_loss).mean().backward()
+        (policy_loss + args.value_loss_weight * critic_loss).mean().backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
         ensure_shared_grads(model, shared_model)
