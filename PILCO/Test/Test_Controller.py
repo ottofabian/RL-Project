@@ -43,8 +43,8 @@ def test_rbf():
 
     # convert data to the struct expected by the MATLAB implementation
     length_scales = length_scales.reshape(n_actions, state_dim)
-    sigma_f = rbf.get_sigma_fs()
-    sigma_eps = rbf.get_sigma_eps()
+    sigma_f = rbf.sigma_fs()
+    sigma_eps = rbf.sigma_eps()
 
     hyp = np.hstack(
         (length_scales,

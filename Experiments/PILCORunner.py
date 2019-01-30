@@ -6,25 +6,25 @@ from Experiments.util.ColorLogger import enable_color_logging
 from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
 
-seed = 1
-# env_name = "Pendulum-v0"
-#
-env_name = "CartpoleStabShort-v0"
-
-# env_name = "CartpoleStabRR-v0"
-
-# env_name = "CartpoleSwingShort-v0"
-# env_name = "CartpoleSwingRR-v0"
-
-# env_name = "Qube-v0"
-# env_name = "QubeRR-v0"
 
 def main():
     enable_color_logging(debug_lvl=logging.DEBUG)
     logging.info('Start Experiment')
 
+    seed = 1
+    env_name = "Pendulum-v0"
+
+    # env_name = "CartpoleStabShort-v0"
+    # env_name = "CartpoleStabRR-v0"
+    # env_name = "CartpoleSwingShort-v0"
+    # env_name = "CartpoleSwingRR-v0"
+    # env_name = "Qube-v0"
+    # env_name = "QubeRR-v0"
+
     env = gym.make(env_name)
     max_episode_steps = 200
+
+    n_inducing_points = 500
 
     # get target state value for computing loss
     if "Cartpole" in env_name:
@@ -57,7 +57,8 @@ def main():
 
     loss = SaturatedLoss(state_dim=env.observation_space.shape[0], target_state=target_state)
     pilco = PILCO(env_name=env_name, seed=seed, n_features=100, Horizon=40, loss=loss,
-                  max_episode_steps=max_episode_steps, gamma=1, start_mu=start_mu, start_cov=start_cov, bound=bound)
+                  max_episode_steps=max_episode_steps, gamma=1, start_mu=start_mu, start_cov=start_cov, bound=bound,
+                  n_inducing_points=n_inducing_points)
     pilco.run(n_samples=max_episode_steps)
 
 

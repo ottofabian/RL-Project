@@ -22,10 +22,10 @@ class ActorCriticNetwork(torch.nn.Module):
 
         self.n_actions = n_actions
         self.n_inputs = n_inputs
-        self.n_hidden = 32
+        self.n_hidden = 200
 
-        act = nn.LeakyReLU()
-        # act = nn.ReLU
+        # act = nn.LeakyReLU()
+        act = nn.ReLU()
 
         self.body = nn.Sequential(
             nn.Linear(self.n_inputs, self.n_hidden),

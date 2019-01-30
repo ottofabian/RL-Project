@@ -1,17 +1,27 @@
 import logging
+
+import numpy as np
+import GPy
+
 from typing import Union, Type
 
-import autograd.numpy as np
+from GPy import likelihoods
 
-from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
-from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
+from PILCO.GaussianProcess import GaussianProcess, RBFNetwork
+from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 
 
-class MultivariateGP(object):
+class SparseMultivariateGP(MultivariateGP):
 
-    def __init__(self, n_targets: int, container: Union[Type[GaussianProcess], Type[RBFNetwork]],
-                 length_scales: np.ndarray, sigma_f: np.ndarray = 1,
-                 sigma_eps: np.ndarray = 1, is_policy: bool = False):
+    def __init__(self, X, y,
+                 n_targets: int,
+                 n_inducing_points: int,
+                 container,
+                 length_scales: np.ndarray,
+                 sigma_f: np.ndarray,
+                 sigma_eps: np.ndarray,
+                 is_policy: bool = False):
+
         """
         Multivariate Gaussian Process Regression
         :param n_targets: amount of target, each dimension of data inputs requires one target
@@ -23,18 +33,28 @@ class MultivariateGP(object):
                           the moment matching is consequently computed differently
         """
 
-        self.X = None
-        self.y = None
+        super(SparseMultivariateGP, self).__init__(y.shape[1], container, length_scales, sigma_f, sigma_eps, is_policy)
+
+        self.X = X
+        self.y = y
         self.n_targets = n_targets
         self.is_policy = is_policy
-
-        # TODO make this in matrix vector form
-        # For a D-dimensional state space, we use D separate GPs, one for each state dimension. Deisenroth (2010)
-        self.gp_container = [
-            container(length_scales=length_scales[i], sigma_eps=sigma_eps[i], sigma_f=sigma_f[i]) for i in
-            range(self.n_targets)]
+        self.n_inducing_points = n_inducing_points
 
         self.logger = logging.getLogger(__name__)
+
+        self.gp_container = []
+        idx = np.random.permutation(X.shape[0])[:min(n_inducing_points, X.shape[0])]
+        Z = X.view(np.ndarray)[idx].copy()
+
+        for i in range(self.n_targets):
+            input_dim = length_scales.shape[1]
+            kernel = GPy.kern.RBF(input_dim=input_dim, lengthscale=np.exp(length_scales[i]), ARD=True,
+                                  variance=np.exp(sigma_f[i]))
+
+            kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
+            model = GPy.models.SparseGPRegression(X=X, Y=y[:, i:i + 1], kernel=kernel, Z=Z)
+            self.gp_container.append(model)
 
     def fit(self, X, y):
         """
@@ -46,7 +66,7 @@ class MultivariateGP(object):
         self.X = X
         self.y = y
         for i in range(self.n_targets):
-            self.gp_container[i].fit(X, y[:, i:i + 1])
+            self.gp_container[i].set_XY(X, y[:, i:i + 1])
 
     def predict_from_dist(self, mu: np.ndarray, sigma: np.ndarray) -> tuple:
 
@@ -62,13 +82,40 @@ class MultivariateGP(object):
 
         state_dim = self.X.shape[1]
         target_dim = self.y.shape[1]
+        induced_dim = np.array(self.gp_container[0].Z).shape[0]
 
-        [gp.compute_matrices() for gp in self.gp_container]
+        # TODO move this part somewhere else
+
+        Kmm = np.stack([gp.kern.rbf.K(gp.Z) + 1e-6 * np.identity(induced_dim) for gp in self.gp_container])
+        Kmn = np.stack([gp.kern.rbf.K(gp.Z, gp.X) for gp in self.gp_container])
+
+        L = np.linalg.cholesky(Kmm)
+
+        V = np.stack([np.linalg.solve(L[i], Kmn[i]) for i in range(target_dim)])  # inv(sqrt(Kmm)) * Kmn
+        G = np.exp(2 * self.sigma_fs()) - np.sum(V ** 2, axis=1)
+        G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))  # this is nan for theta_dot, fuck this algorithm
+        V_scaled = V / G[:, None]
+
+        # noise = np.expand_dims(np.identity(self.n_inducing_points), 0) * np.expand_dims(np.exp(2 * self.sigma_eps()), 1)
+        Am = np.linalg.cholesky(np.stack(
+            [V_scaled[i] @ V_scaled[i].T + np.identity(induced_dim) * np.exp(2 * self.sigma_eps()[i]) for i
+             in range(target_dim)]))
+
+        At = L @ Am
+        iAt = np.stack([np.linalg.solve(At[i], np.identity(induced_dim)) for i in range(target_dim)])
+
+        V_scaled = V / G[:, None]
+        # one big ugly loopy, because numpy cannot do it differently
+        beta = np.stack([np.linalg.solve(L[i], np.linalg.solve(Am[i], (V_scaled[i]) @ gp.Y)) for i, gp in
+                         enumerate(self.gp_container)])[:, :, 0]
+
+        iB = np.stack([iAt[i] @ iAt[i].T for i in range(target_dim)]) * self.sigma_eps()[:, None, None]
+        iK = np.stack([np.linalg.solve(L[i], np.identity(induced_dim)) for i in range(target_dim)]) - iB
 
         # ----------------------------------------------------------------------------------------------------
         # Helper
 
-        beta = np.vstack([gp.betas for gp in self.gp_container]).T
+        # beta = np.vstack([gp.betas for gp in self.gp_container]).T
         length_scales = self.length_scales()
         sigma_f = self.sigma_fs().reshape(self.n_targets)
 
@@ -76,7 +123,7 @@ class MultivariateGP(object):
         precision_inv2 = np.stack([np.diag(np.exp(-2 * l)) for l in length_scales])
 
         # centralized inputs
-        diff = self.X - mu
+        diff = np.array(self.gp_container[0].Z) - mu
         diff_scaled = np.expand_dims(diff, axis=0) / np.expand_dims(np.exp(2 * length_scales), axis=1)
 
         # ----------------------------------------------------------------------------------------------------
@@ -134,7 +181,7 @@ class MultivariateGP(object):
             cov = scaling_factor * np.einsum('ji,iljk,kl->il', beta, Q, beta) + 1e-6 * np.identity(target_dim)
         else:
             cov = np.einsum('ji,iljk,kl->il', beta, Q, beta)
-            trace = np.hstack([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)])
+            trace = np.hstack([np.sum(Q[i, i] * iK[i]) for i in range(target_dim)])
             cov = (cov - np.diag(trace)) * scaling_factor + np.diag(np.exp(2 * sigma_f))
 
         # Centralize moments
@@ -145,99 +192,20 @@ class MultivariateGP(object):
     def optimize(self):
         for i, gp in enumerate(self.gp_container):
             self.logger.info("Optimization for GP (output={}) started.".format(i))
-            gp.optimize()
+            try:
+                self.logger.info("Optimization with L-BFGS-B started.")
+                gp.optimize("lbfgsb", messages=1)
+            except Exception:
+                self.logger.info("Optimization with SCG started.")
+                gp.optimize('scg', messages=1)
 
-    def predict(self, X: np.ndarray):
-        """
-        Computes point predictions from GPs
-        :param X: points to predict th man for
-        :return:
-        """
-        # compute K_inv and betas
-        [gp.compute_matrices() for gp in self.gp_container]
-        return np.array([gp.predict(X) for gp in self.gp_container])
-
-    # def compute_cross_cov(self, i, j, zeta, sigma):
-    #     precision_a_inv = np.diag(1 / self.gp_container[i].length_scales)
-    #     precision_b_inv = np.diag(1 / self.gp_container[j].length_scales)
-    #
-    #     # compute R
-    #     R = sigma @ (precision_a_inv + precision_b_inv) + np.identity(sigma.shape[0])
-    #     R_inv = np.linalg.solve(R, np.identity(R.shape[0]))
-    #
-    #     # compute z
-    #     z = precision_a_inv @ zeta + precision_b_inv @ zeta
-    #
-    #     # compute n using matrix inversion lemma, Appendix A.4 Deisenroth (2010)
-    #     right = (zeta.T @ precision_a_inv @ zeta +
-    #              zeta.T @ precision_b_inv @ zeta -
-    #              z.T @ R_inv @ sigma @ z) / 2
-    #
-    #     const = 2 * (np.log(self.gp_container[i].sigma_f) + np.log(self.gp_container[j].sigma_f))
-    #     n_square = const - right
-    #
-    #     # Compute Q
-    #     Q = np.exp(n_square) / np.sqrt(np.linalg.det(R))
-    #
-    #     return Q
-    #
-    # def predict_from_dist_v2(self, mu, sigma):
-    #     """
-    #     This method should not be used, it is only based on the mathematical description of Deisenroth(2010).
-    #     Use predict_from_dist() in order to get a matlab based method, which is numerically more stable.
-    #     :param mu:
-    #     :param sigma:
-    #     :return:
-    #     """
-    #
-    #     mu_out = np.zeros((self.n_targets,))
-    #     sigma_out = np.zeros((self.n_targets, self.n_targets))
-    #     input_output_cov = np.zeros((self.n_targets, self.X.shape[1]))
-    #
-    #     # calculate combined Expectation of all gps
-    #     for i in range(self.n_targets):
-    #         mu_out[i] = self.gp_container[i].compute_matrices(mu, sigma)
-    #
-    #     # The cov og e.g. delta x is not diagonal, therefor it is necessary to
-    #     # compute the cross-cov between each output
-    #     # This requires to compute the expected value of the GP's outputs
-    #     # from xa,xb - the product of the corresponding mean values from above
-    #
-    #     # compute zeta before hand, it does not change
-    #     zeta = (self.X - mu).T
-    #
-    #     for i in range(self.n_targets):
-    #         beta_a = self.gp_container[i].betas
-    #         input_output_cov[i] = self.compute_input_output_cov(i, beta_a, sigma, zeta)
-    #
-    #         for j in range(self.n_targets):
-    #
-    #             Q = self.compute_cross_cov(i, j, zeta, sigma)
-    #             beta_b = self.gp_container[j].betas
-    #
-    #             # place into cov matrix
-    #             if i == j:
-    #                 cov_ab = beta_a.T @ Q @ beta_a - mu_out[i] ** 2 + self.gp_container[i].sigma_f ** 2 - \
-    #                          np.trace(self.gp_container[i].K_inv @ Q)
-    #             else:
-    #                 cov_ab = beta_a.T @ Q @ beta_b - mu_out[i] * mu_out[j]
-    #
-    #             sigma_out[i, j] = cov_ab
-    #
-    #     return mu_out, sigma_out, input_output_cov
-    #
-    # def compute_input_output_cov(self, i, beta, sigma, zeta):
-    #
-    #     precision = np.diag(self.gp_container[i].length_scales)
-    #     # print(precision, sigma)
-    #     sigma_plus_precision_inv = np.linalg.solve(sigma @ precision, np.identity(sigma.shape[0]))
-    #     return np.sum(beta @ self.gp_container[i].qs * sigma @ sigma_plus_precision_inv @ zeta, axis=1)
+            print(gp)
 
     def sigma_fs(self):
-        return np.array([c.sigma_f for c in self.gp_container])
+        return np.log(np.array([gp.kern.rbf.variance for gp in self.gp_container]))
 
     def sigma_eps(self):
-        return np.array([c.sigma_eps for c in self.gp_container])
+        return np.log(np.array([gp.kern.white.variance for gp in self.gp_container]))
 
     def length_scales(self):
-        return np.array([c.length_scales for c in self.gp_container])
+        return np.log(np.array([gp.kern.rbf.lengthscale for gp in self.gp_container]))
