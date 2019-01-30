@@ -121,10 +121,10 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
 
         rewards = np.mean(rewards)
 
-        print(f"Time: {time_print}, T={T.value} -- mean reward={rewards}"
-              f"-- mean episode length={np.mean(eps_len)} -- global reward={global_reward.value}")
+        logging.info(f"Time: {time_print}, T={T.value} -- mean reward={rewards}"
+                     f"-- mean episode length={np.mean(eps_len)} -- global reward={global_reward.value}")
 
-        writer.add_scalar("mean_test_reward", rewards, int(T.value))
+        writer.add_scalar("reward/test", rewards, int(T.value))
 
         if best_global_reward is None or global_reward.value > best_global_reward:
             best_global_reward = global_reward.value
@@ -160,7 +160,7 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
         logging.info(f"Running A2C with {args.n_envs} environments.")
         env = SubprocVecEnv([make_env(args.env_name, args.seed, i, args.log_dir) for i in range(args.n_envs)])
     else:
-        print(f"Running A3C: training worker {worker_id} started.")
+        logging.info(f"Running A3C: training worker {worker_id} started.")
         env = DummyVecEnv(make_env(args.env_name, args.seed, worker_id, args.log_dir))
         # avoid any issues if this is not 1
         args.n_envs = 1
