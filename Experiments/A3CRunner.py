@@ -72,6 +72,8 @@ parser.add_argument('--train', default=True, action='store_true',
                     help='decides if to do training (default: True)')
 parser.add_argument('--path', type=str, default=None,
                     help='weight location for the models to load (default: None)')
+parser.add_argument('--log-dir', type=str, default=None,
+                    help='default directory for logging the environment stats(default: None)')
 parser.add_argument('--max-action', type=float, default=5,
                     help='maximum allowed action to use, if None the full available action range is used (default: 5)')
 parser.add_argument('--normalizer', type=str, default=None,

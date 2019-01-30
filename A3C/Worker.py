@@ -15,7 +15,7 @@ from torch.multiprocessing import Value, Process
 from torch.optim import Optimizer
 
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
-from A3C.util.save_and_load.model_save import save_checkpoint
+from A3C.util.util import save_checkpoint
 
 pi = Variable(torch.FloatTensor([math.pi]))
 

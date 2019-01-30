@@ -7,12 +7,8 @@ import gym
 import quanser_robots
 from torch.multiprocessing import Value, Lock, Process
 
-from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
-from A3C.Optimizers.SharedAdam import SharedAdam
-from A3C.Optimizers.SharedRMSProp import SharedRMSProp
-from A3C.Worker import Worker
 from A3C.train_test import test, train
-from A3C.util.save_and_load.model_save import load_saved_model, get_model, get_optimizer
+from A3C.util.util import get_model, get_optimizer
 
 
 class A3C(object):

@@ -1,10 +1,12 @@
 import os
+
+from baselines import bench
 from torch.multiprocessing import Value
 
 import gym
 import torch
 
-from typing import Tuple, Union, List
+from typing import Tuple, Union
 
 from torch.nn import Module
 
@@ -160,3 +162,25 @@ def get_normalizer(normalizer_type: str):
         normalizer = BaseNormalizer(read_only=True)
 
     return normalizer
+
+
+def make_env(env_id, seed, rank, log_dir=None):
+    """
+    from https://github.com/ShangtongZhang/DeepRL/blob/master/deep_rl/component/envs.py
+    :param env_id: gym id
+    :param seed: seed for env
+    :param rank: rank if multiple env are used
+    :param log_dir: default log for env
+    :return:
+    """
+
+    def _thunk():
+        env = gym.make(env_id)
+        env.seed(seed + rank)
+
+        if log_dir is not None:
+            env = bench.Monitor(env=env, filename=os.path.join(log_dir, str(rank)), allow_early_resets=True)
+
+        return env
+
+    return _thunk

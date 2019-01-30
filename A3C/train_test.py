@@ -1,12 +1,13 @@
 import copy
-import math
+import logging
 import time
 
 import gym
 import numpy as np
 import quanser_robots
 import torch
-from torch.autograd import Variable
+from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
+from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from torch.multiprocessing import Value
 from torch.optim import Optimizer
 
@@ -15,9 +16,7 @@ from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
 
-from A3C.util.normalizer.base_normalizer import BaseNormalizer
-from A3C.util.normalizer.mean_std_normalizer import MeanStdNormalizer
-from A3C.util.save_and_load.model_save import get_normalizer
+from A3C.util.util import get_normalizer, make_env
 
 
 def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
@@ -167,11 +166,15 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
     :return: None
     """
     torch.manual_seed(args.seed + worker_id)
-    print(f"Training Worker {worker_id} started")
 
-    env = gym.make(args.env_name)
-    # ensure different seed for each worker thread
-    env.seed(args.seed + worker_id)
+    if args.n_worker == 1:
+        logging.info(f"Running A2C with {args.n_envs} environments.")
+        env = SubprocVecEnv([make_env(args.env_name, args.seed, i, args.log_dir) for i in range(args.n_envs)])
+    else:
+        print(f"Running A3C: training worker {worker_id} started.")
+        env = DummyVecEnv(make_env(args.env_name, args.seed, worker_id, args.log_dir))
+        # avoid any issues if this is not 1
+        args.n_envs = 1
 
     normalizer = get_normalizer(args.normalizer)
 
@@ -198,9 +201,9 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
 
     state = torch.from_numpy(env.reset())
 
-    t = 0
+    t = np.zeros(args.n_envs)
     iter_ = 0
-    episode_reward = 0
+    episode_reward = np.zeros(args.n_envs)
 
     if worker_id == 0:
         writer = SummaryWriter()
@@ -232,20 +235,39 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             # ------------------------------------------
             # # select action
             action = dist.sample()
+
             # ------------------------------------------
             # Compute statistics for loss
             entropy = dist.entropy()
             log_prob = dist.log_prob(action)
 
             # make selected move
-            state, reward, done, _ = env.step(np.clip(action.detach().numpy(), -args.max_action, args.max_action))
+            state, reward, dones, _ = env.step(np.clip(action.detach().numpy(), -args.max_action, args.max_action))
             # TODO: check if this is better
             # reward += (-state[2]+1) * np.exp(- np.abs(state[0]) ** 2)
-            episode_reward += reward
-
             # reward = min(max(-1, reward), 1)
 
-            done = done or t >= args.max_episode_length  # probably don't set terminal state if max_episode length
+            episode_reward += reward
+
+            # probably don't set terminal state if max_episode length
+            if t >= args.max_episode_length:
+                dones[:] = True
+
+            for i, done in enumerate(dones):
+                if done:
+                    t = 0
+                    state = env.reset()
+
+                    # keep track of the avg overall global reward
+                    with global_reward.get_lock():
+                        if global_reward.value == 0:
+                            global_reward.value = episode_reward
+                        else:
+                            global_reward.value = .99 * global_reward.value + 0.01 * episode_reward
+                    if worker_id == 0:
+                        writer.add_scalar("reward/global", global_reward.value, T.value)
+
+                    episode_reward[i] = 0
 
             with T.get_lock():
                 T.value += 1
@@ -263,31 +285,16 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             rewards.append(reward)
             entropies.append(entropy)
 
-            # reset env to beginning if done
-            if done:
-                t = 0
-                state = env.reset()
-
-                # keep track of the avg overall global reward
-                with global_reward.get_lock():
-                    if global_reward.value == 0:
-                        global_reward.value = episode_reward
-                    else:
-                        global_reward.value = .99 * global_reward.value + 0.01 * episode_reward
-                if worker_id == 0:
-                    writer.add_scalar("reward/global", global_reward.value, T.value)
-                episode_reward = 0
-
             state = torch.from_numpy(state)
 
             # end if terminal state or max episodes are reached
-            if done:
+            if dones:
                 break
 
         G = torch.zeros(1, 1)
 
         # if non terminal state is present set G to be value of current state
-        if not done:
+        if not dones:
             if args.shared_model:
                 v, _, _ = model(normalizer(state))
                 G = v.detach()
