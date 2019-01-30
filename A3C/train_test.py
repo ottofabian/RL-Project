@@ -275,7 +275,7 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
                     else:
                         global_reward.value = .99 * global_reward.value + 0.01 * episode_reward
                 if worker_id == 0:
-                    writer.add_scalar("global_reward", global_reward.value, T.value)
+                    writer.add_scalar("reward/global", global_reward.value, T.value)
                 episode_reward = 0
 
             state = torch.from_numpy(state)
@@ -298,6 +298,7 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
         # compute loss and backprop
         policy_loss = 0
         value_loss = 0
+        entropy_loss = 0
         advantages = torch.zeros(1, 1)
 
         rewards = torch.Tensor(rewards)
@@ -307,7 +308,7 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             G = rewards[i] + G * args.gamma
             adv = G - values[i]
             value_loss = value_loss + .5 * adv.pow(2)
-            entropy_loss = args.beta * entropies[i]
+            entropy_loss = entropy_loss + entropies[i]
             if args.gae:
                 # Generalized Advantage Estimation
                 td_error = rewards[i] + args.gamma * values[i + 1] - values[i]
@@ -316,18 +317,17 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             else:
                 policy_loss = policy_loss - log_probs[i] * adv.detach()
 
-            policy_loss = policy_loss - entropy_loss
-
-        # zero grads to avoid computation issues in the next step
+        # zero grads to reset the gradients
         optimizer.zero_grad()
 
         if args.shared_model:
-            (policy_loss + args.value_loss_coef * value_loss).mean().backward()
+            # combined loss for shared architecture
+            (policy_loss + args.value_loss_coef * value_loss - args.beta * entropy_loss).mean().backward()
         else:
             optimizer_critic.zero_grad()
 
             value_loss.mean().backward()
-            policy_loss.mean().backward()
+            (policy_loss - args.beta * entropy_loss).mean().backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
         sync_grads(model, shared_model)
@@ -348,9 +348,10 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
                                         for p in model.parameters()
                                         if p.grad is not None])
 
-                writer.add_scalar("grad_l2", np.sqrt(np.mean(np.square(grads))), temp_T)
-                writer.add_scalar("grad_max", np.max(np.abs(grads)), temp_T)
-                writer.add_scalar("grad_var", np.var(grads), temp_T)
+                writer.add_scalar("grad/mean", np.mean(grads), temp_T)
+                writer.add_scalar("grad/l2", np.sqrt(np.mean(np.square(grads))), temp_T)
+                writer.add_scalar("grad/max", np.max(np.abs(grads)), temp_T)
+                writer.add_scalar("grad/var", np.var(grads), temp_T)
                 for param_group in optimizer.param_groups:
                     writer.add_scalar("lr", param_group['lr'], temp_T)
             else:
@@ -362,22 +363,26 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
                                               for p in model.parameters()
                                               if p.grad is not None])
 
-                writer.add_scalar("grad_l2_actor", np.sqrt(np.mean(np.square(grads_actor))), temp_T)
-                writer.add_scalar("grad_max_actor", np.max(np.abs(grads_actor)), temp_T)
-                writer.add_scalar("grad_var_actor", np.var(grads_actor), temp_T)
-                writer.add_scalar("grad_l2_critic", np.sqrt(np.mean(np.square(grads_critic))), temp_T)
-                writer.add_scalar("grad_max_critic", np.max(np.abs(grads_critic)), temp_T)
-                writer.add_scalar("grad_var_critic", np.var(grads_critic), temp_T)
+                writer.add_scalar("grad/actor/mean", np.mean(grads_actor), temp_T)
+                writer.add_scalar("grad/actor/l2", np.sqrt(np.mean(np.square(grads_actor))), temp_T)
+                writer.add_scalar("grad/actor/max", np.max(np.abs(grads_actor)), temp_T)
+                writer.add_scalar("grad/actor/var", np.var(grads_actor), temp_T)
+
+                writer.add_scalar("grad/critic/mean", np.mean(grads_critic), temp_T)
+                writer.add_scalar("grad/critic/l2", np.sqrt(np.mean(np.square(grads_critic))), temp_T)
+                writer.add_scalar("grad/critic/max", np.max(np.abs(grads_critic)), temp_T)
+                writer.add_scalar("grad/critic/var", np.var(grads_critic), temp_T)
                 for param_group in optimizer.param_groups:
-                    writer.add_scalar("lr_actor", param_group['lr'], temp_T)
+                    writer.add_scalar("lr/actor", param_group['lr'], temp_T)
                 for param_group in optimizer_critic.param_groups:
-                    writer.add_scalar("lr_critic", param_group['lr'], temp_T)
+                    writer.add_scalar("lr/critic", param_group['lr'], temp_T)
 
             valuelist = [v.data for v in values]
 
-            writer.add_scalar("mean_values", np.mean(valuelist), temp_T)
-            writer.add_scalar("min_values", np.min(valuelist), temp_T)
-            writer.add_scalar("max_values", np.max(valuelist), temp_T)
-            writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), temp_T)
-            writer.add_scalar("loss_policy", policy_loss, temp_T)
-            writer.add_scalar("loss_value", value_loss, temp_T)
+            writer.add_scalar("values/mean", np.mean(valuelist), temp_T)
+            writer.add_scalar("values/min", np.min(valuelist), temp_T)
+            writer.add_scalar("values/max", np.max(valuelist), temp_T)
+            writer.add_scalar("reward/batch", np.mean(np.array(rewards)), temp_T)
+            writer.add_scalar("loss/policy", policy_loss, temp_T)
+            writer.add_scalar("loss/value", value_loss, temp_T)
+            writer.add_scalar("loss/entropy", entropy_loss, temp_T)

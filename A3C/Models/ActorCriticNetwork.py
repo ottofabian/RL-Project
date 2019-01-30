@@ -10,8 +10,9 @@ import torch.nn.functional as F
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
-        nn.init.normal_(m.weight.data, 0, .01)
-        # nn.init.kaiming_normal_(m.weight.data)
+        # nn.init.normal_(m.weight.data, 0, .01)
+        nn.init.kaiming_normal_(m.weight.data, nonlinearity="leaky_relu")
+        # nn.init.orthogonal_(m.weight.data, gain=1)
         m.bias.data.fill_(0)
 
 
@@ -21,7 +22,7 @@ class ActorCriticNetwork(torch.nn.Module):
 
         self.n_actions = n_actions
         self.n_inputs = n_inputs
-        self.n_hidden = 20
+        self.n_hidden = 32
 
         act = nn.LeakyReLU()
         # act = nn.ReLU

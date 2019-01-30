@@ -10,8 +10,7 @@ def init_weights(m):
     if isinstance(m, nn.Linear):
         # nn.init.normal_(m.weight.data, 0, .1)
         nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
-        # nn.init.orthogonal_(m.weight.data)
-        # m.weight.data.mul_(1e-3)
+        # nn.init.orthogonal_(m.weight.data, gain=1)
         # m.bias.data.fill_(0)
 
 
@@ -58,14 +57,14 @@ class CriticNetwork(torch.nn.Module):
             self.train()
         else:
 
-            act = nn.LeakyReLU()
-            # act = nn.ReLU
+            # act = nn.LeakyReLU()
+            act = nn.ReLU()
 
             self.model = nn.Sequential(
                 nn.Linear(self.n_inputs, self.n_hidden),
                 act,
-                # nn.Linear(self.n_hidden, self.n_hidden),
-                # act,
+                nn.Linear(self.n_hidden, self.n_hidden),
+                act,
                 # nn.Linear(self.n_hidden, self.n_hidden),
                 # act,
                 nn.Linear(self.n_hidden, 1)
