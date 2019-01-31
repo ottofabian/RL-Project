@@ -65,7 +65,8 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
 
     done = False
     global_iter = 0
-    best_global_reward = None
+    best_global_reward = -np.inf
+    best_test_reward = -np.inf
 
     while True:
 
@@ -126,8 +127,9 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
 
         writer.add_scalar("reward/test", rewards, int(T.value))
 
-        if best_global_reward is None or global_reward.value > best_global_reward:
-            best_global_reward = global_reward.value
+        if global_reward.value > best_global_reward or rewards > best_test_reward:
+            best_global_reward = global_reward.value if global_reward.value > best_global_reward else best_global_reward
+            best_test_reward = rewards if rewards > best_test_reward else best_test_reward
             model_type = 'shared' if args.shared_model else 'split'
 
             save_checkpoint({
@@ -138,7 +140,8 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
                 # only save optimizers if shared ones are used
                 'optimizer': optimizer.state_dict() if optimizer else None,
                 'optimizer_critic': optimizer_critic.state_dict() if optimizer_critic else None,
-            }, filename=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value}.pth.tar")
+            },
+                filename=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value}_test-{rewards}.pth.tar")
 
         # delay _test run for 10s to give the network some time to train
         # time.sleep(10)

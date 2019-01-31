@@ -1,0 +1,65 @@
+--env-name
+CartpoleSwingShort-v0
+--discount
+0.99
+--rollout-steps
+50
+--value-loss-weight
+0.5
+--entropy-loss-weight
+0.0001
+--max-action
+10
+--max-episode-length
+5000
+--max-grad-norm
+1
+--lr
+0.0001
+--lr-critic
+0.001
+--optimizer
+adam
+--worker
+1
+--n-envs
+5
+
+Network:
+
+Actor:
+
+nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
+n_hidden = 200
+act = nn.ReLU()
+
+self.body = nn.Sequential(
+    nn.Linear(self.n_inputs, self.n_hidden),
+    act,
+    nn.Linear(self.n_hidden, self.n_hidden),
+    act,
+    # nn.Linear(self.n_hidden, self.n_hidden),
+    # act
+)
+
+self.mu = nn.Sequential(
+    nn.Linear(self.n_hidden, self.n_outputs)
+)
+
+self.sigma = nn.Parameter(torch.zeros(self.n_outputs))
+
+Critic:
+
+nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
+n_hidden = 100
+act = nn.ReLU()
+
+self.model = nn.Sequential(
+    nn.Linear(self.n_inputs, self.n_hidden),
+    act,
+    nn.Linear(self.n_hidden, self.n_hidden),
+    act,
+    # nn.Linear(self.n_hidden, self.n_hidden),
+    # act,
+    nn.Linear(self.n_hidden, 1)
+)

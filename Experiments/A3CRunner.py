@@ -65,8 +65,8 @@ parser.add_argument('--optimizer', type=str, default="rmsprop",
 parser.add_argument('--lr-scheduler', type=str, default=None,
                     help='learning rate scheduler to use, by default no scheduler. '
                          'Options [None, ExponentialLR] (default: None)')
-parser.add_argument('--train', default=True, action='store_true',
-                    help='decides if to do training (default: True)')
+parser.add_argument('--test', default=False, action='store_true',
+                    help='do testing only (default: False)')
 parser.add_argument('--path', type=str, default=None,
                     help='weight location for the models to load (default: None)')
 parser.add_argument('--log-dir', type=str, default=None,
