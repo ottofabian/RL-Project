@@ -12,8 +12,7 @@ from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
 class MultivariateGP(object):
 
     def __init__(self, n_targets: int, container: Union[Type[GaussianProcess], Type[RBFNetwork]],
-                 length_scales: np.ndarray, sigma_f: np.ndarray = 1,
-                 sigma_eps: np.ndarray = 1, is_policy: bool = False):
+                 length_scales: np.ndarray, sigma_f: np.ndarray, sigma_eps: np.ndarray, is_policy: bool = False):
         """
         Multivariate Gaussian Process Regression
         :param n_targets: amount of target, each dimension of data inputs requires one target

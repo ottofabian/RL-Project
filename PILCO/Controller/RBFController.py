@@ -65,11 +65,8 @@ class RBFController(MultivariateGP, Controller):
         :return: None
         """
 
-        # TODO this fits all X for all predictions, this does not matter for 1D actions
+        # TODO this fits all X for all predictions, this does not work for >1D actions
         MultivariateGP.fit(self, X, y)
-
-        # second X shape is for lengthscales
-        # self.n_params = X.shape[0] * X.shape[1] + y.shape[0] * y.shape[1] + X.shape[0] + 1
 
     def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: float = None) -> tuple:
         """

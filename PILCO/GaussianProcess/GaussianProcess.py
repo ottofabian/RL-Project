@@ -21,7 +21,7 @@ class GaussianProcess(object):
         :param sigma_eps: prior for noise variance
         """
 
-        # kernel defintion as in Deisenroth(2010), p.10
+        # kernel definition as in Deisenroth(2010), p.10
         self.kernel = RBFKernel() + WhiteNoiseKernel()
 
         # data of GP
@@ -29,9 +29,9 @@ class GaussianProcess(object):
         self.y = None
 
         # hyperparameters of GP
-        self.sigma_eps = np.atleast_1d(sigma_eps)
         self.length_scales = length_scales
         self.sigma_f = np.atleast_1d(sigma_f)
+        self.sigma_eps = np.atleast_1d(sigma_eps)
 
         self.n_targets = None
         self.state_dim = None

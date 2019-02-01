@@ -65,7 +65,7 @@ def test_trajectory_cost():
     X0_rbf = np.random.rand(n_features_rbf, state_dim)
     A_rbf = np.random.rand(state_dim, n_actions)
     Y0_rbf = np.sin(X0_rbf).dot(A_rbf) + 1e-3 * (np.random.rand(n_features_rbf, n_actions) - 0.5)
-    length_scales_rbf = np.random.rand(state_dim)
+    length_scales_rbf = np.random.rand(n_actions, state_dim)
 
     rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, compute_cost=None,
                         length_scales=length_scales_rbf)

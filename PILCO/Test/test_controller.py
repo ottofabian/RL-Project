@@ -27,7 +27,7 @@ def test_rbf():
     X0 = np.random.rand(n_features, state_dim)
     A = np.random.rand(state_dim, n_actions)
     Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(n_features, n_actions) - 0.5)
-    length_scales = np.random.rand(state_dim)
+    length_scales = np.random.rand(n_actions, state_dim)
 
     rbf = RBFController(n_actions=n_actions, n_features=n_features, compute_cost=None, length_scales=length_scales)
     rbf.fit(X0, Y0)
@@ -36,6 +36,10 @@ def test_rbf():
     mu = np.random.rand(1, state_dim)
     sigma = np.random.rand(state_dim, state_dim)
     sigma = sigma.dot(sigma.T)  # Make sigma positive semidefinite
+
+    print(rbf.sigma_fs())
+    print(rbf.sigma_eps())
+    print(rbf.length_scales())
 
     M, S, V = rbf.choose_action(mu, sigma, None)
     # V is already multiplied with S, have to revert that to run positive test
