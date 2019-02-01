@@ -4,6 +4,7 @@ from scipy.optimize import minimize
 
 from PILCO.Controller.Controller import Controller
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
+from PILCO.GaussianProcess.SparseMultivariateGP import SparseMultivariateGP
 from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
 
 

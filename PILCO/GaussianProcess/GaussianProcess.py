@@ -203,7 +203,7 @@ class GaussianProcess(object):
 
     def unwrap_params(self, params) -> tuple:
         """
-        unwrap vector of hyperparams into seperate values for gp
+        unwrap vector of hyperparams into separate values for gp
         Required for optimization
         :param params: vector of [length scales, signal variance, noise variance]
         :return: length scales, sigma_f, sigma_eps

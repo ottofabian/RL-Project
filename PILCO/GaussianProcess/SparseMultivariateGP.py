@@ -3,11 +3,6 @@ import logging
 import numpy as np
 import GPy
 
-from typing import Union, Type
-
-from GPy import likelihoods
-
-from PILCO.GaussianProcess import GaussianProcess, RBFNetwork
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 
 
@@ -54,6 +49,11 @@ class SparseMultivariateGP(MultivariateGP):
 
             kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
             model = GPy.models.SparseGPRegression(X=X, Y=y[:, i:i + 1], kernel=kernel, Z=Z)
+
+            # add constrain boundaries for the parameters to avoid numerical issues such as NaN problems
+            model.constrain_bounded(1e-3, 1e3)
+            model.kern.white.variance.constrain_fixed(1e-5)
+
             self.gp_container.append(model)
 
     def fit(self, X, y):
@@ -93,6 +93,7 @@ class SparseMultivariateGP(MultivariateGP):
 
         V = np.stack([np.linalg.solve(L[i], Kmn[i]) for i in range(target_dim)])  # inv(sqrt(Kmm)) * Kmn
         G = np.exp(2 * self.sigma_fs()) - np.sum(V ** 2, axis=1)
+
         G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))  # this is nan for theta_dot, fuck this algorithm
         V_scaled = V / G[:, None]
 
@@ -194,12 +195,14 @@ class SparseMultivariateGP(MultivariateGP):
             self.logger.info("Optimization for GP (output={}) started.".format(i))
             try:
                 self.logger.info("Optimization with L-BFGS-B started.")
-                gp.optimize("lbfgsb", messages=1)
+
+                gp.optimize("lbfgsb", messages=True)
             except Exception:
                 self.logger.info("Optimization with SCG started.")
-                gp.optimize('scg', messages=1)
+                gp.optimize('scg', messages=True)
 
             print(gp)
+
 
     def sigma_fs(self):
         return np.log(np.array([gp.kern.rbf.variance for gp in self.gp_container]))
@@ -209,3 +212,5 @@ class SparseMultivariateGP(MultivariateGP):
 
     def length_scales(self):
         return np.log(np.array([gp.kern.rbf.lengthscale for gp in self.gp_container]))
+
+
