@@ -1,3 +1,5 @@
+import dill as pickle
+
 import autograd.numpy as np
 from autograd import value_and_grad
 from scipy.optimize import minimize
@@ -136,3 +138,10 @@ class RBFController(MultivariateGP, Controller):
     # def callback(self, x):
     #     self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, np.array2string(
     #         cost if type(cost) == np.ndarray else cost._value)))
+
+    def save(self, reward):
+        # remove function handle for serialization
+        temp = self.compute_cost
+        self.compute_cost = None
+        pickle.dump(self, open(f"policy_reward-{reward}.p", "wb"))
+        self.compute_cost = temp

@@ -134,8 +134,8 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
 
             save_checkpoint({
                 'epoch': T.value,
-                'model': shared_model.state_dict(),
-                'model_critic': shared_model_critic.state_dict() if shared_model_critic else None,
+                'model': model.state_dict(),
+                'model_critic': model_critic.state_dict() if model_critic else None,
                 'global_reward': global_reward.value,
                 # only save optimizers if shared ones are used
                 'optimizer': optimizer.state_dict() if optimizer else None,
@@ -279,10 +279,8 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             G = model_critic(normalizer(state)).detach()
 
         values.append(G)
+
         # compute loss and backprop
-        # policy_loss = 0
-        # value_loss = 0
-        # entropy_loss = 0
         advantages = torch.zeros((args.n_envs, 1))
 
         ret = torch.zeros((args.rollout_steps, args.n_envs, 1))
@@ -295,7 +293,7 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
                 # Generalized Advantage Estimation
                 td_error = rewards[i] + args.discount * terminals[i] * values[i + 1] - values[i]
                 # terminals here to "reset" advantages to 0, because reset ist called internally in the env
-                # and new trajectroy started
+                # and new trajectory started
                 advantages = advantages * args.discount * args.tau * terminals[i] + td_error
             else:
                 advantages = G - values[i].detach()

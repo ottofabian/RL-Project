@@ -22,9 +22,12 @@ def main():
     # env_name = "QubeRR-v0"
 
     env = gym.make(env_name)
-    max_episode_steps = 200
 
-    n_inducing_points = 500
+    n_inital_samples = 500
+    max_samples_per_test_run = 10000
+    n_inducing_points = 300
+    n_features = 50
+    horizon = 40
 
     # get target state value for computing loss
     if "Cartpole" in env_name:
@@ -56,10 +59,10 @@ def main():
     # --------------------------------------------------------
 
     loss = SaturatedLoss(state_dim=env.observation_space.shape[0], target_state=target_state)
-    pilco = PILCO(env_name=env_name, seed=seed, n_features=100, Horizon=40, loss=loss,
-                  max_episode_steps=max_episode_steps, gamma=1, start_mu=start_mu, start_cov=start_cov, bound=bound,
+    pilco = PILCO(env_name=env_name, seed=seed, n_features=n_features, Horizon=horizon, loss=loss,
+                  max_samples_per_test_run=max_samples_per_test_run, gamma=1, start_mu=start_mu, start_cov=start_cov, bound=bound,
                   n_inducing_points=n_inducing_points)
-    pilco.run(n_samples=max_episode_steps)
+    pilco.run(n_samples=n_inital_samples)
 
 
 if __name__ == '__main__':

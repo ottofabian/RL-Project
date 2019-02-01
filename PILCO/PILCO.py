@@ -1,4 +1,5 @@
 import logging
+import pickle
 
 import autograd.numpy as np
 import gym
@@ -16,7 +17,7 @@ from PILCO.GaussianProcess.SparseMultivariateGP import SparseMultivariateGP
 class PILCO(object):
 
     def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, start_mu: np.ndarray = None,
-                 start_cov: np.ndarray = None, gamma=1, max_episode_steps: int = None, bound: np.ndarray = None,
+                 start_cov: np.ndarray = None, gamma=1, max_samples_per_test_run: int = None, bound: np.ndarray = None,
                  n_inducing_points: int = None):
         """
 
@@ -29,7 +30,8 @@ class PILCO(object):
         :param start_mu: mean of starting state for trajectory rollout
         :param start_cov: covariance of starting state for trajectory rollout
         :param gamma: discount factor
-        :param max_episode_steps: maximum steps for one episode
+        :param max_samples_per_test_run: maximum samples taken from one test  episode,
+         this is required to avoid running out of memory when not using Sparse GPs
         :param bound: squash action with sin to +-bound or None if no squashing is required
         """
 
@@ -49,7 +51,7 @@ class PILCO(object):
 
         # if max_episode_steps is not None:
         #     self.env._max_episode_steps = max_episode_steps
-        self.max_episode_steps = max_episode_steps
+        self.max_episode_steps = max_samples_per_test_run
 
         self.env.seed(self.seed)
 
@@ -90,7 +92,6 @@ class PILCO(object):
         # Container for collected experience
         self.state_action_pairs = None
         self.state_delta = None
-        self.rewards = None
 
         # -----------------------------------------------------
         # logging instance
@@ -110,12 +111,11 @@ class PILCO(object):
             self.learn_dynamics_model()
             self.learn_policy()
 
-            X_test, y_test, reward_test = self.execute_test_run()
+            X_test, y_test = self.execute_test_run()
 
             # add test history to training data set
             self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
             self.state_delta = np.append(self.state_delta, y_test, axis=0)
-            self.rewards = np.append(self.rewards, reward_test)
 
     def sample_inital_data_set(self, n_init: int) -> None:
         """
@@ -129,7 +129,6 @@ class PILCO(object):
 
         state_action_pairs = []
         state_delta = []
-        rewards = []
 
         i = 0
         state_prev = self.env.reset()
@@ -156,8 +155,6 @@ class PILCO(object):
             noise = np.random.multivariate_normal(np.zeros(state.shape), 1e-6 * np.identity(state.shape[0]))
             state_delta.append(state - state_prev + noise)
 
-            rewards.append(reward)
-
             # reset env if terminal state was reached before max samples were generated
             if done:
                 state = self.env.reset()
@@ -174,7 +171,6 @@ class PILCO(object):
 
         self.state_action_pairs = np.array(state_action_pairs)[idx]
         self.state_delta = np.array(state_delta)[idx]
-        self.rewards = np.array(rewards)[idx]
 
     def learn_dynamics_model(self) -> None:
         """
@@ -321,7 +317,7 @@ class PILCO(object):
 
         X = []
         y = []
-        rewards = []
+        rewards = 0
 
         state_prev = self.env.reset()
         # [1,3] is returned and is reduced to 1D
@@ -351,23 +347,24 @@ class PILCO(object):
             noise = np.random.multivariate_normal(np.zeros(state.shape), 1e-6 * np.identity(state.shape[0]))
             y.append(state - state_prev + noise)
 
-            rewards.append(reward)
+            rewards += reward
             state_prev = state
 
-        print("reward={}, episode_len={}".format(np.sum(rewards), t))
+        print(f"reward={rewards}, episode_len={t}")
+
+        self.policy.save(rewards)
+        self.dynamics_model.save(rewards)
 
         if len(X) < self.max_episode_steps:
             X = np.array(X)
             y = np.array(y)
-            rewards = np.array(rewards)
         else:
             idx = np.random.choice(range(0, len(X)), self.max_episode_steps, replace=False)
 
             X = np.array(X)[idx]
             y = np.array(y)[idx]
-            rewards = np.array(rewards)[idx]
 
-        return X, y, rewards
+        return X, y
 
     def get_joint_dist(self, state_mu, state_cov, action_mu, action_cov, input_output_cov) -> tuple:
         """
@@ -431,3 +428,10 @@ class PILCO(object):
         # plt.fill_between(x, mu_actions - sigma_actions, mu_actions + sigma_actions)
         plt.title("Trajectory prediction for actions")
         plt.show()
+
+    def load_policy(self, path, compute_cost:callable):
+        self.policy = pickle.load(self, open(path, "r"))
+        self.policy.compute_cost = compute_cost
+
+    def load_dynamics(self, path):
+        self.dynamics_model = pickle.load(self, open(path, "r"))

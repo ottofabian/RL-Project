@@ -1,6 +1,8 @@
 import logging
+
 from typing import Union, Type
 
+import dill as pickle
 import autograd.numpy as np
 
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
@@ -232,6 +234,9 @@ class MultivariateGP(object):
     #     # print(precision, sigma)
     #     sigma_plus_precision_inv = np.linalg.solve(sigma @ precision, np.identity(sigma.shape[0]))
     #     return np.sum(beta @ self.gp_container[i].qs * sigma @ sigma_plus_precision_inv @ zeta, axis=1)
+
+    def save(self, reward):
+        pickle.dump(self, open(f"dynamics_reward-{reward}.p", "wb"))
 
     def sigma_fs(self):
         return np.array([c.sigma_f for c in self.gp_container])

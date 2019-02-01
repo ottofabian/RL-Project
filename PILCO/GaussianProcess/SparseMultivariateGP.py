@@ -1,13 +1,9 @@
 import logging
 
-import numpy as np
+import autograd.numpy as np
+import scipy
 import GPy
 
-from typing import Union, Type
-
-from GPy import likelihoods
-
-from PILCO.GaussianProcess import GaussianProcess, RBFNetwork
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 
 
@@ -54,6 +50,11 @@ class SparseMultivariateGP(MultivariateGP):
 
             kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
             model = GPy.models.SparseGPRegression(X=X, Y=y[:, i:i + 1], kernel=kernel, Z=Z)
+            # model.kern.rbf.lengthscale.constrain_bounded(-1,0)
+            # prior = GPy.priors.gamma_from_EV(0.5, 1)
+            # gp.kern.lengthscale.set_prior(prior, warning=False)
+            model.inference_method = GPy.inference.latent_function_inference.FITC()
+            # model.likelihood
             self.gp_container.append(model)
 
     def fit(self, X, y):
@@ -87,11 +88,11 @@ class SparseMultivariateGP(MultivariateGP):
         # TODO move this part somewhere else
 
         Kmm = np.stack([gp.kern.rbf.K(gp.Z) + 1e-6 * np.identity(induced_dim) for gp in self.gp_container])
-        Kmn = np.stack([gp.kern.rbf.K(gp.Z, gp.X) for gp in self.gp_container])
+        Kmn = np.stack([gp.kern.rbf.K(gp.Z, self.X) for gp in self.gp_container])
 
         L = np.linalg.cholesky(Kmm)
 
-        V = np.stack([np.linalg.solve(L[i], Kmn[i]) for i in range(target_dim)])  # inv(sqrt(Kmm)) * Kmn
+        V = np.stack([scipy.linalg.solve_triangular(L[i], Kmn[i], lower=True) for i in range(target_dim)])  # inv(sqrt(Kmm)) * Kmn
         G = np.exp(2 * self.sigma_fs()) - np.sum(V ** 2, axis=1)
         G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))  # this is nan for theta_dot, fuck this algorithm
         V_scaled = V / G[:, None]
@@ -101,15 +102,15 @@ class SparseMultivariateGP(MultivariateGP):
             [V_scaled[i] @ V_scaled[i].T + np.identity(induced_dim) * np.exp(2 * self.sigma_eps()[i]) for i
              in range(target_dim)]))
 
-        At = L @ Am
-        iAt = np.stack([np.linalg.solve(At[i], np.identity(induced_dim)) for i in range(target_dim)])
+        At = L @ Am  # chol(sig*B) Deisenroth(2010)
+        iAt = np.stack([scipy.linalg.solve_triangular(At[i], np.identity(induced_dim), lower=True) for i in range(target_dim)])
 
         V_scaled = V / G[:, None]
         # one big ugly loopy, because numpy cannot do it differently
-        beta = np.stack([np.linalg.solve(L[i], np.linalg.solve(Am[i], (V_scaled[i]) @ gp.Y)) for i, gp in
-                         enumerate(self.gp_container)])[:, :, 0]
+        beta = np.stack([scipy.linalg.solve_triangular(L[i], np.linalg.solve(Am[i], (V_scaled[i]) @ gp.Y), lower=True) for i, gp in
+                         enumerate(self.gp_container)])[:, :, 0].T
 
-        iB = np.stack([iAt[i] @ iAt[i].T for i in range(target_dim)]) * self.sigma_eps()[:, None, None]
+        iB = np.stack([iAt[i] @ iAt[i].T for i in range(target_dim)]) * np.exp(2 * self.sigma_eps())[:, None]  # inv(B)
         iK = np.stack([np.linalg.solve(L[i], np.identity(induced_dim)) for i in range(target_dim)]) - iB
 
         # ----------------------------------------------------------------------------------------------------
@@ -194,10 +195,10 @@ class SparseMultivariateGP(MultivariateGP):
             self.logger.info("Optimization for GP (output={}) started.".format(i))
             try:
                 self.logger.info("Optimization with L-BFGS-B started.")
-                gp.optimize("lbfgsb", messages=1)
+                gp.optimize("lbfgsb", messages=True)
             except Exception:
                 self.logger.info("Optimization with SCG started.")
-                gp.optimize('scg', messages=1)
+                gp.optimize('scg', messages=True)
 
             print(gp)
 
