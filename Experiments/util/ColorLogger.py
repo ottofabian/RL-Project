@@ -162,8 +162,6 @@ def enable_color_logging(logging_lvl=logging.DEBUG, save_log=False, logfile_pref
     root.addHandler(ch)
 
     if save_log:
-        file_logger = logging.getLogger("file")
-
         # include current timestamp in dataset export file
         timestmp = datetime.datetime.fromtimestamp(time()).strftime("%Y-%m-%d-%H-%M")
         formatter = logging.Formatter("%(asctime)s %(message)s")
@@ -171,4 +169,4 @@ def enable_color_logging(logging_lvl=logging.DEBUG, save_log=False, logfile_pref
         file_handler = logging.FileHandler("logs/" + logfile_prefix + timestmp + ".log", mode='w')
         file_handler.setFormatter(formatter)
 
-        file_logger.addHandler(file_handler)
+        root.addHandler(file_handler)
