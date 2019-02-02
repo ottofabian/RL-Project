@@ -12,9 +12,9 @@ def main():
     logging.info('Start Experiment')
 
     seed = 1
-    env_name = "Pendulum-v0"
+    # env_name = "Pendulum-v0"
 
-    # env_name = "CartpoleStabShort-v0"
+    env_name = "CartpoleStabShort-v0"
     # env_name = "CartpoleStabRR-v0"
     # env_name = "CartpoleSwingShort-v0"
     # env_name = "CartpoleSwingRR-v0"
@@ -23,11 +23,11 @@ def main():
 
     env = gym.make(env_name)
 
-    n_inital_samples = 100
-    max_samples_per_test_run = 1000
-    n_inducing_points = 50
-    n_features = 50
-    horizon = 40
+    n_inital_samples = 300
+    max_samples_per_test_run = 300
+    n_inducing_points = 300
+    n_features = 10
+    horizon = 100
 
     # get target state value for computing loss
     if "Cartpole" in env_name:

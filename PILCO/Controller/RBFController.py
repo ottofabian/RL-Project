@@ -53,7 +53,6 @@ class RBFController(MultivariateGP, Controller):
         MultivariateGP.__init__(self, length_scales=length_scales, n_targets=n_actions, sigma_f=sigma_f,
                                 sigma_eps=sigma_eps, container=RBFNetwork, is_policy=True)
 
-        # self.length_scales = None
         self.n_features = n_features
         self.compute_cost = compute_cost
         self.opt_ctr = 0

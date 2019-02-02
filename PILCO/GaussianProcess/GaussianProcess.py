@@ -1,4 +1,5 @@
 import logging
+import scipy
 from typing import Union
 
 import autograd.numpy as np
@@ -172,12 +173,6 @@ class GaussianProcess(object):
 
         self.K_inv = np.linalg.solve(self.K, np.identity(self.K.shape[0]))
         self.betas = np.linalg.solve(self.K, self.y).T
-
-        # -------------------------------
-        # TODO: Prob better, but autograd has no solve_triangular
-        # L = np.linalg.cholesky(K + noise)
-        # self.K_inv = solve_triangular(L, np.identity(self.X.shape[0]))
-        # self.betas = solve_triangular(L, self.y)
 
     # def compute_mu(self, mu, sigma):
     #     """
