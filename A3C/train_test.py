@@ -164,7 +164,7 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
         env = SubprocVecEnv([make_env(args.env_name, args.seed, i, args.log_dir) for i in range(args.n_envs)])
     else:
         logging.info(f"Running A3C: training worker {worker_id} started.")
-        env = DummyVecEnv(make_env(args.env_name, args.seed, worker_id, args.log_dir))
+        env = DummyVecEnv([make_env(args.env_name, args.seed, worker_id, args.log_dir)])
         # avoid any issues if this is not 1
         args.n_envs = 1
 

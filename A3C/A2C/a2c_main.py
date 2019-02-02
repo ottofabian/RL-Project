@@ -103,7 +103,7 @@ parser.add_argument('--normalize', type=bool, default=False,
 #     path_critic="./best_models/Stabilization/Full action range/critic_finetuned_T-7285824_global-1266.9597491827692.pth.tar")
 
 if __name__ == '__main__':
-    enable_color_logging(debug_lvl=logging.DEBUG)
+    enable_color_logging(logging_lvl=logging.DEBUG)
     logging.info('Start Experiment')
 
     args = parser.parse_args()

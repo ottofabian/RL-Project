@@ -77,14 +77,23 @@ parser.add_argument('--normalizer', type=str, default=None,
                     help='which normalizer to use (default: None)')
 parser.add_argument('--n-envs', type=int, default=1,
                     help='amount of envs for A2C (worker=1) in order to reduce correlation in batches (default: 1)')
+parser.add_argument('--save-log', default=True,
+                    help='exports a log file into the log directory if set to True (default: True)')
 
 if __name__ == '__main__':
-    enable_color_logging(debug_lvl=logging.DEBUG)
 
     args = parser.parse_args()
+    enable_color_logging(logging_lvl=logging.DEBUG, save_log=args.save_log, logfile_prefix=args.env_name + "_")
+
     logging.info(
         f'Start Experiment for {args.env_name} at {time.strftime("%m/%d/%Y, %Hh:%Mm:%Ss", time.gmtime(time.time()))}')
-    print(args)
+
+    # log all given hyper-parameter command line settings
+    logging.info("Command line parameters:")
+    for arg in vars(args):
+        # for cmd line parameters - is used as a separator in actual python _ is used
+        cmd_parameter = arg.replace("_", "-")
+        logging.info(f"--{cmd_parameter} {getattr(args, arg)}")
 
     a3c = A3C(args)
     a3c.run()

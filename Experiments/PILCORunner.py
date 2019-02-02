@@ -8,7 +8,7 @@ from PILCO.PILCO import PILCO
 
 
 def main():
-    enable_color_logging(debug_lvl=logging.DEBUG)
+    enable_color_logging(logging_lvl=logging.DEBUG)
     logging.info('Start Experiment')
 
     seed = 1

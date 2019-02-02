@@ -372,3 +372,5 @@ TSWLatexianTemp*
 # standalone packages
 *.sta
 
+# ignore the push of log files
+*.log
