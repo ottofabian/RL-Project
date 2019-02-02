@@ -48,8 +48,9 @@ class SparseMultivariateGP(MultivariateGP):
             kernel = GPy.kern.RBF(input_dim=input_dim, lengthscale=np.exp(length_scales[i]), ARD=True,
                                   variance=np.exp(sigma_f[i]))
 
-            kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
+            # kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
             model = GPy.models.SparseGPRegression(X=X, Y=y[:, i:i + 1], kernel=kernel, Z=Z)
+            model.likelihood.noise = np.exp(sigma_eps[i])
             # model.kern.rbf.lengthscale.constrain_bounded(-1,0)
             # prior = GPy.priors.gamma_from_EV(0.5, 1)
             # gp.kern.lengthscale.set_prior(prior, warning=False)
@@ -87,8 +88,8 @@ class SparseMultivariateGP(MultivariateGP):
 
         # TODO move this part somewhere else
 
-        Kmm = np.stack([gp.kern.rbf.K(gp.Z) + 1e-6 * np.identity(induced_dim) for gp in self.gp_container])
-        Kmn = np.stack([gp.kern.rbf.K(gp.Z, gp.X) for gp in self.gp_container])
+        Kmm = np.stack([gp.kern.K(gp.Z) + 1e-6 * np.identity(induced_dim) for gp in self.gp_container])
+        Kmn = np.stack([gp.kern.K(gp.Z, gp.X) for gp in self.gp_container])
 
         L = np.linalg.cholesky(Kmm)
 
@@ -96,10 +97,10 @@ class SparseMultivariateGP(MultivariateGP):
                       range(target_dim)])  # inv(sqrt(Kmm)) * Kmn
         G = np.exp(2 * self.sigma_fs()) - np.sum(V ** 2, axis=1)
         G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))  # this is nan for theta_dot, fuck this algorithm
-        V_scaled = V / G[:, None]
+        V = V / G[:, None]
 
         Am = np.linalg.cholesky(np.stack(
-            [V_scaled[i] @ V_scaled[i].T + np.identity(induced_dim) * np.exp(2 * self.sigma_eps()[i]) for i
+            [V[i] @ V[i].T + np.identity(induced_dim) * np.exp(2 * self.sigma_eps()[i]) for i
              in range(target_dim)]))
 
         At = L @ Am  # chol(sig*B) Deisenroth(2010)
@@ -108,16 +109,12 @@ class SparseMultivariateGP(MultivariateGP):
 
         V_scaled = V / G[:, None]
         # one big ugly loopy, because numpy cannot do it differently
-        # beta = np.stack([scipy.linalg.solve_triangular(L[i], np.linalg.solve(Am[i], (V_scaled[i]) @ gp.Y), lower=True) for i, gp in
-        #                  enumerate(self.gp_container)])[:, :, 0].T
-
         beta = np.stack([(np.linalg.solve(Am[i], V_scaled[i]).T @ iAt[i]).T @ gp.Y.flatten() for i, gp in
                          enumerate(self.gp_container)]).T
 
         iB = np.stack([iAt[i].T @ iAt[i] * np.exp(2 * self.sigma_eps()[i]) for i in range(target_dim)])  # inv(B)
 
         # covariance matrix for predictive variances
-        # iK = np.stack([scipy.linalg.cho_solve(L[i], np.identity(induced_dim)) for i in range(target_dim)]) - iB
         iK = np.stack([np.linalg.solve(Kmm[i], np.identity(induced_dim)) for i in range(target_dim)]) - iB
 
         # ----------------------------------------------------------------------------------------------------
@@ -210,10 +207,10 @@ class SparseMultivariateGP(MultivariateGP):
             print(gp)
 
     def sigma_fs(self):
-        return np.log(np.array([gp.kern.rbf.variance for gp in self.gp_container]))
+        return np.log(np.sqrt(np.array([gp.kern.variance.values for gp in self.gp_container])))
 
     def sigma_eps(self):
-        return np.log(np.array([gp.kern.white.variance for gp in self.gp_container]))
+        return np.log(np.sqrt(np.array([gp.likelihood.variance.values for gp in self.gp_container])))
 
     def length_scales(self):
-        return np.log(np.array([gp.kern.rbf.lengthscale for gp in self.gp_container]))
+        return np.log(np.array([gp.kern.lengthscale.values for gp in self.gp_container]))
