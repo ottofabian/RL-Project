@@ -18,7 +18,8 @@ by Sorin & Dave
 import logging
 import sys
 import platform
-
+import datetime
+from time import time
 
 def add_coloring_to_emit_windows(fn):
     # patch Python code to add color support to logging.StreamHandler
@@ -124,21 +125,32 @@ def add_coloring_to_emit_ansi(fn):
     return new
 
 
-def enable_color_logging(debug_lvl=logging.DEBUG):
-    if platform.system() == 'Windows':
-        # Windows does not support ANSI escapes and we are using API calls to set the console color
-        logging.StreamHandler.emit = add_coloring_to_emit_windows(logging.StreamHandler.emit)
-    else:
-        # all non-Windows platforms are supporting ANSI escapes so we use them
-        logging.StreamHandler.emit = add_coloring_to_emit_ansi(logging.StreamHandler.emit)
+def enable_color_logging(logging_lvl=logging.DEBUG, save_log=False, logfile_prefix=""):
+    """
+    Enables Color logging on multi-platforms as well as in environments like jupyter notebooks
+
+    :param logging_lvl: Given debug level for setting what messages to show. (logging.DEBUG is lowest)
+    :param save_log: If true a log file will be created under ./logs
+    :param logfile_prefix; Prefix for defining the name of the log file
+    :return:
+    """
+
+    if not save_log:
+        # unfortunately by enabling colored logs, some characted can't be properly displayed in the log-file
+        # TODO: Enably color logging while exporting the log to file (optional)
+        if platform.system() == 'Windows':
+            # Windows does not support ANSI escapes and we are using API calls to set the console color
+            logging.StreamHandler.emit = add_coloring_to_emit_windows(logging.StreamHandler.emit)
+        else:
+            # all non-Windows platforms are supporting ANSI escapes so we use them
+            logging.StreamHandler.emit = add_coloring_to_emit_ansi(logging.StreamHandler.emit)
+            pass
 
     root = logging.getLogger()
-    root.setLevel(debug_lvl)
+    root.setLevel(logging_lvl)
 
     ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(debug_lvl)
-    # FORMAT = '[%(asctime)-s][%(name)-s][\033[1m%(levelname)-7s\033[0m] %(message)-s'
-    # FORMAT='%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+    ch.setLevel(logging_lvl)
 
     # FORMAT from https://github.com/xolox/python-coloredlogs
     FORMAT = '%(asctime)s %(name)s[%(process)d] \033[1m%(levelname)s\033[0m %(message)s'
@@ -148,3 +160,15 @@ def enable_color_logging(debug_lvl=logging.DEBUG):
 
     ch.setFormatter(formatter)
     root.addHandler(ch)
+
+    if save_log:
+        file_logger = logging.getLogger("file")
+
+        # include current timestamp in dataset export file
+        timestmp = datetime.datetime.fromtimestamp(time()).strftime("%Y-%m-%d-%H-%M")
+        formatter = logging.Formatter("%(asctime)s %(message)s")
+
+        file_handler = logging.FileHandler("logs/" + logfile_prefix + timestmp + ".log", mode='w')
+        file_handler.setFormatter(formatter)
+
+        file_logger.addHandler(file_handler)
