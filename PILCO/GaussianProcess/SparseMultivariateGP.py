@@ -54,7 +54,7 @@ class SparseMultivariateGP(MultivariateGP):
             # model.kern.rbf.lengthscale.constrain_bounded(-1,0)
             # prior = GPy.priors.gamma_from_EV(0.5, 1)
             # gp.kern.lengthscale.set_prior(prior, warning=False)
-            model.inference_method = GPy.inference.latent_function_inference.FITC()
+            # model.inference_method = GPy.inference.latent_function_inference.FITC()
             # model.likelihood
             self.gp_container.append(model)
 
@@ -128,8 +128,8 @@ class SparseMultivariateGP(MultivariateGP):
         precision_inv2 = np.stack([np.diag(np.exp(-2 * l)) for l in length_scales])
 
         # centralized inputs
-        diff = np.array(self.gp_container[0].Z) - mu
-        diff_scaled = np.expand_dims(diff, axis=0) / np.expand_dims(np.exp(2 * length_scales), axis=1)
+        diff = np.stack([self.gp_container[i].Z.values for i in range(target_dim)]) - mu
+        diff_scaled = diff / np.expand_dims(np.exp(2 * length_scales), axis=1)
 
         # ----------------------------------------------------------------------------------------------------
         # compute mean of predictive dist based on matlab code
@@ -205,6 +205,7 @@ class SparseMultivariateGP(MultivariateGP):
                 gp.optimize('scg', messages=True)
 
             print(gp)
+            print("Length scales:", gp.kern.lengthscale.values)
 
     def sigma_fs(self):
         return np.log(np.sqrt(np.array([gp.kern.variance.values for gp in self.gp_container])))

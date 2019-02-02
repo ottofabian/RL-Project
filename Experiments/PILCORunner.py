@@ -23,8 +23,8 @@ def main():
 
     env = gym.make(env_name)
 
-    n_inital_samples = 50
-    max_samples_per_test_run = 10000
+    n_inital_samples = 100
+    max_samples_per_test_run = 1000
     n_inducing_points = 50
     n_features = 50
     horizon = 40

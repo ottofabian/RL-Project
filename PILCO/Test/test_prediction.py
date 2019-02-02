@@ -97,7 +97,7 @@ def test_smgpr():
     smgpr = SparseMultivariateGP(length_scales=length_scales, n_targets=n_targets, X=X0, y=Y0,
                                  n_inducing_points=n_inducing_points, container=GaussianProcess, sigma_eps=sigma_eps,
                                  sigma_f=sigma_f)
-    # smgpr.optimize()
+    smgpr.optimize()
 
     # Generate input
     mu = np.random.rand(1, state_dim)
@@ -129,8 +129,8 @@ def test_smgpr():
     gpmodel.hyp = hyp
     gpmodel.inputs = X0
     gpmodel.targets = Y0
-    # gpmodel.induce = np.stack([gp.Z.T for gp in smgpr.gp_container]).T
-    gpmodel.induce = smgpr.gp_container[0].Z
+    gpmodel.induce = np.stack([gp.Z.T for gp in smgpr.gp_container]).T
+    # gpmodel.induce = smgpr.gp_container[0].Z
 
 
     # Call function in octave
