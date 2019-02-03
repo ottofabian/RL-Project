@@ -1,5 +1,4 @@
 from autograd import grad, jacobian
-from autograd.test_util import check_grads
 from scipy.optimize import check_grad
 
 import numpy as np
@@ -71,6 +70,14 @@ def test_grad_mgpr():
     params = np.array([gp.wrap_policy_hyperparams() for gp in rbf.gp_container]).flatten()
     np.allclose(grad(rbf._optimize_hyperparams)(params), jacobian(rbf._optimize_hyperparams)(params))
 
+    # def check_it(x):
+    #     x1 = x[:state_dim]
+    #     x2 = x[state_dim:].reshape(state_dim, state_dim)
+    #     return rbf._optimize_hyperparams()
+
+    grad_error = check_grad(func=rbf._optimize_hyperparams, grad=grad(rbf._optimize_hyperparams), x0=params)
+    print(grad_error)
+
 
 def test_grad_smgpr():
     np.random.seed(0)
@@ -135,6 +142,9 @@ def test_grad_smgpr():
 
     params = np.array([gp.wrap_policy_hyperparams() for gp in rbf.gp_container]).flatten()
     np.allclose(grad(rbf._optimize_hyperparams)(params), jacobian(rbf._optimize_hyperparams)(params))
+
+    grad_error = check_grad(func=rbf._optimize_hyperparams, grad=grad(rbf._optimize_hyperparams), x0=params)
+    print(grad_error)
 
 
 if __name__ == '__main__':

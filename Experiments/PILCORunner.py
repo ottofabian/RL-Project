@@ -27,7 +27,7 @@ def main():
     max_samples_per_test_run = 300
     n_inducing_points = 300
     n_features = 25
-    horizon = 100
+    horizon = 40
 
     # get target state value for computing loss
     if "Cartpole" in env_name:

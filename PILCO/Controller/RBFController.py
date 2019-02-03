@@ -95,8 +95,9 @@ class RBFController(MultivariateGP, Controller):
 
         try:
             self.logger.info("Starting to optimize policy with L-BFGS-B.")
-            res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B', jac=True,
-                           options=options)
+            # res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B', jac=True,
+            #                options=options)
+            res = minimize(fun=self._optimize_hyperparams, x0=params, method='L-BFGS-B', jac=False, options=options)
         except Exception:
             self.logger.info("Starting to optimize policy with CG.")
             res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='CG', jac=True,
