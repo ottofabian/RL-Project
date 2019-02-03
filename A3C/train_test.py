@@ -122,12 +122,14 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
 
         rewards = np.mean(rewards)
 
-        logging.info(f"Time: {time_print}, T={T.value} -- mean reward={rewards}"
-                     f"-- mean episode length={np.mean(eps_len)} -- global reward={global_reward.value}")
-
         writer.add_scalar("reward/test", rewards, int(T.value))
+        writer.add_scalar("episode/length", np.mean(eps_len), int(T.value))
 
         if global_reward.value > best_global_reward or rewards > best_test_reward:
+            # highlight messages if progress was done
+            logging.info(f"Time: {time_print}, T={T.value} -- mean reward={rewards}"
+                         f"-- mean episode length={np.mean(eps_len)} -- global reward={global_reward.value}")
+
             best_global_reward = global_reward.value if global_reward.value > best_global_reward else best_global_reward
             best_test_reward = rewards if rewards > best_test_reward else best_test_reward
             model_type = 'shared' if args.shared_model else 'split'
@@ -142,6 +144,10 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
                 'optimizer_critic': optimizer_critic.state_dict() if optimizer_critic else None,
             },
                 filename=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value}_test-{rewards}.pth.tar")
+        else:
+            # use by default only debug messages if no progress was reached
+            logging.debug(f"Time: {time_print}, T={T.value} -- mean reward={rewards}"
+                         f"-- mean episode length={np.mean(eps_len)} -- global reward={global_reward.value}")
 
         # delay _test run for 10s to give the network some time to train
         # time.sleep(10)
