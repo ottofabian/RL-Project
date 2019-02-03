@@ -26,7 +26,7 @@ def main():
     n_inital_samples = 300
     max_samples_per_test_run = 300
     n_inducing_points = 300
-    n_features = 10
+    n_features = 25
     horizon = 100
 
     # get target state value for computing loss

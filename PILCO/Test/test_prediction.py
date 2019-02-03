@@ -110,8 +110,6 @@ def test_smgpr():
     X0 = 5 * np.random.rand(n_samples, state_dim)
     smgpr.fit(X0, Y0)
 
-    print("-"*60)
-
     M, S, V = smgpr.predict_from_dist(mu, sigma)
 
     # convert data to the struct expected by the MATLAB implementation
@@ -131,7 +129,6 @@ def test_smgpr():
     gpmodel.targets = Y0
     gpmodel.induce = np.stack([gp.Z.T for gp in smgpr.gp_container]).T
     # gpmodel.induce = smgpr.gp_container[0].Z
-
 
     # Call function in octave
     M_mat, S_mat, V_mat = octave.gp1(gpmodel, mu.T, sigma, nout=3)

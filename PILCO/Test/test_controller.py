@@ -2,6 +2,8 @@ import os
 
 import numpy as np
 import oct2py
+from autograd import grad, jacobian, elementwise_grad
+from autograd.test_util import check_grads
 
 from PILCO.Controller.RBFController import RBFController, squash_action_dist
 
@@ -37,11 +39,8 @@ def test_rbf():
     sigma = np.random.rand(state_dim, state_dim)
     sigma = sigma.dot(sigma.T)  # Make sigma positive semidefinite
 
-    print(rbf.sigma_fs())
-    print(rbf.sigma_eps())
-    print(rbf.length_scales())
-
     M, S, V = rbf.choose_action(mu, sigma, None)
+
     # V is already multiplied with S, have to revert that to run positive test
     V = np.linalg.solve(sigma, np.eye(sigma.shape[0])) @ V
 
