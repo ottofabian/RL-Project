@@ -349,7 +349,7 @@ class Worker(Process):
                     state = torch.from_numpy(state)
                 done = False
 
-            print("T={} -- mean reward={} -- mean episode length={} -- global reward={}".format(self.T.value,
+            print("T={} -- mean reward={:.5f} -- mean episode length={:.5f} -- global reward={:.5f}".format(self.T.value,
                                                                                                 rewards.mean(),
                                                                                                 eps_len.mean(),
                                                                                                 self.global_reward.value))
@@ -358,7 +358,7 @@ class Worker(Process):
                 'state_dict': model.state_dict(),
                 'global_reward': self.global_reward.value,
                 'optimizer': self.optimizer.state_dict() if self.optimizer is not None else None,
-            }, filename="./checkpoints/critic_T-{}_global-{}.pth.tar".format(self.T.value, self.global_reward.value))
+            }, filename="./checkpoints/critic_T-{:.5f}_global-{:.5f}.pth.tar".format(self.T.value, self.global_reward.value))
 
             # delay _test run for 10s to give the network some time to train
             time.sleep(10)

@@ -79,6 +79,9 @@ parser.add_argument('--n-envs', type=int, default=1,
                     help='amount of envs for A2C (worker=1) in order to reduce correlation in batches (default: 1)')
 parser.add_argument('--save-log', default=True,
                     help='exports a log file into the log directory if set to True (default: True)')
+parser.add_argument('--log-frequency', default=100,
+                    help='defines how often a sample is logged to tensorboard to avoid unnecessary bloating.'
+                         'If set to X every X metric sample will be logged. (default: 100)')
 
 if __name__ == '__main__':
 

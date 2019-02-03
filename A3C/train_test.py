@@ -122,13 +122,16 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
 
         rewards = np.mean(rewards)
 
+        new_best = rewards > best_test_reward
         writer.add_scalar("reward/test", rewards, int(T.value))
         writer.add_scalar("episode/length", np.mean(eps_len), int(T.value))
 
-        if global_reward.value > best_global_reward or rewards > best_test_reward:
+        log_string = f"Time: {time_print}, T={T.value} -- mean reward={rewards:.5f}" + \
+                     f"-- mean episode length={np.mean(eps_len):.2f} -- global reward={global_reward.value:.5f}"
+
+        if new_best:
             # highlight messages if progress was done
-            logging.info(f"Time: {time_print}, T={T.value} -- mean reward={rewards}"
-                         f"-- mean episode length={np.mean(eps_len)} -- global reward={global_reward.value}")
+            logging.info(log_string)
 
             best_global_reward = global_reward.value if global_reward.value > best_global_reward else best_global_reward
             best_test_reward = rewards if rewards > best_test_reward else best_test_reward
@@ -143,11 +146,10 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
                 'optimizer': optimizer.state_dict() if optimizer else None,
                 'optimizer_critic': optimizer_critic.state_dict() if optimizer_critic else None,
             },
-                filename=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value}_test-{rewards}.pth.tar")
+                filename=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value:.5f}_test-{rewards:.5f}.pth.tar")
         else:
             # use by default only debug messages if no progress was reached
-            logging.debug(f"Time: {time_print}, T={T.value} -- mean reward={rewards}"
-                         f"-- mean episode length={np.mean(eps_len)} -- global reward={global_reward.value}")
+            logging.debug(log_string)
 
         # delay _test run for 10s to give the network some time to train
         # time.sleep(10)
@@ -339,6 +341,6 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
 
         global_iter += 1
 
-        if worker_id == 0:
+        if worker_id == 0 and T.value % args.log_frequency == 0:
             log_to_tensorboard(writer, model, optimizer, rewards, values, total_loss, policy_loss, value_loss,
                                entropy_loss, T.value, model_critic=model_critic, optimizer_critic=optimizer_critic)

@@ -20,8 +20,6 @@ config.max_steps = int(2e7)
 config.logger = get_logger(tag=a2c_continuous.__name__)
 run_steps(A2CAgent(config))
 
-
-
 import logging
 
 import quanser_robots
@@ -32,7 +30,7 @@ import argparse
 import multiprocessing
 
 
-parser = argparse.ArgumentParser(description='A3C')
+parser = argparse.ArgumentParser(description='A2C')
 parser.add_argument('--lr-actor', type=float, default=0.0001,
                     help='learning rat, in paper sampled between 1e-4 to 1e-2 (default: 0.0001)')
 parser.add_argument('--lr-critic', type=float, default=0.001,

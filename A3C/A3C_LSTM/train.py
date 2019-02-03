@@ -76,7 +76,7 @@ def train(worker_id, args, shared_model, T, global_reward, optimizer=None):
 
             dist = torch.distributions.Normal(mu, variance)
 
-            # reparametrization trick through rsample
+            # reparameterization trick through rsample
             # eps = Variable(torch.randn(mu.size()))
             # action = (mu + variance.sqrt() * eps).detach()
             action = dist.rsample().detach()
@@ -158,15 +158,3 @@ def train(worker_id, args, shared_model, T, global_reward, optimizer=None):
         optimizer.step()
 
         iter_ += 1
-
-        # grads = np.concatenate([p.grad.data.cpu().numpy().flatten()
-        #                         for p in model.parameters()
-        #                         if p.grad is not None])
-        #
-        # writer.add_scalar("loss_policy", policy_loss, iter_)
-        # writer.add_scalar("loss_value", critic_loss, iter_)
-        # writer.add_scalar("values", np.mean([v.data for v in values]), iter_)
-        # writer.add_scalar("batch_rewards", np.mean(np.array(rewards)), iter_)
-        # writer.add_scalar("grad_l2", np.sqrt(np.mean(np.square(grads))), iter_)
-        # writer.add_scalar("grad_max", np.max(np.abs(grads)), iter_)
-        # writer.add_scalar("grad_variance", np.var(grads), iter_)
