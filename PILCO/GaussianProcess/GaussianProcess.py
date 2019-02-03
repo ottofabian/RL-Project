@@ -1,4 +1,5 @@
 import logging
+import scipy
 from typing import Union
 
 import autograd.numpy as np
@@ -21,7 +22,7 @@ class GaussianProcess(object):
         :param sigma_eps: prior for noise variance
         """
 
-        # kernel defintion as in Deisenroth(2010), p.10
+        # kernel definition as in Deisenroth(2010), p.10
         self.kernel = RBFKernel() + WhiteNoiseKernel()
 
         # data of GP
@@ -29,9 +30,9 @@ class GaussianProcess(object):
         self.y = None
 
         # hyperparameters of GP
-        self.sigma_eps = np.atleast_1d(sigma_eps)
         self.length_scales = length_scales
         self.sigma_f = np.atleast_1d(sigma_f)
+        self.sigma_eps = np.atleast_1d(sigma_eps)
 
         self.n_targets = None
         self.state_dim = None
@@ -95,9 +96,9 @@ class GaussianProcess(object):
         # bounds for noise variance to be lower than 1e-10
         # bounds = [(None, None) for _ in range(len(params) - 1)] + [(None, np.log(1e-10))]
 
-        self.logger.debug("Log Length scales before: {}".format(np.array2string(self.length_scales)))
-        self.logger.debug("Log Sigma_f before: {}".format(np.array2string(self.sigma_f)))
-        self.logger.debug("Log Sigma_eps before: {}".format(np.array2string(self.sigma_eps)))
+        self.logger.debug("Length scales before: {}".format(np.array2string(np.exp(self.length_scales))))
+        self.logger.debug("Sigma_f before: {}".format(np.array2string(np.exp(self.sigma_f))))
+        self.logger.debug("Sigma_eps before: {}".format(np.array2string(np.exp(self.sigma_eps))))
 
         try:
             self.logger.info("Optimization with L-BFGS-B started.")
@@ -111,9 +112,9 @@ class GaussianProcess(object):
 
         self.length_scales, self.sigma_f, self.sigma_eps = self.unwrap_params(best_params)
 
-        self.logger.debug("Log Length scales after: {}".format(np.array2string(self.length_scales)))
-        self.logger.debug("Log Sigma_f after: {}".format(np.array2string(self.sigma_f)))
-        self.logger.debug("Log Sigma_eps after: {}".format(np.array2string(self.sigma_eps)))
+        self.logger.debug("Length scales after: {}".format(np.array2string(np.exp(self.length_scales))))
+        self.logger.debug("Sigma_f after: {}".format(np.array2string(np.exp(self.sigma_f))))
+        self.logger.debug("Sigma_eps after: {}".format(np.array2string(np.exp(self.sigma_eps))))
 
         # compute betas and K_inv which is required for later predictions
         self.compute_matrices()
@@ -172,12 +173,6 @@ class GaussianProcess(object):
 
         self.K_inv = np.linalg.solve(self.K, np.identity(self.K.shape[0]))
         self.betas = np.linalg.solve(self.K, self.y).T
-
-        # -------------------------------
-        # TODO: Prob better, but autograd has no solve_triangular
-        # L = np.linalg.cholesky(K + noise)
-        # self.K_inv = solve_triangular(L, np.identity(self.X.shape[0]))
-        # self.betas = solve_triangular(L, self.y)
 
     # def compute_mu(self, mu, sigma):
     #     """

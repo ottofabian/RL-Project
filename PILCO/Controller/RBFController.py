@@ -1,3 +1,5 @@
+import dill as pickle
+
 import autograd.numpy as np
 from autograd import value_and_grad
 from scipy.optimize import minimize
@@ -51,7 +53,6 @@ class RBFController(MultivariateGP, Controller):
         MultivariateGP.__init__(self, length_scales=length_scales, n_targets=n_actions, sigma_f=sigma_f,
                                 sigma_eps=sigma_eps, container=RBFNetwork, is_policy=True)
 
-        # self.length_scales = None
         self.n_features = n_features
         self.compute_cost = compute_cost
         self.opt_ctr = 0
@@ -64,11 +65,8 @@ class RBFController(MultivariateGP, Controller):
         :return: None
         """
 
-        # TODO this fits all X for all predictions, this does not matter for 1D actions
+        # TODO this fits all X for all predictions, this does not work for >1D actions
         MultivariateGP.fit(self, X, y)
-
-        # second X shape is for lengthscales
-        # self.n_params = X.shape[0] * X.shape[1] + y.shape[0] * y.shape[1] + X.shape[0] + 1
 
     def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: float = None) -> tuple:
         """
@@ -137,3 +135,10 @@ class RBFController(MultivariateGP, Controller):
     # def callback(self, x):
     #     self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, np.array2string(
     #         cost if type(cost) == np.ndarray else cost._value)))
+
+    def save(self, reward):
+        # remove function handle for serialization
+        temp = self.compute_cost
+        self.compute_cost = None
+        pickle.dump(self, open(f"policy_reward-{reward}.p", "wb"))
+        self.compute_cost = temp

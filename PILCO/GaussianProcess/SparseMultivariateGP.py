@@ -1,6 +1,7 @@
 import logging
 
-import numpy as np
+import autograd.numpy as np
+import scipy
 import GPy
 
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
@@ -47,13 +48,18 @@ class SparseMultivariateGP(MultivariateGP):
             kernel = GPy.kern.RBF(input_dim=input_dim, lengthscale=np.exp(length_scales[i]), ARD=True,
                                   variance=np.exp(sigma_f[i]))
 
-            kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
+            # kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
             model = GPy.models.SparseGPRegression(X=X, Y=y[:, i:i + 1], kernel=kernel, Z=Z)
-
-            # add constrain boundaries for the parameters to avoid numerical issues such as NaN problems
-            model.constrain_bounded(1e-3, 1e3)
-            model.kern.white.variance.constrain_fixed(1e-5)
-
+            model.likelihood.noise = np.exp(sigma_eps[i])
+            model.kern.lengthscale.constrain_bounded(0, 150)
+            # model.kern.lengthscale[1].constrain_bounded(0, 10)
+            # model.kern.lengthscale[2].constrain_bounded(0, 10)
+            # model.kern.lengthscale[3].constrain_bounded(0, 150)
+            # model.kern.lengthscale[4].constrain_bounded(0, 200)
+            # model.kern.lengthscale[5].constrain_bounded(0, 150)
+            # prior = GPy.priors.gamma_from_EV(0.5, 1)
+            # gp.kern.lengthscale.set_prior(prior, warning=False)
+            # model.inference_method = GPy.inference.latent_function_inference.FITC()
             self.gp_container.append(model)
 
     def fit(self, X, y):
@@ -86,32 +92,34 @@ class SparseMultivariateGP(MultivariateGP):
 
         # TODO move this part somewhere else
 
-        Kmm = np.stack([gp.kern.rbf.K(gp.Z) + 1e-6 * np.identity(induced_dim) for gp in self.gp_container])
-        Kmn = np.stack([gp.kern.rbf.K(gp.Z, gp.X) for gp in self.gp_container])
+        Kmm = np.stack([gp.kern.K(gp.Z) + 1e-6 * np.identity(induced_dim) for gp in self.gp_container])
+        Kmn = np.stack([gp.kern.K(gp.Z, gp.X) for gp in self.gp_container])
 
         L = np.linalg.cholesky(Kmm)
 
-        V = np.stack([np.linalg.solve(L[i], Kmn[i]) for i in range(target_dim)])  # inv(sqrt(Kmm)) * Kmn
+        V = np.stack([scipy.linalg.solve_triangular(L[i], Kmn[i], lower=True) for i in
+                      range(target_dim)])  # inv(sqrt(Kmm)) * Kmn
         G = np.exp(2 * self.sigma_fs()) - np.sum(V ** 2, axis=1)
-
         G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))  # this is nan for theta_dot, fuck this algorithm
-        V_scaled = V / G[:, None]
+        V = V / G[:, None]
 
-        # noise = np.expand_dims(np.identity(self.n_inducing_points), 0) * np.expand_dims(np.exp(2 * self.sigma_eps()), 1)
         Am = np.linalg.cholesky(np.stack(
-            [V_scaled[i] @ V_scaled[i].T + np.identity(induced_dim) * np.exp(2 * self.sigma_eps()[i]) for i
+            [V[i] @ V[i].T + np.identity(induced_dim) * np.exp(2 * self.sigma_eps()[i]) for i
              in range(target_dim)]))
 
-        At = L @ Am
-        iAt = np.stack([np.linalg.solve(At[i], np.identity(induced_dim)) for i in range(target_dim)])
+        At = L @ Am  # chol(sig*B) Deisenroth(2010)
+        iAt = np.stack(
+            [scipy.linalg.solve_triangular(At[i], np.identity(induced_dim), lower=True) for i in range(target_dim)])
 
         V_scaled = V / G[:, None]
         # one big ugly loopy, because numpy cannot do it differently
-        beta = np.stack([np.linalg.solve(L[i], np.linalg.solve(Am[i], (V_scaled[i]) @ gp.Y)) for i, gp in
-                         enumerate(self.gp_container)])[:, :, 0]
+        beta = np.stack([(np.linalg.solve(Am[i], V_scaled[i]).T @ iAt[i]).T @ gp.Y.flatten() for i, gp in
+                         enumerate(self.gp_container)]).T
 
-        iB = np.stack([iAt[i] @ iAt[i].T for i in range(target_dim)]) * self.sigma_eps()[:, None, None]
-        iK = np.stack([np.linalg.solve(L[i], np.identity(induced_dim)) for i in range(target_dim)]) - iB
+        iB = np.stack([iAt[i].T @ iAt[i] * np.exp(2 * self.sigma_eps()[i]) for i in range(target_dim)])  # inv(B)
+
+        # covariance matrix for predictive variances
+        iK = np.stack([np.linalg.solve(Kmm[i], np.identity(induced_dim)) for i in range(target_dim)]) - iB
 
         # ----------------------------------------------------------------------------------------------------
         # Helper
@@ -124,8 +132,8 @@ class SparseMultivariateGP(MultivariateGP):
         precision_inv2 = np.stack([np.diag(np.exp(-2 * l)) for l in length_scales])
 
         # centralized inputs
-        diff = np.array(self.gp_container[0].Z) - mu
-        diff_scaled = np.expand_dims(diff, axis=0) / np.expand_dims(np.exp(2 * length_scales), axis=1)
+        diff = np.stack([self.gp_container[i].Z.values for i in range(target_dim)]) - mu
+        diff_scaled = diff / np.expand_dims(np.exp(2 * length_scales), axis=1)
 
         # ----------------------------------------------------------------------------------------------------
         # compute mean of predictive dist based on matlab code
@@ -195,22 +203,19 @@ class SparseMultivariateGP(MultivariateGP):
             self.logger.info("Optimization for GP (output={}) started.".format(i))
             try:
                 self.logger.info("Optimization with L-BFGS-B started.")
-
                 gp.optimize("lbfgsb", messages=True)
             except Exception:
                 self.logger.info("Optimization with SCG started.")
                 gp.optimize('scg', messages=True)
 
             print(gp)
-
+            print("Length scales:", gp.kern.lengthscale.values)
 
     def sigma_fs(self):
-        return np.log(np.array([gp.kern.rbf.variance for gp in self.gp_container]))
+        return np.log(np.sqrt(np.array([gp.kern.variance.values for gp in self.gp_container])))
 
     def sigma_eps(self):
-        return np.log(np.array([gp.kern.white.variance for gp in self.gp_container]))
+        return np.log(np.sqrt(np.array([gp.likelihood.variance.values for gp in self.gp_container])))
 
     def length_scales(self):
-        return np.log(np.array([gp.kern.rbf.lengthscale for gp in self.gp_container]))
-
-
+        return np.log(np.array([gp.kern.lengthscale.values for gp in self.gp_container]))

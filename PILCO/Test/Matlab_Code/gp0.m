@@ -101,4 +101,4 @@ for i=1:E
 end
 
 % 4) centralize moments
-S = S - M*M';                                              
+S = S - M*M';

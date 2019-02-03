@@ -1,6 +1,8 @@
 import logging
+
 from typing import Union, Type
 
+import dill as pickle
 import autograd.numpy as np
 
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
@@ -10,8 +12,7 @@ from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
 class MultivariateGP(object):
 
     def __init__(self, n_targets: int, container: Union[Type[GaussianProcess], Type[RBFNetwork]],
-                 length_scales: np.ndarray, sigma_f: np.ndarray = 1,
-                 sigma_eps: np.ndarray = 1, is_policy: bool = False):
+                 length_scales: np.ndarray, sigma_f: np.ndarray, sigma_eps: np.ndarray, is_policy: bool = False):
         """
         Multivariate Gaussian Process Regression
         :param n_targets: amount of target, each dimension of data inputs requires one target
@@ -232,6 +233,9 @@ class MultivariateGP(object):
     #     # print(precision, sigma)
     #     sigma_plus_precision_inv = np.linalg.solve(sigma @ precision, np.identity(sigma.shape[0]))
     #     return np.sum(beta @ self.gp_container[i].qs * sigma @ sigma_plus_precision_inv @ zeta, axis=1)
+
+    def save(self, reward):
+        pickle.dump(self, open(f"dynamics_reward-{reward}.p", "wb"))
 
     def sigma_fs(self):
         return np.array([c.sigma_f for c in self.gp_container])

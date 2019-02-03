@@ -75,9 +75,9 @@ if true
 % The following is not an inverse matrix, but we'll treat it as such: multiply
 % the targets from right and the cross-covariances left to get predictive mean.
     iK(:,:,i) = ((Am\(bsxfun(@rdivide,V,G)))'*iAt)';
-    beta(:,i) = iK(:,:,i)*targets(:,i);      
+    beta(:,i) = iK(:,:,i)*targets(:,i);
     iB = iAt'*iAt.*exp(2*X(D+2,i));              % inv(B), [Ed's thesis, p. 40]
-    iK2(:,:,i) = Kmm\eye(np) - iB; % covariance matrix for predictive variances       
+    iK2(:,:,i) = Kmm\eye(np) - iB; % covariance matrix for predictive variances
   end
 end
 
