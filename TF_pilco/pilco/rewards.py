@@ -1,7 +1,7 @@
 import abc
 import tensorflow as tf
 from gpflow import Parameterized, Param, params_as_tensors, settings
-import numpy as np
+from autograd import numpy as np
 
 float_type = settings.dtypes.float_type
 

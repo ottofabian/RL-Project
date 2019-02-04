@@ -1,5 +1,5 @@
 import tensorflow as tf
-import numpy as np
+from autograd import numpy as np
 import gpflow
 
 from .models import MGPR

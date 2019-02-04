@@ -1,6 +1,6 @@
 import dill as pickle
 
-import autograd.numpy as np
+from autograd import numpy as np
 from autograd import value_and_grad
 from scipy.optimize import minimize
 
@@ -89,49 +89,7 @@ class RBFController(MultivariateGP, Controller):
         optimize policy with regards to pseudo inputs and targets
         :return: None
         """
-        # TODO make this working for n_actions > 1
-        params = np.array([gp.wrap_policy_hyperparams() for gp in self.gp_container]).flatten()
-        options = {'maxiter': 150, 'disp': True}
-
-        try:
-            self.logger.info("Starting to optimize policy with L-BFGS-B.")
-            # res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B', jac=True,
-            #                options=options)
-            res = minimize(fun=self._optimize_hyperparams, x0=params, method='L-BFGS-B', jac=False, options=options)
-        except Exception:
-            self.logger.info("Starting to optimize policy with CG.")
-            res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='CG', jac=True,
-                           options=options)
-        self.opt_ctr = 0
-
-        # TODO make this working for n_actions > 1
-        for gp in self.gp_container:
-            gp.unwrap_params(res.x)
-            gp.compute_matrices()
-
-        # Make one more run for plots
-        self.compute_cost(policy=self, print_trajectory=True)
-
-    def _optimize_hyperparams(self, params):
-        """
-        function handle to use for scipy optimizer
-        :param params: flat array of all parameters [
-        :return: cost of trajectory
-        """
-
-        self.opt_ctr += 1
-
-        # TODO make this working for n_actions > 1
-        for gp in self.gp_container:
-            gp.unwrap_params(params)
-            # computes beta and K_inv for updated hyperparams
-            gp.compute_matrices()
-
-        # self.logger.debug("Params as given from the optimization step:")
-        # self.logger.debug(np.array2string(params if type(params) == np.ndarray else params._value))
-
-        # cost of trajectory
-        return self.compute_cost(self, print_trajectory=False)
+        raise ValueError("Cannot be used for optimization")
 
     # def callback(self, x):
     #     self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, np.array2string(
@@ -139,7 +97,4 @@ class RBFController(MultivariateGP, Controller):
 
     def save(self, reward):
         # remove function handle for serialization
-        temp = self.compute_cost
-        self.compute_cost = None
         pickle.dump(self, open(f"policy_reward-{reward}.p", "wb"))
-        self.compute_cost = temp
