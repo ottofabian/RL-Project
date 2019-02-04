@@ -238,7 +238,8 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             log_prob = dist.log_prob(action).sum(-1).unsqueeze(-1)
 
             # make selected move
-            state, reward, dones, _ = env.step(np.clip(action.detach().numpy(), -args.max_action, args.max_action))
+            action = np.clip(action.detach().numpy(), -args.max_action, args.max_action)
+            state, reward, dones, _ = env.step(action if args.worker == 1 else action[0])
             # TODO: check if this is better
             # reward += (-state[2]+1) * np.exp(- np.abs(state[0]) ** 2)
             # reward = min(max(-1, reward), 1)
