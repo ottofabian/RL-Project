@@ -69,12 +69,12 @@ class MultivariateGP(object):
         # ----------------------------------------------------------------------------------------------------
         # Helper
 
-        beta = np.vstack([gp.betas for gp in self.gp_container]).T
+        beta = np.vstack(np.array([gp.betas for gp in self.gp_container])).T
         length_scales = self.length_scales()
         sigma_f = self.sigma_fs().reshape(self.n_targets)
 
-        precision_inv = np.stack([np.diag(np.exp(-l)) for l in length_scales])
-        precision_inv2 = np.stack([np.diag(np.exp(-2 * l)) for l in length_scales])
+        precision_inv = np.stack(np.array([np.diag(np.exp(-l)) for l in length_scales]))
+        precision_inv2 = np.stack(np.array([np.diag(np.exp(-2 * l)) for l in length_scales]))
 
         # centralized inputs
         diff = self.X - mu
@@ -90,7 +90,7 @@ class MultivariateGP(object):
 
         # t = zeta_a / B
         # B[i] is symmetric, so B[i].T=B[i]
-        t = np.stack([np.linalg.solve(B[i], zeta_a[i].T).T for i in range(target_dim)])
+        t = np.stack(np.array([np.linalg.solve(B[i], zeta_a[i].T).T for i in range(target_dim)]))
 
         scaled_beta = np.exp(-.5 * np.sum(zeta_a * t, axis=2)) * beta.T
 
@@ -117,8 +117,8 @@ class MultivariateGP(object):
         R = sigma @ precision_add + np.identity(state_dim)
         scaling_factor = np.linalg.det(R) ** -.5
 
-        R_inv = np.stack(
-            [np.linalg.solve(R.reshape(-1, state_dim, state_dim)[i], sigma) for i in range(target_dim ** 2)])
+        R_inv = np.stack(np.array(
+            [np.linalg.solve(R.reshape(-1, state_dim, state_dim)[i], sigma) for i in range(target_dim ** 2)]))
         R_inv = R_inv.reshape(target_dim, target_dim, state_dim, state_dim) / 2
 
         # compute squared mahalanobis distance
@@ -135,7 +135,7 @@ class MultivariateGP(object):
             cov = scaling_factor * np.einsum('ji,iljk,kl->il', beta, Q, beta) + 1e-6 * np.identity(target_dim)
         else:
             cov = np.einsum('ji,iljk,kl->il', beta, Q, beta)
-            trace = np.hstack([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)])
+            trace = np.hstack(np.array([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)]))
             cov = (cov - np.diag(trace)) * scaling_factor + np.diag(np.exp(2 * sigma_f))
 
         # Centralize moments

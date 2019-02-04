@@ -429,7 +429,7 @@ class PILCO(object):
         plt.title("Trajectory prediction for actions")
         plt.show()
 
-    def load_policy(self, path, compute_cost:callable):
+    def load_policy(self, path, compute_cost: callable):
         self.policy = pickle.load(self, open(path, "r"))
         self.policy.compute_cost = compute_cost
 

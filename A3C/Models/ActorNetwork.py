@@ -88,8 +88,8 @@ class ActorNetwork(torch.nn.Module):
             self.body = nn.Sequential(
                 nn.Linear(self.n_inputs, self.n_hidden),
                 act,
-                nn.Linear(self.n_hidden, self.n_hidden),
-                act,
+                # nn.Linear(self.n_hidden, self.n_hidden),
+                # act,
                 # nn.Linear(self.n_hidden, self.n_hidden),
                 # act
             )
@@ -99,6 +99,10 @@ class ActorNetwork(torch.nn.Module):
             )
 
             self.sigma = nn.Parameter(torch.zeros(self.n_outputs))
+
+            print(self.body)
+            print(self.mu)
+            print(self.sigma)
 
         self.apply(init_weights)
         self.train()
