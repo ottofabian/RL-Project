@@ -35,8 +35,6 @@ def init_weights(m):
 # mu = 5 * torch.tanh(self.mu(action_hidden))
 # sigma = F.softplus(self.sigma(action_hidden)) + 1e-5
 
-load_stab = False #True
-
 
 class CriticNetwork(torch.nn.Module):
     def __init__(self, n_inputs):
@@ -46,30 +44,16 @@ class CriticNetwork(torch.nn.Module):
         # self.n_hidden = n_hidden
         self.n_hidden = 100
 
-        if load_stab:
-            # n_hidden = 200
+        # act = nn.LeakyReLU()
+        act = nn.ReLU()
 
-            self.n_inputs = self.n_inputs
-            self.fc2 = nn.Linear(self.n_inputs, self.n_hidden)
-            #self.hidden_value2 = nn.Linear(n_hidden, n_hidden)
-            self.value = nn.Linear(self.n_hidden, 1)
-
-            self.apply(init_weights)
-            self.train()
-        else:
-
-            # act = nn.LeakyReLU()
-            act = nn.ReLU()
-
-            self.model = nn.Sequential(
-                nn.Linear(self.n_inputs, self.n_hidden),
-                act,
-                # nn.Linear(self.n_hidden, self.n_hidden),
-                # act,
-                # nn.Linear(self.n_hidden, self.n_hidden),
-                # act,
-                nn.Linear(self.n_hidden, 1)
-            )
+        self.model = nn.Sequential(
+            nn.Linear(self.n_inputs, self.n_hidden),
+            act,
+            nn.Linear(self.n_hidden, self.n_hidden),
+            act,
+            nn.Linear(self.n_hidden, 1)
+        )
 
         print(self.model)
 
@@ -86,10 +70,5 @@ class CriticNetwork(torch.nn.Module):
 
         x = x.float()
 
-        if load_stab:
-            x = F.relu(self.fc2(x))
-            #x = F.relu(self.hidden_value2(x))
-            return self.value(x)
-        else:
-            return self.model(x)
+        return self.model(x)
 

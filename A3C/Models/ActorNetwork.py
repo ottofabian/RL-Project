@@ -58,8 +58,6 @@ def init_weights(m):
 #         mu = 10 * torch.tanh(self.mu(x))
 #         sigma = F.softplus(self.sigma(x)) + 1e-5  # avoid 0
 
-load_stab = False  # True
-
 
 class ActorNetwork(torch.nn.Module):
     def __init__(self, n_inputs, n_actions):
@@ -70,39 +68,25 @@ class ActorNetwork(torch.nn.Module):
 
         self.n_hidden = 200
 
-        if load_stab:
-            # n_hidden = 200
+        # act = nn.LeakyReLU()
+        act = nn.ReLU()
 
-            self.n_inputs = self.n_inputs
-            self.fc2 = nn.Linear(self.n_inputs, self.n_hidden)
-            self.mu = nn.Linear(self.n_hidden, self.n_outputs)
-            self.sigma = nn.Linear(self.n_hidden, self.n_outputs)
+        self.body = nn.Sequential(
+            nn.Linear(self.n_inputs, self.n_hidden),
+            act,
+            nn.Linear(self.n_hidden, self.n_hidden),
+            act,
+        )
 
-            self.apply(init_weights)
-            self.train()
+        self.mu = nn.Sequential(
+            nn.Linear(self.n_hidden, self.n_outputs)
+        )
 
-        else:
-            # act = nn.LeakyReLU()
-            act = nn.ReLU()
+        self.sigma = nn.Parameter(torch.zeros(self.n_outputs))
 
-            self.body = nn.Sequential(
-                nn.Linear(self.n_inputs, self.n_hidden),
-                act,
-                # nn.Linear(self.n_hidden, self.n_hidden),
-                # act,
-                # nn.Linear(self.n_hidden, self.n_hidden),
-                # act
-            )
-
-            self.mu = nn.Sequential(
-                nn.Linear(self.n_hidden, self.n_outputs)
-            )
-
-            self.sigma = nn.Parameter(torch.zeros(self.n_outputs))
-
-            print(self.body)
-            print(self.mu)
-            print(self.sigma)
+        print(self.body)
+        print(self.mu)
+        print(self.sigma)
 
         self.apply(init_weights)
         self.train()
@@ -110,13 +94,6 @@ class ActorNetwork(torch.nn.Module):
     def forward(self, x):
         x = x.float()
 
-        if load_stab:
-            x = F.relu(self.fc2(x))
-            mu = self.max_action * torch.tanh(self.mu(x))
-            sigma = F.softplus(self.sigma(x)) + 1e-5
-            return mu, sigma
-        else:
-
-            body = self.body(x)
-            mu = self.mu(body)
-            return mu, F.softplus(self.sigma)
+        body = self.body(x)
+        mu = self.mu(body)
+        return mu, F.softplus(self.sigma)
