@@ -264,7 +264,7 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
                             global_reward.value = episode_reward[i]
                         else:
                             global_reward.value = .99 * global_reward.value + .01 * episode_reward[i]
-                    if worker_id == 0:
+                    if worker_id == 0 and T.value % args.log_frequency == 0:
                         writer.add_scalar("reward/global", global_reward.value, T.value)
 
                     episode_reward[i] = 0
