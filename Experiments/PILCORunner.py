@@ -25,7 +25,7 @@ def main():
 
     n_inital_samples = 300
     max_samples_per_test_run = 300
-    n_inducing_points = 300
+    n_inducing_points = None
     n_features = 25
     horizon = 40
 

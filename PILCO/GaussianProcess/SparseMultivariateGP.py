@@ -92,34 +92,35 @@ class SparseMultivariateGP(MultivariateGP):
 
         # TODO move this part somewhere else
 
-        Kmm = np.stack([gp.kern.K(gp.Z) + 1e-6 * np.identity(induced_dim) for gp in self.gp_container])
-        Kmn = np.stack([gp.kern.K(gp.Z, gp.X) for gp in self.gp_container])
+        Kmm = np.stack(np.array([gp.kern.K(gp.Z) + 1e-6 * np.identity(induced_dim) for gp in self.gp_container]))
+        Kmn = np.stack(np.array([gp.kern.K(gp.Z, gp.X) for gp in self.gp_container]))
 
         L = np.linalg.cholesky(Kmm)
 
-        V = np.stack([scipy.linalg.solve_triangular(L[i], Kmn[i], lower=True) for i in
-                      range(target_dim)])  # inv(sqrt(Kmm)) * Kmn
+        V = np.stack(np.array([scipy.linalg.solve_triangular(L[i], Kmn[i], lower=True) for i in
+                               range(target_dim)]))  # inv(sqrt(Kmm)) * Kmn
         G = np.exp(2 * self.sigma_fs()) - np.sum(V ** 2, axis=1)
         G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))  # this is nan for theta_dot, fuck this algorithm
         V = V / G[:, None]
 
-        Am = np.linalg.cholesky(np.stack(
+        Am = np.linalg.cholesky(np.stack(np.array(
             [V[i] @ V[i].T + np.identity(induced_dim) * np.exp(2 * self.sigma_eps()[i]) for i
-             in range(target_dim)]))
+             in range(target_dim)])))
 
         At = L @ Am  # chol(sig*B) Deisenroth(2010)
-        iAt = np.stack(
-            [scipy.linalg.solve_triangular(At[i], np.identity(induced_dim), lower=True) for i in range(target_dim)])
+        iAt = np.stack(np.array(
+            [scipy.linalg.solve_triangular(At[i], np.identity(induced_dim), lower=True) for i in range(target_dim)]))
 
         V_scaled = V / G[:, None]
         # one big ugly loopy, because numpy cannot do it differently
-        beta = np.stack([(np.linalg.solve(Am[i], V_scaled[i]).T @ iAt[i]).T @ gp.Y.flatten() for i, gp in
-                         enumerate(self.gp_container)]).T
+        beta = np.stack(np.array([(np.linalg.solve(Am[i], V_scaled[i]).T @ iAt[i]).T @ gp.Y.flatten() for i, gp in
+                                  enumerate(self.gp_container)])).T
 
-        iB = np.stack([iAt[i].T @ iAt[i] * np.exp(2 * self.sigma_eps()[i]) for i in range(target_dim)])  # inv(B)
+        iB = np.stack(
+            np.array([iAt[i].T @ iAt[i] * np.exp(2 * self.sigma_eps()[i]) for i in range(target_dim)]))  # inv(B)
 
         # covariance matrix for predictive variances
-        iK = np.stack([np.linalg.solve(Kmm[i], np.identity(induced_dim)) for i in range(target_dim)]) - iB
+        iK = np.stack(np.array([np.linalg.solve(Kmm[i], np.identity(induced_dim)) for i in range(target_dim)])) - iB
 
         # ----------------------------------------------------------------------------------------------------
         # Helper
@@ -132,7 +133,7 @@ class SparseMultivariateGP(MultivariateGP):
         precision_inv2 = np.stack([np.diag(np.exp(-2 * l)) for l in length_scales])
 
         # centralized inputs
-        diff = np.stack([self.gp_container[i].Z.values for i in range(target_dim)]) - mu
+        diff = np.stack(np.array([self.gp_container[i].Z.values for i in range(target_dim)])) - mu
         diff_scaled = diff / np.expand_dims(np.exp(2 * length_scales), axis=1)
 
         # ----------------------------------------------------------------------------------------------------
