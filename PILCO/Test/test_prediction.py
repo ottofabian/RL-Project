@@ -1,6 +1,6 @@
 import os
 
-import numpy as np
+from autograd import numpy as np
 import oct2py
 
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess

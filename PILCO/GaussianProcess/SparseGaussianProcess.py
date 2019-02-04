@@ -1,5 +1,5 @@
 from GPy.models import SparseGPRegression
-import numpy as np
+from autograd import numpy as np
 from autograd import value_and_grad
 from scipy.optimize import minimize
 

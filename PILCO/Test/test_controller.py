@@ -1,6 +1,6 @@
 import os
 
-import numpy as np
+from autograd import numpy as np
 import oct2py
 from autograd import grad, jacobian, elementwise_grad
 from autograd.test_util import check_grads
@@ -12,10 +12,6 @@ octave = oct2py.Oct2Py()
 dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"
 print(dir_path)
 octave.addpath(dir_path)
-
-
-def compute_action_wrapper(controller, m, s, squash=False):
-    return controller.choose_action(m, s, squash)
 
 
 def test_rbf():

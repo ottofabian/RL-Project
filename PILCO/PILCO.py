@@ -5,6 +5,8 @@ import autograd.numpy as np
 import gym
 import matplotlib.pyplot as plt
 import quanser_robots
+from autograd import value_and_grad
+from scipy.optimize import minimize
 
 from PILCO.Controller.Controller import Controller
 from PILCO.Controller.RBFController import RBFController
@@ -225,7 +227,7 @@ class PILCO(object):
                                         length_scales=length_scales)
             self.policy.fit(policy_X, policy_y)
 
-        self.policy.optimize()
+        self.optimize_policy()
 
     def compute_trajectory_cost(self, policy: Controller, print_trajectory: bool = False) -> float:
         """
@@ -308,6 +310,53 @@ class PILCO(object):
         state_next_cov = delta_cov + state_cov + delta_input_output_cov + delta_input_output_cov.T
 
         return state_next_mu, state_next_cov, action_mu, action_cov
+
+    def optimize_policy(self) -> None:
+        """
+        optimize policy with regards to pseudo inputs and targets
+        :return: None
+        """
+        # TODO make this working for n_actions > 1
+        params = np.array([gp.wrap_policy_hyperparams() for gp in self.policy.gp_container]).flatten()
+        options = {'maxiter': 150, 'disp': True}
+
+        try:
+            self.logger.info("Starting to optimize policy with L-BFGS-B.")
+            res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B',
+                           jac=True, options=options)
+            # res = minimize(fun=self.policy._optimize_hyperparams, x0=params, method='L-BFGS-B', jac=False,
+            #                options=options)
+        except Exception:
+            self.logger.info("Starting to optimize policy with CG.")
+            res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='CG', jac=True,
+                           options=options)
+
+        # TODO make this working for n_actions > 1
+        for gp in self.policy.gp_container:
+            gp.unwrap_params(res.x)
+            gp.compute_matrices()
+
+        # Make one more run for plots
+        self.compute_trajectory_cost(policy=self.policy, print_trajectory=True)
+
+    def _optimize_hyperparams(self, params):
+        """
+        function handle to use for scipy optimizer
+        :param params: flat array of all parameters [
+        :return: cost of trajectory
+        """
+
+        # TODO make this working for n_actions > 1
+        for gp in self.policy.gp_container:
+            gp.unwrap_params(params)
+            # computes beta and K_inv for updated hyperparams
+            gp.compute_matrices()
+
+        # self.logger.debug("Params as given from the optimization step:")
+        # self.logger.debug(np.array2string(params if type(params) == np.ndarray else params._value))
+
+        # cost of trajectory
+        return self.compute_trajectory_cost(self.policy, print_trajectory=False)
 
     def execute_test_run(self) -> tuple:
         """

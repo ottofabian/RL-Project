@@ -1,12 +1,16 @@
 import logging
+from functools import partial
 
 from typing import Union, Type
 
 import dill as pickle
 import autograd.numpy as np
+from autograd.test_util import check_grads
 
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
+
+check_grads = partial(check_grads, modes=['rev'])
 
 
 class MultivariateGP(object):
@@ -135,6 +139,7 @@ class MultivariateGP(object):
             cov = scaling_factor * np.einsum('ji,iljk,kl->il', beta, Q, beta) + 1e-6 * np.identity(target_dim)
         else:
             cov = np.einsum('ji,iljk,kl->il', beta, Q, beta)
+
             trace = np.hstack(np.array([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)]))
             cov = (cov - np.diag(trace)) * scaling_factor + np.diag(np.exp(2 * sigma_f))
 
