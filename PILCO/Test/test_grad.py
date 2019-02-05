@@ -38,7 +38,7 @@ def test_grad_mgpr():
 
     # setup loss
     T_inv = np.random.randn(state_dim, state_dim)
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, T_inv=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 
     # take any env, to avoid issues with gym.make
     pilco = PILCO(env_name="MountainCarContinuous-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=loss,
@@ -65,8 +65,7 @@ def test_grad_mgpr():
     Y0_rbf = np.sin(X0_rbf).dot(A_rbf) + 1e-3 * (np.random.rand(n_features_rbf, n_actions) - 0.5)
     length_scales_rbf = np.random.rand(n_actions, state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, compute_cost=None,
-                        length_scales=length_scales_rbf)
+    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, length_scales=length_scales_rbf)
     rbf.fit(X0_rbf, Y0_rbf)
     pilco.policy = rbf
 
@@ -114,7 +113,7 @@ def test_grad_smgpr():
 
     # setup loss
     T_inv = np.random.randn(state_dim, state_dim)
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, T_inv=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 
     # take any env, to avoid issues with gym.make
     pilco = PILCO(env_name="MountainCarContinuous-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=loss,
@@ -141,8 +140,7 @@ def test_grad_smgpr():
     Y0_rbf = np.sin(X0_rbf).dot(A_rbf) + 1e-3 * (np.random.rand(n_features_rbf, n_actions) - 0.5)
     length_scales_rbf = np.random.rand(n_actions, state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, compute_cost=None,
-                        length_scales=length_scales_rbf)
+    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, length_scales=length_scales_rbf)
     rbf.fit(X0_rbf, Y0_rbf)
 
     pilco.policy = rbf
@@ -151,10 +149,7 @@ def test_grad_smgpr():
     params = np.array([gp.wrap_policy_hyperparams() for gp in rbf.gp_container]).flatten()
     np.allclose(grad(pilco._optimize_hyperparams)(params), jacobian(pilco._optimize_hyperparams)(params))
 
-    def helper(x):
-        return pilco._optimize_hyperparams(x)
-
-    check_grads(helper)(params)
+    check_grads(pilco._optimize_hyperparams)(params)
 
 
 def test_grad_loss():
@@ -168,7 +163,7 @@ def test_grad_loss():
     target_state = np.random.rand(state_dim)
     T_inv = np.random.randn(state_dim, state_dim)
 
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, T_inv=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 
     # grad_error = check_grad(func=loss.compute_loss, grad=grad(loss.compute_loss), x0=params)
     check_grads(loss.compute_loss)(mu, sigma)
@@ -226,8 +221,7 @@ def test_grad_rollout():
     Y0_rbf = np.sin(X0_rbf).dot(A_rbf) + 1e-3 * (np.random.rand(n_features_rbf, n_actions) - 0.5)
     length_scales_rbf = np.random.rand(n_actions, state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, compute_cost=None,
-                        length_scales=length_scales_rbf)
+    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, length_scales=length_scales_rbf)
     rbf.fit(X0_rbf, Y0_rbf)
 
     # ---------------------------------------------------------------------------------------
@@ -264,7 +258,7 @@ def test_grad_rollout():
     target_state = np.random.rand(state_dim)
     T_inv = np.random.randn(state_dim, state_dim)
 
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, T_inv=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 
     def helper1(x):
         m = x[0:state_dim]

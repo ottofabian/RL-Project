@@ -1,6 +1,6 @@
 import os
 
-from autograd import numpy as np
+import numpy as np
 import oct2py
 
 from PILCO.Controller.RBFController import RBFController
@@ -23,14 +23,14 @@ def test_cost():
     target_state = np.random.rand(state_dim)
     T_inv = np.random.randn(state_dim, state_dim)
 
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, T_inv=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 
     M, S, C = loss.compute_cost(mu, sigma)
     C = np.linalg.solve(sigma, np.eye(state_dim)) @ C
 
     cost = oct2py.io.Struct()
     cost.z = loss.target_state.T
-    cost.W = loss.T_inv
+    cost.W = loss.W
 
     M_mat, _, _, S_mat, _, _, C_mat, _, _ = octave.lossSat(cost, mu.T, sigma, nout=9)
 
@@ -67,8 +67,7 @@ def test_trajectory_cost():
     Y0_rbf = np.sin(X0_rbf).dot(A_rbf) + 1e-3 * (np.random.rand(n_features_rbf, n_actions) - 0.5)
     length_scales_rbf = np.random.rand(n_actions, state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, compute_cost=None,
-                        length_scales=length_scales_rbf)
+    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, length_scales=length_scales_rbf)
     rbf.fit(X0_rbf, Y0_rbf)
 
     # ---------------------------------------------------------------------------------------
@@ -76,7 +75,7 @@ def test_trajectory_cost():
 
     # setup loss
     T_inv = np.random.randn(state_dim, state_dim)
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, T_inv=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 
     # take any env, to avoid issues with gym.make
     # matlab is specified with squashing
@@ -143,7 +142,7 @@ def test_trajectory_cost():
     # generate loss struct for matlab
     cost = oct2py.io.Struct()
     cost.z = loss.target_state.T
-    cost.W = loss.T_inv
+    cost.W = loss.W
 
     # ---------------------------------------------------------------------------------------
 

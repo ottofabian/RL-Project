@@ -1,6 +1,6 @@
 import os
 
-from autograd import numpy as np
+import numpy as np
 import oct2py
 
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
@@ -139,8 +139,8 @@ def test_smgpr():
     assert M.shape == M_mat.T.shape
     assert S.shape == S_mat.shape
     assert V.shape == V_mat.shape
-    np.testing.assert_allclose(M, M_mat.T, rtol=1e-5)
-    np.testing.assert_allclose(S, S_mat, rtol=1e-5)
+    np.testing.assert_allclose(M, M_mat.T, rtol=1e-4)
+    np.testing.assert_allclose(S, S_mat, rtol=1e-4)
     np.testing.assert_allclose(V, V_mat, rtol=1e-4)
 
 

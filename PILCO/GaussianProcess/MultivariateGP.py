@@ -1,16 +1,17 @@
 import logging
-from functools import partial
+# from functools import partial
 
 from typing import Union, Type
 
-import dill as pickle
+import pickle
 import autograd.numpy as np
-from autograd.test_util import check_grads
+# from autograd.test_util import check_grads
 
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
 
-check_grads = partial(check_grads, modes=['rev'])
+
+# check_grads = partial(check_grads, modes=['rev'])
 
 
 class MultivariateGP(object):
@@ -43,7 +44,7 @@ class MultivariateGP(object):
 
     def fit(self, X, y):
         """
-        This is essentially used to compute the posterior of the GP, given the trainings samples
+        Set new X any y for the new data
         :param X:
         :param y:
         :return:
@@ -56,7 +57,7 @@ class MultivariateGP(object):
     def predict_from_dist(self, mu: np.ndarray, sigma: np.ndarray) -> tuple:
 
         """
-        Predict dist given an uncertain input x~N(mu,sigma) from gaussian process
+        Use moment mathcing to predict dist given an uncertain input x~N(mu,sigma) from gaussian process
         Based on the idea of: https://github.com/cryscan/pilco-learner
         :param mu: n_targets x n_state + n_actions
         :param sigma: n_targets x (n_state + n_actions) x (n_state + n_actions)
@@ -68,6 +69,8 @@ class MultivariateGP(object):
         state_dim = self.X.shape[1]
         target_dim = self.y.shape[1]
 
+        # TODO: maybe move this outside the function, to avoid computing it all the time during rollouts
+        # TODO: Needs to be adjusted anyway for sparse GP logic, duplicate code is bad.
         [gp.compute_matrices() for gp in self.gp_container]
 
         # ----------------------------------------------------------------------------------------------------
@@ -85,7 +88,7 @@ class MultivariateGP(object):
         diff_scaled = np.expand_dims(diff, axis=0) / np.expand_dims(np.exp(2 * length_scales), axis=1)
 
         # ----------------------------------------------------------------------------------------------------
-        # compute mean of predictive dist based on matlab code
+        # compute mean of predictive dist based on matlab code Deisenroth(2010)
 
         # The precision_inv cancels out later on
         zeta_a = diff @ precision_inv
@@ -98,7 +101,7 @@ class MultivariateGP(object):
 
         scaled_beta = np.exp(-.5 * np.sum(zeta_a * t, axis=2)) * beta.T
 
-        coefficient = np.exp(2 * sigma_f) * np.linalg.det(B) ** -.5
+        coefficient = np.exp(2 * sigma_f) / np.sqrt(np.linalg.det(B))
 
         mean = np.sum(scaled_beta, axis=1) * coefficient
 
