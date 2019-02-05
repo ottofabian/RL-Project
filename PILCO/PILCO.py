@@ -20,7 +20,7 @@ class PILCO(object):
 
     def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, start_mu: np.ndarray = None,
                  start_cov: np.ndarray = None, gamma=1, max_samples_per_test_run: int = None, bound: np.ndarray = None,
-                 n_inducing_points: int = None):
+                 n_inducing_points: int = None, cost_threshold: float = -np.inf, horizon_increase: float = .25):
         """
 
         :param env_name: gym env to work with
@@ -35,6 +35,10 @@ class PILCO(object):
         :param max_samples_per_test_run: maximum samples taken from one test  episode,
          this is required to avoid running out of memory when not using Sparse GPs
         :param bound: squash action with sin to +-bound or None if no squashing is required
+        :param cost_threshold: specifies a threshold for the rollout cost. If cost is smaller than this value,
+         the rollout horizon is increased by "horizon_increase"
+         :param horizon_increase: specifies the rollout horizon's increase percentage
+          after cost is smaller than  ost_threshold
         """
 
         # -----------------------------------------------------
@@ -53,7 +57,7 @@ class PILCO(object):
 
         # if max_episode_steps is not None:
         #     self.env._max_episode_steps = max_episode_steps
-        self.max_episode_steps = max_samples_per_test_run
+        self.max_samples_per_test_run = max_samples_per_test_run
 
         self.env.seed(self.seed)
 
@@ -81,8 +85,9 @@ class PILCO(object):
         self.policy = None
         self.bound = bound
         self.n_features = n_features
-        # TODO: increase by 25% when successful
-        self.Horizon = Horizon
+        self.horizon = Horizon
+        self.cost_threshold = cost_threshold
+        self.horizon_increase = horizon_increase
 
         # -----------------------------------------------------
         # rollout variables
@@ -223,7 +228,6 @@ class PILCO(object):
             length_scales = np.repeat(np.ones(self.state_dim).reshape(1, -1), self.n_actions, axis=0)
 
             self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features,
-                                        compute_cost=self.compute_trajectory_cost,
                                         length_scales=length_scales)
             self.policy.fit(policy_X, policy_y)
 
@@ -252,7 +256,7 @@ class PILCO(object):
         mu_action_container = []
         sigma_action_container = []
 
-        for t in range(0, self.Horizon):
+        for t in range(0, self.horizon):
             state_next_mu, state_next_cov, action_mu, action_cov = self.rollout(policy, state_mu, state_cov)
 
             # compute value of current state prediction
@@ -324,8 +328,6 @@ class PILCO(object):
             self.logger.info("Starting to optimize policy with L-BFGS-B.")
             res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B',
                            jac=True, options=options)
-            # res = minimize(fun=self.policy._optimize_hyperparams, x0=params, method='L-BFGS-B', jac=False,
-            #                options=options)
         except Exception:
             self.logger.info("Starting to optimize policy with CG.")
             res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='CG', jac=True,
@@ -337,7 +339,12 @@ class PILCO(object):
             gp.compute_matrices()
 
         # Make one more run for plots
-        self.compute_trajectory_cost(policy=self.policy, print_trajectory=True)
+        cost = self.compute_trajectory_cost(policy=self.policy, print_trajectory=True)
+
+        # increase trajectory length if below threshold cost
+        if cost < self.cost_threshold:
+            self.horizon += int(self.horizon * self.horizon_increase)
+            self.logger.info(f"Rollout horizon was increased to {self.horizon}.")
 
     def _optimize_hyperparams(self, params):
         """
@@ -399,16 +406,17 @@ class PILCO(object):
             rewards += reward
             state_prev = state
 
-        print(f"reward={rewards}, episode_len={t}")
+        self.logger.info(f"reward={rewards}, episode_len={t}")
 
         self.policy.save(rewards)
         self.dynamics_model.save(rewards)
+        self.save_data(rewards)
 
-        if len(X) < self.max_episode_steps:
+        if len(X) < self.max_samples_per_test_run:
             X = np.array(X)
             y = np.array(y)
         else:
-            idx = np.random.choice(range(0, len(X)), self.max_episode_steps, replace=False)
+            idx = np.random.choice(range(0, len(X)), self.max_samples_per_test_run, replace=False)
 
             X = np.array(X)[idx]
             y = np.array(y)[idx]
@@ -467,6 +475,7 @@ class PILCO(object):
 
             x = np.arange(0, len(m))
             plt.errorbar(x, m, yerr=s, fmt='-o')
+            plt.xlabel("rollout steps")
             # plt.fill_between(x, m - s, m + s)
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
             plt.show()
@@ -474,6 +483,7 @@ class PILCO(object):
         # plot action trajectory
         x = np.arange(0, len(mu_actions))
         plt.errorbar(x, mu_actions, yerr=sigma_actions, fmt='-o')
+        plt.xlabel("rollout steps")
         # plt.fill_between(x, mu_actions - sigma_actions, mu_actions + sigma_actions)
         plt.title("Trajectory prediction for actions")
         plt.show()
@@ -484,3 +494,7 @@ class PILCO(object):
 
     def load_dynamics(self, path):
         self.dynamics_model = pickle.load(self, open(path, "r"))
+
+    def save_data(self, reward):
+        np.save(open(f"state-delta_reward-{reward}.npy", "wb"), self.state_delta)
+        np.save(open(f"state-action_reward-{reward}.npy", "wb"), self.state_action_pairs)

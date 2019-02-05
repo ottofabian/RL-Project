@@ -5,13 +5,13 @@ from PILCO.CostFunctions.Loss import Loss
 
 class SaturatedLoss(Loss):
 
-    def __init__(self, state_dim: np.ndarray, target_state: np.ndarray = None, T_inv: np.ndarray = None,
+    def __init__(self, state_dim: np.ndarray, target_state: np.ndarray = None, W: np.ndarray = None,
                  cost_width: np.ndarray = None):
         """
         Initialize saturated loss function
         :param state_dim: state dimensionality
         :param target_state: target state which should be reached
-        :param T_inv: weight matrix
+        :param W: weight matrix
         :param cost_width: TODO what is this
         """
 
@@ -22,7 +22,7 @@ class SaturatedLoss(Loss):
         self.target_state = np.atleast_2d(self.target_state)
 
         # weight matrix
-        self.T_inv = np.identity(self.state_dim) if T_inv is None else T_inv
+        self.W = np.identity(self.state_dim) if W is None else W
 
         # -----------------------------------------------------
         # This is only useful if we have any penalties etc.
@@ -37,20 +37,20 @@ class SaturatedLoss(Loss):
         """
         mu = np.atleast_2d(mu)
 
-        sigma_T_inv = np.dot(sigma, self.T_inv)
-        S1 = np.linalg.solve((np.identity(self.state_dim) + sigma_T_inv).T, self.T_inv.T).T
+        sigma_T_inv = np.dot(sigma, self.W)
+        S1 = np.linalg.solve((np.identity(self.state_dim) + sigma_T_inv).T, self.W.T).T
         diff = mu - self.target_state
 
         # compute expected cost
         mean = -np.exp(-diff @ S1 @ diff.T / 2) / np.sqrt(np.linalg.det(np.identity(self.state_dim) + sigma_T_inv))
 
         # compute variance of cost
-        S2 = np.linalg.solve((np.identity(self.state_dim) + 2 * sigma_T_inv).T, self.T_inv.T).T
+        S2 = np.linalg.solve((np.identity(self.state_dim) + 2 * sigma_T_inv).T, self.W.T).T
         r2 = np.exp(-diff @ S2 @ diff.T) * ((np.linalg.det(np.identity(self.state_dim) + 2 * sigma_T_inv)) ** -.5)
         variance = r2 - mean ** 2
 
         # compute cross covariance
-        t = np.dot(self.T_inv, self.target_state.T) - S1 @ (np.dot(sigma_T_inv, self.target_state.T) + mu.T)
+        t = np.dot(self.W, self.target_state.T) - S1 @ (np.dot(sigma_T_inv, self.target_state.T) + mu.T)
 
         cross_cov = sigma @ (mean * t)
 
