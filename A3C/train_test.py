@@ -1,6 +1,7 @@
 import copy
 import logging
 import time
+from typing import Union
 
 import gym
 import numpy as np
@@ -11,6 +12,7 @@ from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from torch.multiprocessing import Value
 
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
+from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
@@ -156,7 +158,7 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
         global_iter += 1
 
 
-def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_reward: Value,
+def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNetwork], T: Value, global_reward: Value,
           optimizer: torch.optim.Optimizer = None, shared_model_critic: CriticNetwork = None,
           optimizer_critic: torch.optim.Optimizer = None, lr_scheduler: torch.optim.lr_scheduler = None,
           lr_scheduler_critic: torch.optim.lr_scheduler = None):
@@ -238,7 +240,8 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
             log_prob = dist.log_prob(action).sum(-1).unsqueeze(-1)
 
             # make selected move
-            state, reward, dones, _ = env.step(np.clip(action.detach().numpy(), -args.max_action, args.max_action))
+            action = np.clip(action.detach().numpy(), -args.max_action, args.max_action)
+            state, reward, dones, _ = env.step(action if args.worker == 1 else action[0])
             # TODO: check if this is better
             # reward += (-state[2]+1) * np.exp(- np.abs(state[0]) ** 2)
             # reward = min(max(-1, reward), 1)
@@ -256,17 +259,19 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
 
             for i, done in enumerate(dones):
                 if done:
-                    t[i] = 0
                     # keep track of the avg overall global reward
                     with global_reward.get_lock():
                         if global_reward.value == -np.inf:
                             global_reward.value = episode_reward[i]
                         else:
                             global_reward.value = .99 * global_reward.value + .01 * episode_reward[i]
-                    if worker_id == 0:
+                    if worker_id == 0 and T.value % args.log_frequency == 0:
                         writer.add_scalar("reward/global", global_reward.value, T.value)
 
                     episode_reward[i] = 0
+                    t[i] = 0
+                    if args.worker != 1:
+                        env.reset()
 
             with T.get_lock():
                 # this is one for A3C and n for A2C (actually the lock is not needed for A2C)
