@@ -1,6 +1,7 @@
 import copy
 import logging
 import time
+from typing import Union
 
 import gym
 import numpy as np
@@ -11,6 +12,7 @@ from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from torch.multiprocessing import Value
 
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
+from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
 from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
@@ -156,7 +158,7 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
         global_iter += 1
 
 
-def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_reward: Value,
+def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNetwork], T: Value, global_reward: Value,
           optimizer: torch.optim.Optimizer = None, shared_model_critic: CriticNetwork = None,
           optimizer_critic: torch.optim.Optimizer = None, lr_scheduler: torch.optim.lr_scheduler = None,
           lr_scheduler_critic: torch.optim.lr_scheduler = None):
@@ -257,7 +259,6 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
 
             for i, done in enumerate(dones):
                 if done:
-                    t[i] = 0
                     # keep track of the avg overall global reward
                     with global_reward.get_lock():
                         if global_reward.value == -np.inf:
@@ -268,6 +269,9 @@ def train(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_
                         writer.add_scalar("reward/global", global_reward.value, T.value)
 
                     episode_reward[i] = 0
+                    t[i] = 0
+                    if args.worker != 1:
+                        env.reset()
 
             with T.get_lock():
                 # this is one for A3C and n for A2C (actually the lock is not needed for A2C)
