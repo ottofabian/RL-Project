@@ -1,13 +1,10 @@
 import os
 
-from autograd import numpy as np
+import numpy as np
 import oct2py
-from autograd import grad, jacobian, elementwise_grad
-from autograd.test_util import check_grads
 
 from PILCO.Controller.RBFController import RBFController, squash_action_dist
 
-# https://github.com/nrontsis/PILCO/edit/master/tests/test_controllers.py
 octave = oct2py.Oct2Py()
 dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"
 print(dir_path)
@@ -27,7 +24,7 @@ def test_rbf():
     Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(n_features, n_actions) - 0.5)
     length_scales = np.random.rand(n_actions, state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features, compute_cost=None, length_scales=length_scales)
+    rbf = RBFController(n_actions=n_actions, n_features=n_features, length_scales=length_scales)
     rbf.fit(X0, Y0)
 
     # Generate input

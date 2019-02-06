@@ -1,12 +1,9 @@
-import dill as pickle
+import pickle
 
 from autograd import numpy as np
-from autograd import value_and_grad
-from scipy.optimize import minimize
 
 from PILCO.Controller.Controller import Controller
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
-from PILCO.GaussianProcess.SparseMultivariateGP import SparseMultivariateGP
 from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
 
 
@@ -44,7 +41,7 @@ def squash_action_dist(mu: np.ndarray, sigma: np.ndarray, input_output_cov: np.n
 class RBFController(MultivariateGP, Controller):
     """RBF Controller/Policy"""
 
-    def __init__(self, n_actions, n_features, compute_cost, length_scales):
+    def __init__(self, n_actions, n_features, length_scales):
         # sigma_f is fixed for the RBF Controller, if it is seen as deterministic GP
         # sigma_eps is .01 to ensure a numerical stable computation
         sigma_f = np.log(np.ones((n_actions,)))
@@ -54,7 +51,6 @@ class RBFController(MultivariateGP, Controller):
                                 sigma_eps=sigma_eps, container=RBFNetwork, is_policy=True)
 
         self.n_features = n_features
-        self.compute_cost = compute_cost
         self.opt_ctr = 0
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> None:
@@ -68,7 +64,7 @@ class RBFController(MultivariateGP, Controller):
         # TODO this fits all X for all predictions, this does not work for >1D actions
         MultivariateGP.fit(self, X, y)
 
-    def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: float = None) -> tuple:
+    def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: np.ndarray = None) -> tuple:
         """
         Choose an action based on the current RBF functions
         :param mu: mean of state
@@ -81,20 +77,20 @@ class RBFController(MultivariateGP, Controller):
         if bound is not None:
             action_mu, action_cov, input_output_cov = squash_action_dist(action_mu, action_cov, input_output_cov, bound)
 
-        # prediction from GP of cross_cov is times inv(s)
+        # prediction of cross_cov from GP is cross_cov @ inv(sigma)
         return action_mu, action_cov, sigma @ input_output_cov
 
     def optimize(self) -> None:
         """
-        optimize policy with regards to pseudo inputs and targets
+        This does nothing, policy needs to be optimized based on rollouts.
         :return: None
         """
         raise ValueError("Cannot be used for optimization")
 
-    # def callback(self, x):
-    #     self.logger.info("Policy optimization iteration: {} -- Cost: {}".format(self.opt_ctr, np.array2string(
-    #         cost if type(cost) == np.ndarray else cost._value)))
-
-    def save(self, reward):
-        # remove function handle for serialization
+    def save(self, reward) -> None:
+        """
+        pickle dumps the policy to hard drive
+        :param reward: required for the name of the file.
+        :return:
+        """
         pickle.dump(self, open(f"policy_reward-{reward}.p", "wb"))
