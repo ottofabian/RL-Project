@@ -53,6 +53,7 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
     model = copy.deepcopy(shared_model)
     model.eval()
 
+    model_critic = None
     if shared_model_critic:
         model_critic = copy.deepcopy(shared_model_critic)
         model_critic.eval()
@@ -142,7 +143,7 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
             save_checkpoint({
                 'epoch': T.value,
                 'model': model.state_dict(),
-                'model_critic': model_critic.state_dict() if model_critic else None,
+                'model_critic': model_critic.state_dict() if model_critic is not None else None,
                 'global_reward': global_reward.value,
                 # only save optimizers if shared ones are used
                 'optimizer': optimizer.state_dict() if optimizer else None,
