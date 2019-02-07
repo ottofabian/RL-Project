@@ -31,9 +31,8 @@ class ActorCriticNetwork(torch.nn.Module):
         self.body = nn.Sequential(
             nn.Linear(self.n_inputs, self.n_hidden),
             act,
-            # nn.Linear(self.n_hidden, self.n_hidden),
-            # act,
-            # nn.Linear(self.n_hidden, self.n_hidden),
+            nn.Linear(self.n_hidden, self.n_hidden),
+            act,
         )
 
         self.mu = nn.Sequential(
