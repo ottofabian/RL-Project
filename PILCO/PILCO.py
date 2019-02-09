@@ -60,6 +60,7 @@ class PILCO(object):
         self.max_samples_per_test_run = max_samples_per_test_run
 
         self.env.seed(self.seed)
+        np.random.seed(self.seed)
 
         if self.env_name == "Pendulum-v0":
             self.state_names = ["cos($\\theta$)", "sin($\\theta$)", "$\\dot{\\theta}$"]

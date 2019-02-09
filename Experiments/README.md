@@ -49,6 +49,7 @@ environment boundaries.
 | [x]  | QG          | baseline, seed=3                     | [x]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 3    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-10    | None     | 5    | 9519.15                   | 27,705,750               | 06h 43m 03s            |
 | [x]  | QG          | baseline, seed=4                     | [x]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 3    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-10    | None     | 5    | 9526.39                   | 11,584,670               | 02h 25m 39s            |
 | [x]  | QG          | baseline, seed=5                     | [x]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 3    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-10    | None     | 5    | 9522.64                   | 8,164,985                | 01h 43m 46s            |
+| [ ]  | QG          | baseline, frq=50, action_space= +/-5 | [ ]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5    | None     | 5    | 9523                      | 15,060,000               | 01h 45m 04s            |
 | [ ]  | QG          | baseline, action_space=+/-5          | [ ]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | 4992.49                   | 9,245,565                | 01h 05m 17s            |
 | [x]  | BD          | baseline, tau=1.0                    | [x]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 1.0 | 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-10    | None     | 5    | 9518                      | 13,630,085               | 08h 08m 47s            |
 | [ ]  | QG          | baseline, tau=0.95                   | [ ]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.95| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-10    | None     | 5    | 9518                      | 13,630,085               | 08h 08m 47s            |
@@ -90,11 +91,20 @@ environment boundaries.
 
 ## CartpoleStabShort-v0
 
-* [ ] solved in simulation
+| done | contributor | comment                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | start_mu      | start_cov | seed | max_samples_per_test_run | test reward | steps    | training time              |
+| ---- | ------------| ------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | --------------| --------- | -----| ------------------------ | ----------- | -------- | -------------------------- |
+| [x]  | BD          | baseline                              | [x]        | SparseGP  | 200               | 200              | 40      | 0                | -np.inf        | 10         | 1        | Exponential  | [0,0,1,0,0]   | 1e-2 * I  |  1   | 200                      | 19999.98    | 200      |             ?              |
+
+* [x] solved in simulation
 * [ ] solved in Q-Lab (real world)
 
 
 ## CartpoleSwingShort-v0
+
+| done | contributor | comment                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights | start_mu    | start_cov | seed | max_samples_per_test_run | test reward | steps    | training time              |
+| ---- | ------------| ------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | ------------| --------- | -----| ------------------------ | ----------- | -------- | -------------------------- |
+| [ ]  | BD          | baseline                              | [ ]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 200      |             ?              |
+
 
 * [ ] solved in simulation
 * [ ] solved in Q-Lab (real world)
