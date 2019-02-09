@@ -3,7 +3,7 @@ import logging
 
 from typing import Union, Type
 
-import pickle
+import dill as pickle
 import autograd.numpy as np
 # from autograd.test_util import check_grads
 

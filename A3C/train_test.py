@@ -302,6 +302,7 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
 
         # iterate over all time steps from most recent to the starting one
         for i in reversed(range(args.rollout_steps)):
+            # G can be seen essentially as the return over the course of the rollout
             G = rewards[i] + args.discount * terminals[i] * G
             if args.gae:
                 # Generalized Advantage Estimation
