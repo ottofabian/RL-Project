@@ -1,15 +1,12 @@
 import logging
-import scipy
 from typing import Union
 
 import autograd.numpy as np
 from autograd import value_and_grad
 from scipy.optimize import minimize
-import autograd.scipy.stats.multivariate_normal as mvn
 
 from PILCO.Kernels.RBFKernel import RBFKernel
 from PILCO.Kernels.WhiteNoiseKernel import WhiteNoiseKernel
-
 
 class GaussianProcess(object):
 

@@ -14,9 +14,9 @@ def main():
     seed = 1
     # env_name = "Pendulum-v0"
 
-    env_name = "CartpoleStabShort-v0"
+    # env_name = "CartpoleStabShort-v0"
     # env_name = "CartpoleStabRR-v0"
-    # env_name = "CartpoleSwingShort-v0"
+    env_name = "CartpoleSwingShort-v0"
     # env_name = "CartpoleSwingRR-v0"
     # env_name = "Qube-v0"
     # env_name = "QubeRR-v0"
@@ -26,7 +26,7 @@ def main():
     n_inital_samples = 300
     max_samples_per_test_run = 300
     n_inducing_points = 300
-    n_features = 25
+    n_features = 10
     horizon = 40
 
     # get target state value for computing loss

@@ -89,11 +89,20 @@ environment boundaries.
 
 ## CartpoleStabShort-v0
 
-* [ ] solved in simulation
+| done | contributor | comment                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | start_mu      | start_cov | seed | max_samples_per_test_run | test reward | steps    | training time              |
+| ---- | ------------| ------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | --------------| --------- | -----| ------------------------ | ----------- | -------- | -------------------------- |
+| [x]  | BD          | baseline                              | [x]        | SparseGP  | 200               | 200              | 40      | 0                | -np.inf        | 10         | 1        | Exponential  | [0,0,1,0,0]   | 1e-2 * I  |  1   | 200                      | 19999.98    | 200      |             ?              |
+
+* [x] solved in simulation
 * [ ] solved in Q-Lab (real world)
 
 
 ## CartpoleSwingShort-v0
+
+| done | contributor | comment                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights | start_mu    | start_cov | seed | max_samples_per_test_run | test reward | steps    | training time              |
+| ---- | ------------| ------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | ------------| --------- | -----| ------------------------ | ----------- | -------- | -------------------------- |
+| [ ]  | BD          | baseline                              | [ ]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 200      |             ?              |
+
 
 * [ ] solved in simulation
 * [ ] solved in Q-Lab (real world)
