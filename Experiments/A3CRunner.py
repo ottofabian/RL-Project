@@ -82,6 +82,11 @@ parser.add_argument('--save-log', default=True,
 parser.add_argument('--log-frequency', default=100,
                     help='defines how often a sample is logged to tensorboard to avoid unnecessary bloating.'
                          'If set to X every X metric sample will be logged. (default: 100)')
+parser.add_argument('--edge-fear', default=False, action='store_true',
+                    help='gives negative rewards if the cart reaches goes near the border to avoid sucidal policies.'
+                         'This is meant for evaluation and not part of the original environment. (default: False)')
+parser.add_argument('--squared-reward', default=False, action='store_true',
+                    help='manipulates the reward by squaring it. reward = reward * reward. (default: False)')
 
 if __name__ == '__main__':
 
