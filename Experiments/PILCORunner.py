@@ -48,7 +48,7 @@ def main():
     elif env_name == "CartpoleSwingShort-v0":
         theta = 0
         start_mu = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
-        bound = np.array([24])
+        bound = np.array([10])
     elif env_name == "Qube-v0":
         # TODO
         raise NotImplementedError()
