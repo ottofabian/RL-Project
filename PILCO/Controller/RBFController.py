@@ -93,4 +93,4 @@ class RBFController(MultivariateGP, Controller):
         :param reward: required for the name of the file.
         :return:
         """
-        pickle.dump(self, open(f"policy_reward-{reward}.p", "wb"))
+        pickle.dump(self, open(f"./checkpoints/policy_reward-{reward}.p", "wb"))
