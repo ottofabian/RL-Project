@@ -243,7 +243,7 @@ class MultivariateGP(object):
     #     return np.sum(beta @ self.gp_container[i].qs * sigma @ sigma_plus_precision_inv @ zeta, axis=1)
 
     def save(self, reward):
-        pickle.dump(self, open(f"dynamics_reward-{reward}.p", "wb"))
+        pickle.dump(self, open(f"./checkpoints/dynamics_reward-{reward}.p", "wb"))
 
     def sigma_fs(self):
         return np.array([c.sigma_f for c in self.gp_container])

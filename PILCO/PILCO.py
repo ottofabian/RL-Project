@@ -153,7 +153,10 @@ class PILCO(object):
             # self.env.render()
 
             # take initial random action
-            action = self.env.action_space.sample()
+            if self.bound:
+                action = np.random.uniform(-self.bound, self.bound, 1)
+            else:
+                action = self.env.action_space.sample()
             state, reward, done, _ = self.env.step(action)
 
             # safe state-action pair as input for dynamics GP
@@ -205,7 +208,7 @@ class PILCO(object):
 
         self.dynamics_model.optimize()
 
-    def learn_policy(self, mu: float = 0, sigma: float = 0.1 ** 2, target_noise: float = 0.1) -> None:
+    def learn_policy(self, target_noise: float = 0.1) -> None:
         """
         learn the policy based by trajectory rollouts
         :param mu: mean for sampling pseudo input
@@ -217,8 +220,7 @@ class PILCO(object):
         # initialize policy if we do not already have one
         if self.policy is None:
             # init model params
-            policy_X = np.random.multivariate_normal(np.full(self.state_dim, mu), sigma * np.identity(self.state_dim),
-                                                     size=(self.n_features,))
+            policy_X = np.random.multivariate_normal(self.start_mu, self.start_cov, size=(self.n_features,))
             policy_y = target_noise * np.random.randn(self.n_features, self.n_actions)
 
             # augmented states would be initialized with .7, but we already have sin and cos given
@@ -497,5 +499,5 @@ class PILCO(object):
         self.dynamics_model = pickle.load(self, open(path, "r"))
 
     def save_data(self, reward):
-        np.save(open(f"state-delta_reward-{reward}.npy", "wb"), self.state_delta)
-        np.save(open(f"state-action_reward-{reward}.npy", "wb"), self.state_action_pairs)
+        np.save(open(f"./checkpoints/state-delta_reward-{reward}.npy", "wb"), self.state_delta)
+        np.save(open(f"./checkpoints/state-action_reward-{reward}.npy", "wb"), self.state_action_pairs)

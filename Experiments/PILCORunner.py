@@ -23,10 +23,10 @@ def main():
 
     env = gym.make(env_name)
 
-    n_inital_samples = 300
-    max_samples_per_test_run = 300
-    n_inducing_points = 300
-    n_features = 10
+    n_inital_samples = 500
+    max_samples_per_test_run = 500
+    n_inducing_points = 500
+    n_features = 100
     horizon = 40
 
     # get target state value for computing loss
@@ -48,7 +48,10 @@ def main():
     elif env_name == "CartpoleSwingShort-v0":
         theta = 0
         start_mu = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
-        bound = np.array([5])
+        bound = np.array([10])
+    elif env_name == "Qube-v0":
+        # TODO
+        raise NotImplementedError()
 
     start_cov = 1e-2 * np.identity(env.observation_space.shape[0])
     # --------------------------------------------------------
