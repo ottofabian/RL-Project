@@ -91,9 +91,10 @@ environment boundaries.
 
 ## CartpoleStabShort-v0
 
-| done | contributor | comment                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | start_mu      | start_cov | seed | max_samples_per_test_run | test reward | steps    | training time              |
-| ---- | ------------| ------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | --------------| --------- | -----| ------------------------ | ----------- | -------- | -------------------------- |
-| [x]  | BD          | baseline                              | [x]        | SparseGP  | 200               | 200              | 40      | 0                | -np.inf        | 10         | 1        | Exponential  | [0,0,1,0,0]   | 1e-2 * I  |  1   | 200                      | 19999.98    | 200      |             ?              |
+| done | contributor | comment                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights | start_mu    | start_cov | seed | max_samples_per_test_run | test reward | episodes | total steps before solved (w/o inital samples) | training time              |
+| ---- | ------------| ------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | ------------| --------- | -----| ------------------------ | ----------- | -------- | ---------------------------------------------- | -------------------------- |
+| [x]  | BD          | baseline                              | [x]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
+
 
 * [x] solved in simulation
 * [ ] solved in Q-Lab (real world)
@@ -101,9 +102,9 @@ environment boundaries.
 
 ## CartpoleSwingShort-v0
 
-| done | contributor | comment                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights | start_mu    | start_cov | seed | max_samples_per_test_run | test reward | steps    | training time              |
-| ---- | ------------| ------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | ------------| --------- | -----| ------------------------ | ----------- | -------- | -------------------------- |
-| [ ]  | BD          | baseline                              | [ ]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 200      |             ?              |
+| done | contributor | comment                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights | start_mu    | start_cov | seed | max_samples_per_test_run | test reward | episodes | total steps before solved (w/o inital samples) | training time              |
+| ---- | ------------| ------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | ------------| --------- | -----| ------------------------ | ----------- | -------- | ---------------------------------------------- | -------------------------- |
+| [ ]  | BD          | baseline                              | [ ]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
 
 
 * [ ] solved in simulation
