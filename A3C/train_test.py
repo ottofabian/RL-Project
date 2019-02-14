@@ -257,7 +257,7 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
                     if np.abs(cur_state[0]) > edge_fear_threshold:
                         reward[idx] = -np.abs(cur_state[0])
 
-            if args.exponential_reward:
+            if args.squared_reward:
                 # use quadratic of reward
                 for idx, r in enumerate(reward):
                     reward[idx] *= reward[idx]
