@@ -1,5 +1,6 @@
 import copy
 import logging
+import math
 import time
 from typing import Union
 
@@ -170,6 +171,9 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
     """
     torch.manual_seed(args.seed + worker_id)
 
+    # defines the border area when negativ rewards are sent
+    edge_fear_threshold = 0.3
+
     if args.worker == 1:
         logging.info(f"Running A2C with {args.n_envs} environments.")
         env = SubprocVecEnv([make_env(args.env_name, args.seed, i, args.log_dir) for i in range(args.n_envs)])
@@ -243,6 +247,22 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
             # make selected move
             action = np.clip(action.detach().numpy(), -args.max_action, args.max_action)
             state, reward, dones, _ = env.step(action if args.worker == 1 else action[0])
+
+            # optional parameters
+            # -------------------
+            # sent the current x-position as a negative reward when edge fear is active
+            if args.edge_fear:
+                # edge fear is triggered when the cart is close to the border
+                for idx, cur_state in enumerate(state):
+                    if np.abs(cur_state[0]) > edge_fear_threshold:
+                        reward[idx] = -np.abs(cur_state[0])
+
+            if args.squared_reward:
+                # use quadratic of reward
+                for idx, r in enumerate(reward):
+                    reward[idx] *= reward[idx]
+            # ------------------------------------------
+
             # TODO: check if this is better
             # reward += (-state[2]+1) * np.exp(- np.abs(state[0]) ** 2)
             # reward = min(max(-1, reward), 1)
