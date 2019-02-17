@@ -23,11 +23,11 @@ def main():
 
     env = gym.make(env_name)
 
-    n_inital_samples = 500
-    max_samples_per_test_run = 500
-    n_inducing_points = 500
+    n_inital_samples = 300
+    max_samples_per_test_run = 300
+    n_inducing_points = 300
     n_features = 100
-    horizon = 40
+    horizon = 100
 
     # get target state value for computing loss
     if "Cartpole" in env_name:
@@ -66,7 +66,7 @@ def main():
     pilco = PILCO(env_name=env_name, seed=seed, n_features=n_features, Horizon=horizon, loss=loss,
                   max_samples_per_test_run=max_samples_per_test_run, gamma=1, start_mu=start_mu, start_cov=start_cov,
                   bound=bound, n_inducing_points=n_inducing_points)
-    pilco.run(n_samples=n_inital_samples)
+    pilco.run(n_samples=n_inital_samples, n_steps=20)
 
 
 if __name__ == '__main__':
