@@ -26,7 +26,7 @@ def main():
     n_inital_samples = 300
     max_samples_per_test_run = 300
     n_inducing_points = 300
-    n_features = 100
+    n_features = 50
     horizon = 100
 
     # get target state value for computing loss
@@ -61,7 +61,7 @@ def main():
     # state_cov = np.cov(X[:, :self.state_dim], rowvar=False
     # --------------------------------------------------------
 
-    weights = np.diag([1, 1, 1, 1, 1])
+    weights = np.diag([1, 2, 2, 1, 1])
     loss = SaturatedLoss(state_dim=env.observation_space.shape[0], target_state=target_state, W=weights)
     pilco = PILCO(env_name=env_name, seed=seed, n_features=n_features, Horizon=horizon, loss=loss,
                   max_samples_per_test_run=max_samples_per_test_run, gamma=1, start_mu=start_mu, start_cov=start_cov,
