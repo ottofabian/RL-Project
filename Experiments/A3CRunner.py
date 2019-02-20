@@ -87,6 +87,8 @@ parser.add_argument('--edge-fear', default=False, action='store_true',
                          'This is meant for evaluation and not part of the original environment. (default: False)')
 parser.add_argument('--squared-reward', default=False, action='store_true',
                     help='manipulates the reward by squaring it. reward = reward * reward. (default: False)')
+parser.add_argument('--render', default=True, action='store_true',
+                    help='enables/disables rendering. (default: True)')
 
 if __name__ == '__main__':
 
