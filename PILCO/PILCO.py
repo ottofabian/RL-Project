@@ -491,13 +491,18 @@ class PILCO(object):
         plt.title("Trajectory prediction for actions")
         plt.show()
 
-    def load_policy(self, path, compute_cost: callable):
-        self.policy = pickle.load(self, open(path, "r"))
-        self.policy.compute_cost = compute_cost
+    def load_policy(self, path):
+        self.policy = pickle.load(open(path, "rb"))
 
     def load_dynamics(self, path):
-        self.dynamics_model = pickle.load(self, open(path, "r"))
+        self.dynamics_model = pickle.load(open(path, "rb"))
 
     def save_data(self, reward):
         np.save(open(f"./checkpoints/state-delta_reward-{reward}.npy", "wb"), self.state_delta)
         np.save(open(f"./checkpoints/state-action_reward-{reward}.npy", "wb"), self.state_action_pairs)
+
+    def load_data(self, path_state_action, path_delta):
+        self.state_action_pairs = np.load(open(f"{path_state_action}", "rb"))
+        self.state_delta = np.load(open(f"{path_delta}", "rb"))
+
+

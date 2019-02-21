@@ -14,9 +14,9 @@ def main():
     seed = 1
     # env_name = "Pendulum-v0"
 
-    # env_name = "CartpoleStabShort-v0"
+    env_name = "CartpoleStabShort-v0"
     # env_name = "CartpoleStabRR-v0"
-    env_name = "CartpoleSwingShort-v0"
+    # env_name = "CartpoleSwingShort-v0"
     # env_name = "CartpoleSwingRR-v0"
     # env_name = "Qube-v0"
     # env_name = "QubeRR-v0"
@@ -26,8 +26,8 @@ def main():
     n_inital_samples = 300
     max_samples_per_test_run = 300
     n_inducing_points = 300
-    n_features = 50
-    horizon = 100
+    n_features = 40
+    horizon = 25
 
     # get target state value for computing loss
     if "Cartpole" in env_name:
@@ -61,12 +61,25 @@ def main():
     # state_cov = np.cov(X[:, :self.state_dim], rowvar=False
     # --------------------------------------------------------
 
-    weights = np.diag([1, 2, 2, 1, 1])
+    weights = np.diag([1, 1, 1, 1, 1])
     loss = SaturatedLoss(state_dim=env.observation_space.shape[0], target_state=target_state, W=weights)
     pilco = PILCO(env_name=env_name, seed=seed, n_features=n_features, Horizon=horizon, loss=loss,
                   max_samples_per_test_run=max_samples_per_test_run, gamma=1, start_mu=start_mu, start_cov=start_cov,
                   bound=bound, n_inducing_points=n_inducing_points)
-    pilco.run(n_samples=n_inital_samples, n_steps=20)
+
+    pilco.load_dynamics(
+        "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/dynamics_reward-19999.964480042458.p")
+    pilco.load_policy(
+        "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/policy_reward-19999.964480042458.p")
+
+    pilco.load_data(
+        "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/state-action_reward-19999.964480042458.npy",
+        "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/state-delta_reward-19999.964480042458.npy")
+
+    for _ in range(10):
+        pilco.execute_test_run()
+
+    # pilco.run(n_samples=0, n_steps=20)
 
 
 if __name__ == '__main__':
