@@ -16,6 +16,64 @@ from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 from PILCO.GaussianProcess.SparseMultivariateGP import SparseMultivariateGP
 
 
+def evaluate_policy(self, policy) -> tuple:
+    """
+    execute test run for max episode steps and return new training samples
+    :return: states, state_deltas, rewards
+    """
+
+    X = []
+    y = []
+    rewards = 0
+
+    state_prev = self.env.reset()
+    # [1,3] is returned and is reduced to 1D
+    state_prev = state_prev.flatten()
+
+    if self.env_name == "Pendulum-v0":
+        theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
+        state_prev = np.array([np.cos(theta), np.sin(theta), 0])
+        self.env.env.state = [theta, 0]
+
+    done = False
+    t = 0
+    while not done:
+        self.env.render()
+        t += 1
+
+        # no uncertainty during testing required
+        action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), bound=self.bound)
+        action = action.flatten()
+
+        state, reward, done, _ = self.env.step(action)
+        state = state.flatten()
+
+        # create history and new training instance
+        X.append(np.append(state_prev, action))
+
+        noise = np.random.multivariate_normal(np.zeros(state.shape), 1e-6 * np.identity(state.shape[0]))
+        y.append(state - state_prev + noise)
+
+        rewards += reward
+        state_prev = state
+
+    self.logger.info(f"reward={rewards}, episode_len={t}")
+
+    self.policy.save(rewards)
+    self.dynamics_model.save(rewards)
+    self.save_data(rewards)
+
+    if len(X) < self.max_samples_per_test_run:
+        X = np.array(X)
+        y = np.array(y)
+    else:
+        idx = np.random.choice(range(0, len(X)), self.max_samples_per_test_run, replace=False)
+
+        X = np.array(X)[idx]
+        y = np.array(y)[idx]
+
+    return X, y
+
 class PILCO(object):
 
     def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, start_mu: np.ndarray = None,
