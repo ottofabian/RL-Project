@@ -426,7 +426,7 @@ class PILCO(object):
         # cost of trajectory
         return self.compute_trajectory_cost(self.policy, print_trajectory=False)
 
-    def execute_test_run(self) -> tuple:
+    def execute_test_run(self, render=True) -> tuple:
         """
         execute test run for max episode steps and return new training samples
         :return: states, state_deltas, rewards
@@ -448,7 +448,8 @@ class PILCO(object):
         done = False
         t = 0
         while not done:
-            self.env.render()
+            if render:
+                self.env.render()
             t += 1
 
             # no uncertainty during testing required
