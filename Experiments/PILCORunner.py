@@ -14,11 +14,11 @@ def main():
     seed = 1
     # env_name = "Pendulum-v0"
 
-    env_name = "CartpoleStabShort-v0"
+    # env_name = "CartpoleStabShort-v0"
     # env_name = "CartpoleStabRR-v0"
     # env_name = "CartpoleSwingShort-v0"
     # env_name = "CartpoleSwingRR-v0"
-    # env_name = "Qube-v0"
+    env_name = "Qube-v0"
     # env_name = "QubeRR-v0"
 
     env = gym.make(env_name)
@@ -26,32 +26,43 @@ def main():
     n_inital_samples = 300
     max_samples_per_test_run = 300
     n_inducing_points = 300
-    n_features = 40
-    horizon = 25
+    n_features = 50
+    horizon = 100
 
-    # get target state value for computing loss
-    if "Cartpole" in env_name:
-        target_state = np.array([0, 0, -1, 0, 0])
-    elif "Pendulum" in env_name:
-        target_state = np.array([1, 0, 0])
-
-    # get initial mu and cov for trajectory rollouts
+    # get target state as well as initial mu and cov for trajectory rollouts
     if env_name == "Pendulum-v0":
         # this acts like pendulum stabilization or swing up to work with easier 3D obs space
         theta = 0
         start_mu = np.array([np.cos(theta), np.sin(theta), 0])
         bound = np.array([2])
+        weights = np.diag([1, 1, 1])
+
+        target_state = np.array([1, 0, 0])
+
     elif env_name == "CartpoleStabShort-v0":
         theta = np.pi
         start_mu = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
         bound = np.array([5])
+        weights = np.diag([1, 1, 1, 1, 1])
+
+        target_state = np.array([0, 0, -1, 0, 0])
+
     elif env_name == "CartpoleSwingShort-v0":
         theta = 0
         start_mu = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
         bound = np.array([10])
+        weights = np.diag([0, 1, 1, 0, 0])
+
+        target_state = np.array([0, 0, -1, 0, 0])
+
     elif env_name == "Qube-v0":
-        # TODO
-        raise NotImplementedError()
+        theta = 0
+        alpha = 0
+        start_mu = np.array([np.cos(theta), np.sin(theta), np.cos(alpha), np.sin(alpha), 0., 0.])
+        bound = np.array([5])
+        weights = np.diag([1, 1, 1, 1, 1, 1])
+
+        target_state = np.array([1., 0., -1., 0., 0., 0.])
 
     start_cov = 1e-2 * np.identity(env.observation_space.shape[0])
     # --------------------------------------------------------
@@ -61,25 +72,11 @@ def main():
     # state_cov = np.cov(X[:, :self.state_dim], rowvar=False
     # --------------------------------------------------------
 
-    weights = np.diag([1, 1, 1, 1, 1])
     loss = SaturatedLoss(state_dim=env.observation_space.shape[0], target_state=target_state, W=weights)
     pilco = PILCO(env_name=env_name, seed=seed, n_features=n_features, Horizon=horizon, loss=loss,
                   max_samples_per_test_run=max_samples_per_test_run, gamma=1, start_mu=start_mu, start_cov=start_cov,
                   bound=bound, n_inducing_points=n_inducing_points)
-
-    pilco.load_dynamics(
-        "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/dynamics_reward-19999.964480042458.p")
-    pilco.load_policy(
-        "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/policy_reward-19999.964480042458.p")
-
-    pilco.load_data(
-        "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/state-action_reward-19999.964480042458.npy",
-        "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/state-delta_reward-19999.964480042458.npy")
-
-    for _ in range(10):
-        pilco.execute_test_run()
-
-    # pilco.run(n_samples=0, n_steps=20)
+    pilco.run(n_samples=n_inital_samples, n_steps=20)
 
 
 if __name__ == '__main__':
