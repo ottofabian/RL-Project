@@ -71,6 +71,11 @@ class SparseMultivariateGP(MultivariateGP):
         for i in range(self.n_targets):
             self.gp_container[i].set_XY(X, y[:, i:i + 1])
 
+    def cache(self):
+        # TODO
+        self.iK = 0
+        self.betas = 0
+
     def predict_from_dist(self, mu: np.ndarray, sigma: np.ndarray) -> tuple:
 
         """
