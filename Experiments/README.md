@@ -108,14 +108,14 @@ environment boundaries.
 | done | contributor | comment                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights | start_mu    | start_cov | seed | max_samples_per_test_run | test reward | episodes | total steps before solved (w/o inital samples) | training time              |
 | ---- | ------------| ------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | ------------| --------- | -----| ------------------------ | ----------- | -------- | ---------------------------------------------- | -------------------------- |
 | [x]  | BD          | baseline, seed=1                      | [x]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
-| [x]  | QG          | baseline, seed=2                      | [x]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
-| [x]  | QG          | baseline, seed=3                      | [x]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
-| [x]  | QG          | baseline, seed=4                      | [x]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
-| [x]  | QG          | baseline, seed=5                      | [x]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
+| [ ]  | QG          | baseline, seed=2                      | [ ]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
+| [ ]  | QG          | baseline, seed=3                      | [ ]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
+| [ ]  | QG          | baseline, seed=4                      | [ ]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
+| [ ]  | QG          | baseline, seed=5                      | [ ]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3h             |
 
 
 * [x] solved in simulation
-* [ ] solved in Q-Lab (real world)
+* [?] solved in Q-Lab (real world)
 
 
 ## CartpoleSwingShort-v0
@@ -131,6 +131,8 @@ All experiments are with frequency 100, if not stated otherwise
 | [x]  | BD          | baseline, horizon=100, n_features=50, weight=[1,2,2,1,1]  | [-]        | SparseGP  | 300               | 300              | 100     | 0                | -np.inf        | 50         | 1        | Exponential  | [1,2,2,1,1]  | [0,0,-1,0,0] | 1e-2 * I  |  1   | 300                      |  1663.46    | 20       | -                                              |              5d            |
 | [ ]  | BD          | baseline, horizon=100, n_features=50, weight=[0,1,1,0,0]  | [ ]        | SparseGP  | 300               | 300              | 100     | 0                | -np.inf        | 50         | 1        | Exponential  | [0,1,1,0,0]  | [0,0,-1,0,0] | 1e-2 * I  |  1   | 300                      |             | 20       | -                                              |                            |
 
+* [?] solved in simulation
+* [?] solved in Q-Lab (real world)
 
 ## Qube-v0
 
@@ -139,7 +141,8 @@ All experiments are with frequency 100, if not stated otherwise
 | ---- | ------------| --------------------------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | -------------| --------- | -----| ------------------------ | ----------- | -------- | ---------------------------------------------- | -------------------------- |
 | [x]  | QG          | baseline                                                  | [-]        | SparseGP  | 300               | 300              | 50      | 0                | -np.inf        | 50         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,-1,0,0] | 1e-2 * I  |  1   | 300                      |    57.50    | 20       | -                                              |             32.0h          |
 
-
+* [?] solved in simulation
+* [?] solved in Q-Lab (real world)
 
 * [ ] solved in simulation
 * [ ] solved in Q-Lab (real world)
