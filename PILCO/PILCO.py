@@ -77,33 +77,17 @@ def evaluate_policy(self, policy) -> tuple:
 
 class PILCO(object):
 
-    def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, start_mu: np.ndarray = None,
-                 start_cov: np.ndarray = None, gamma=1, max_samples_per_test_run: int = None, bound: np.ndarray = None,
-                 n_inducing_points: int = None, cost_threshold: float = -np.inf, horizon_increase: float = .25):
+    def __init__(self, args, loss: Loss):
         """
-
-        :param env_name: gym env to work with
-        :param seed: random seed for reproduceability
-        :param n_features: Amount of features for RBF Controller
-        :param Horizon: number of steps for trajectory rollout, also defined as horizon
+        :param args: Cmd-line parameters, see PILCORunner.py for more details
         :param loss: loss object which defines the cost for the given environment.
                               This function is used for policy optimization.
-        :param start_mu: mean of starting state for trajectory rollout
-        :param start_cov: covariance of starting state for trajectory rollout
-        :param gamma: discount factor
-        :param max_samples_per_test_run: maximum samples taken from one test  episode,
-         this is required to avoid running out of memory when not using Sparse GPs
-        :param bound: squash action with sin to +-bound or None if no squashing is required
-        :param cost_threshold: specifies a threshold for the rollout cost. If cost is smaller than this value,
-         the rollout horizon is increased by "horizon_increase"
-         :param horizon_increase: specifies the rollout horizon's increase percentage
-          after cost is smaller than  ost_threshold
         """
 
         # -----------------------------------------------------
         # general
-        self.env_name = env_name
-        self.seed = seed
+        self.env_name = args.env_name
+        self.seed = args.seed
 
         # -----------------------------------------------------
         # env setup
@@ -116,7 +100,7 @@ class PILCO(object):
 
         # if max_episode_steps is not None:
         #     self.env._max_episode_steps = max_episode_steps
-        self.max_samples_per_test_run = max_samples_per_test_run
+        self.max_samples_test_run = args.max_samples_test_run
 
         self.env.seed(self.seed)
         np.random.seed(self.seed)
@@ -133,27 +117,27 @@ class PILCO(object):
 
         # -----------------------------------------------------
         # training params
-        self.gamma = gamma  # discount factor
+        self.discount = args.discount  # discount factor
 
         # -----------------------------------------------------
         # dynamics
         self.dynamics_model = None
-        self.n_inducing_points = n_inducing_points
+        self.n_inducing_points = args.inducing_points
 
         # -----------------------------------------------------
         # policy
         self.policy = None
-        self.bound = bound
-        self.n_features = n_features
-        self.horizon = Horizon
-        self.cost_threshold = cost_threshold
-        self.horizon_increase = horizon_increase
+        self.bound = args.max_action
+        self.n_features = args.features
+        self.horizon = args.horizon
+        self.cost_threshold = args.cost_threshold
+        self.horizon_increase = args.horizon_increase
 
         # -----------------------------------------------------
         # rollout variables
         self.loss = loss
-        self.start_mu = start_mu
-        self.start_cov = start_cov
+        self.start_mu = args.start_state
+        self.start_cov = args.start_cov
 
         # -----------------------------------------------------
         # Container for collected experience
@@ -164,17 +148,25 @@ class PILCO(object):
         # logging instance
         self.logger = logging.getLogger(__name__)
 
-    def run(self, n_samples: int, n_steps: int = 10) -> None:
+        # -----------------------------------------------------
+        # Run parameters
+        self.n_samples = args.initial_samples
+        self.n_steps = args.steps
+
+        # -----------------------------------------------------
+        # Plotting options
+        self.export_plots = args.export_plots
+        self.plot_id = 0  # is a counter variable which is increment for each plot
+
+    def run(self) -> None:
         """
         start pilco training run
-        :param n_samples: number of initial samples before first policy optimization
-        :param n_steps: maximum number of learning steps until termination
         :return: None
         """
 
-        self.sample_inital_data_set(n_init=n_samples)
+        self.sample_inital_data_set(n_init=self.n_samples)
 
-        for _ in range(n_steps):
+        for _ in range(self.n_steps):
             self.learn_dynamics_model()
             self.learn_policy()
 
@@ -323,7 +315,7 @@ class PILCO(object):
 
             # compute value of current state prediction
             l = self.loss.compute_loss(state_next_mu, state_next_cov)
-            cost = cost + self.gamma ** t * l.flatten()
+            cost = cost + self.discount ** t * l.flatten()
 
             mu_state_container.append(state_next_mu)
             sigma_state_container.append(state_next_cov)
@@ -475,11 +467,11 @@ class PILCO(object):
         self.dynamics_model.save(rewards)
         self.save_data(rewards)
 
-        if len(X) < self.max_samples_per_test_run:
+        if len(X) < self.max_samples_test_run:
             X = np.array(X)
             y = np.array(y)
         else:
-            idx = np.random.choice(range(0, len(X)), self.max_samples_per_test_run, replace=False)
+            idx = np.random.choice(range(0, len(X)), self.max_samples_test_run, replace=False)
 
             X = np.array(X)[idx]
             y = np.array(y)[idx]
@@ -542,9 +534,9 @@ class PILCO(object):
             # plt.fill_between(x, m - s, m + s)
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
 
-            from matplotlib2tikz import save as tikz_save
-
-            tikz_save("test.tex")
+            if self.export_plots:
+                from matplotlib2tikz import save as tikz_save
+                tikz_save("./plots/state_trajectory" + str(self.plot_id) + str(i) + ".tex")
 
             plt.show()
 
@@ -554,7 +546,13 @@ class PILCO(object):
         plt.xlabel("rollout steps")
         # plt.fill_between(x, mu_actions - sigma_actions, mu_actions + sigma_actions)
         plt.title("Trajectory prediction for actions")
+        if self.export_plots:
+            from matplotlib2tikz import save as tikz_save
+            tikz_save("./plots/action_trajectory" + str(self.plot_id) + ".tex")
+
         plt.show()
+
+        self.plot_id += 1
 
     def load_policy(self, path):
         self.policy = pickle.load(open(path, "rb"))

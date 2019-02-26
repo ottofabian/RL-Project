@@ -79,7 +79,7 @@ parser.add_argument('--normalizer', type=str, default=None,
                     help='which normalizer to use. Available [None, "MeanStd", "MinMax"] (default: None)')
 parser.add_argument('--n-envs', type=int, default=5,
                     help='amount of envs for A2C (worker=1) in order to reduce correlation in batches (default: 5)')
-parser.add_argument('--save-log', default=True,
+parser.add_argument('--save-log', default=True, action='store_true',
                     help='exports a log file into the log directory if set to True (default: True)')
 parser.add_argument('--log-frequency', default=100,
                     help='defines how often a sample is logged to tensorboard to avoid unnecessary bloating.'

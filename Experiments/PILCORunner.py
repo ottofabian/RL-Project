@@ -47,8 +47,13 @@ def main():
                              ' environment will be used (default: None)')
     parser.add_argument('--steps', type=int, default=20,
                         help='Maximum number of learning steps until termination (default: 20)')
-    parser.add_argument('--start-cov', type=float, default=1e-2,
-                        help='covariance of starting state for trajectory rollout (default: 1e-2)')
+    parser.add_argument('--horizon-increase', type=float, default=0.25,
+                        help="specifies the rollout horizon's increase percentage after cost is smaller than"
+                             "  cost-threshold (default: 0.25)")
+    parser.add_argument('--cost-threshold', type=float, default=None,
+                        help='specifies a threshold for the rollout cost. If cost is smaller than this value,'
+                             ' the rollout horizon is increased by "horizon_increase". If "None" is used then'
+                             '"cost-threshold" will be set to "-np.inf" (default: None)')
     parser.add_argument('--start-state', type=float, nargs="*",  default=None,
                         help='Starting state which is used at the beginning of a trajectory rollout. If None is given '
                              'then a predetermined starting state for the supported environment is used.'
@@ -59,8 +64,13 @@ def main():
                              'then a predetermined target state for the supported environment is used.'
                              'Arguments needs to be passed as a list e.g. pass "--target-state 0 0 -1 0 0" for the '
                              '"CartpoleStabShort-v0" environment. (default: None)')
-    parser.add_argument('--save-log', default=True,
+    parser.add_argument('--start-cov', type=float, default=1e-2,
+                        help='covariance of starting state for trajectory rollout (default: 1e-2)')
+    parser.add_argument('--save-log', default=True, action='store_true',
                         help='exports a log file into the log directory if set to True (default: True)')
+    parser.add_argument('--export_plots', default=False, action='store_true',
+                        help='exports the trajectory plots as latex TikZ figures into "./plots/".'
+                             ' You need to install "matplotlib2tikz" if set to True. (default: False)')
 
     args = parser.parse_args()
 
@@ -77,6 +87,10 @@ def main():
         args.start_state = np.array(args.start_state)
     if args.target_state:
         args.target_state = np.array(args.target_state)
+
+    # set default value for cost threshold
+    if not args.cost_threshold:
+        args.cost_threshold = -np.inf
 
     # get target state as well as initial mu and cov for trajectory rollouts
     if args.env_name == "Pendulum-v0":
@@ -149,10 +163,8 @@ def main():
     show_cmd_args(args)
 
     loss = SaturatedLoss(state_dim=state_dim, target_state=args.target_state, W=args.weights)
-    pilco = PILCO(env_name=args.env_name, seed=args.seed, n_features=args.features, Horizon=args.horizon, loss=loss,
-                  max_samples_per_test_run=args.max_samples_test_run, gamma=args.discount, start_mu=args.start_state,
-                  start_cov=args.start_cov, bound=args.max_action, n_inducing_points=args.inducing_points)
-    pilco.run(n_samples=args.initial_samples, n_steps=args.steps)
+    pilco = PILCO(args, loss=loss)
+    pilco.run()
 
 
 if __name__ == '__main__':
