@@ -74,6 +74,7 @@ def evaluate_policy(self, policy) -> tuple:
 
     return X, y
 
+
 class PILCO(object):
 
     def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, start_mu: np.ndarray = None,
@@ -125,6 +126,9 @@ class PILCO(object):
         elif "Cartpole" in self.env_name:
             # self.state_names = self.env.observation_space.labels
             self.state_names = ["x", "sin($\\theta$)", "cos($\\theta$)", "$\\dot{x}$", "$\\dot{\\theta}$"]
+        elif self.env_name == "Qube-v0":
+            self.state_names = ["sin($\\theta$)", "cos($\\theta$)", "sin($\\alpha)", "cos($\\alpha)",
+                                "$\\dot{\\theta}$", "$\\dot{\\alpha}$"]
 
         # get the number of available action from the environment
         self.state_dim = self.env.observation_space.shape[0]
@@ -563,5 +567,3 @@ class PILCO(object):
     def load_data(self, path_state_action, path_delta):
         self.state_action_pairs = np.load(open(f"{path_state_action}", "rb"))
         self.state_delta = np.load(open(f"{path_delta}", "rb"))
-
-
