@@ -51,7 +51,7 @@ class SparseMultivariateGP(MultivariateGP):
             # kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
             model = GPy.models.SparseGPRegression(X=X, Y=y[:, i:i + 1], kernel=kernel, Z=Z)
             model.likelihood.noise = np.exp(sigma_eps[i])
-            model.kern.lengthscale.constrain_bounded(0, 300)  # 300
+            model.kern.lengthscale.constrain_bounded(0, 300)  # 500
             model.likelihood.variance.constrain_bounded(1e-15, 1e-3)
             # model.kern.lengthscale[1].constrain_bounded(0, 10)
             # prior = GPy.priors.gamma_from_EV(0.5, 1)
