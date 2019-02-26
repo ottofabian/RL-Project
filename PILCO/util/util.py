@@ -145,6 +145,8 @@ def parse_args(args):
         args.start_state = np.array(args.start_state)
     if args.target_state:
         args.target_state = np.array(args.target_state)
+    if args.weights:
+        args.weights = np.diag(args.weights)
 
     # set default value for cost threshold
     if not args.cost_threshold:
