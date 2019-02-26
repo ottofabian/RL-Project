@@ -112,12 +112,13 @@ class SparseMultivariateGP(MultivariateGP):
             self.logger.info("Optimization for GP (output={}) started.".format(i))
             try:
                 self.logger.info("Optimization with L-BFGS-B started.")
-                gp.optimize("lbfgsb", messages=True)
+                msg = gp.optimize("lbfgsb", messages=True)
             except Exception:
                 self.logger.info("Optimization with SCG started.")
-                gp.optimize('scg', messages=True)
+                msg = gp.optimize('scg', messages=True)
 
-            print(gp)
+            self.logger.info(msg)
+            self.logger.info(gp)
             print("Length scales:", gp.kern.lengthscale.values)
 
     def sigma_fs(self):
