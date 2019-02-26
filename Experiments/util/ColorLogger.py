@@ -16,6 +16,7 @@ by Sorin & Dave
 """
 
 import logging
+import os
 import sys
 import platform
 import datetime
@@ -165,6 +166,9 @@ def enable_color_logging(logging_lvl=logging.DEBUG, save_log=False, logfile_pref
         # include current timestamp in dataset export file
         timestmp = datetime.datetime.fromtimestamp(time()).strftime("%Y-%m-%d-%H-%M-%S")
         formatter = logging.Formatter("%(asctime)s %(message)s")
+
+        if not os.path.isdir("logs/"):
+            os.mkdir("logs/")
 
         file_handler = logging.FileHandler("logs/" + logfile_prefix + timestmp + ".log", mode='w')
         file_handler.setFormatter(formatter)

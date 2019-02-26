@@ -38,10 +38,10 @@
 %
 \RequirePackage{fix-cm}
 %
-\documentclass{svjour3}                     % onecolumn (standard format)
+%\documentclass{svjour3}                     % onecolumn (standard format)
 %\documentclass[smallcondensed]{svjour3}     % onecolumn (ditto)
 %\documentclass[smallextended]{svjour3}       % onecolumn (second format)
-%\documentclass[twocolumn]{svjour3}          % twocolumn
+\documentclass[twocolumn]{svjour3}          % twocolumn
 %
 \smartqed  % flush right qed marks, e.g. at end of proof
 %
@@ -111,9 +111,9 @@
     Define RL and the method in general.
     Show clear distinction to SL.
     Maybe include success of recent things in CV and NLP, might also be possible in \ref{sec:history} to transition to more recent approaches in RL. 
-    Introduce RL goal and notation, short intro ro MDPs.
+    Introduce RL goal and notation, short intro to MDPs.
     
-    \section{Preliminaries}
+    \section{Background}
 %    \paragraph{Markov Decision Process}
     A Markov Decision Process (MDP) is defined as a tuple $(\mathcal{S}, \mathcal{A}, \mathcal{T},\mathcal{R})$, where $\mathcal{S}$ is a finite set of states, $\mathcal{A}$ is a finite set of actions, $\mathcal{T}:\mathcal{S} \times \mathcal{A} \rightarrow \Pi(\mathcal{S})$ represents the state transition function, which returns a probability distribution over states and 
     $\mathcal{R}:\mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$ returns the expected immediate reward for taking each action in each state. 
@@ -138,6 +138,7 @@
     In order to reduce variance and keeping the estimate unbiased, a baseline $b(s)$ is subtracted from the return $\nabla_\theta\log\pi(s;\theta)(R - b(s))$. 
     For this baseline, it is common to use an estimate of the value function $b(s)\approx V^\pi(s)$.
     Consequently, $R-b(s)$ can be seen as an estimate of the advantage function $A_\pi(s,a) = Q_\pi(s,a) - V_\pi(s)$.
+    When estimating these functions, the algorithm is called actor-critic. 
     
     \section{Neural Networks and their history}
     \label{sec:def}

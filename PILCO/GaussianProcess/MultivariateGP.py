@@ -34,7 +34,9 @@ class MultivariateGP(object):
         self.n_targets = n_targets
         self.is_policy = is_policy
 
-        # TODO make this in matrix vector form
+        self.beta = None
+        self.K_inv = None
+
         # For a D-dimensional state space, we use D separate GPs, one for each state dimension. Deisenroth (2010)
         self.gp_container = [
             container(length_scales=length_scales[i], sigma_eps=sigma_eps[i], sigma_f=sigma_f[i]) for i in
@@ -42,17 +44,31 @@ class MultivariateGP(object):
 
         self.logger = logging.getLogger(__name__)
 
-    def fit(self, X, y):
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         """
-        Set new X any y for the new data
-        :param X:
-        :param y:
-        :return:
+        set x and y
+        :param X: input variables [n_samples, sample dim]
+        :param y: target variables [n_samples, n_targets]
+        :return: None
         """
         self.X = X
         self.y = y
+
+        # reset cached matrices when new data is added
+        self.K_inv = None
+        self.beta = None
+
         for i in range(self.n_targets):
-            self.gp_container[i].fit(X, y[:, i:i + 1])
+            self.gp_container[i].set_XY(X, y[:, i:i + 1])
+
+    def cache(self):
+        """
+        Precomputes the inverse gram matrix and betas for gp
+        :return:
+        """
+        [gp.compute_matrices() for gp in self.gp_container]
+        self.beta = np.vstack(np.array([gp.betas for gp in self.gp_container])).T
+        self.K_inv = np.array([gp.K_inv for gp in self.gp_container])
 
     def predict_from_dist(self, mu: np.ndarray, sigma: np.ndarray) -> tuple:
 
@@ -69,14 +85,12 @@ class MultivariateGP(object):
         state_dim = self.X.shape[1]
         target_dim = self.y.shape[1]
 
-        # TODO: maybe move this outside the function, to avoid computing it all the time during rollouts
-        # TODO: Needs to be adjusted anyway for sparse GP logic, duplicate code is bad.
-        [gp.compute_matrices() for gp in self.gp_container]
-
         # ----------------------------------------------------------------------------------------------------
         # Helper
 
-        beta = np.vstack(np.array([gp.betas for gp in self.gp_container])).T
+        # if self.K_inv is None or self.beta is None:
+        self.cache()
+
         length_scales = self.length_scales()
         sigma_f = self.sigma_fs().reshape(self.n_targets)
 
@@ -84,8 +98,8 @@ class MultivariateGP(object):
         precision_inv2 = np.stack(np.array([np.diag(np.exp(-2 * l)) for l in length_scales]))
 
         # centralized inputs
-        diff = self.X - mu
-        diff_scaled = np.expand_dims(diff, axis=0) / np.expand_dims(np.exp(2 * length_scales), axis=1)
+        diff = self.center_inputs(mu)
+        diff_scaled = diff / np.expand_dims(np.exp(2 * length_scales), axis=1)
 
         # ----------------------------------------------------------------------------------------------------
         # compute mean of predictive dist based on matlab code Deisenroth(2010)
@@ -99,7 +113,7 @@ class MultivariateGP(object):
         # B[i] is symmetric, so B[i].T=B[i]
         t = np.stack(np.array([np.linalg.solve(B[i], zeta_a[i].T).T for i in range(target_dim)]))
 
-        scaled_beta = np.exp(-.5 * np.sum(zeta_a * t, axis=2)) * beta.T
+        scaled_beta = np.exp(-.5 * np.sum(zeta_a * t, axis=2)) * self.beta.T
 
         coefficient = np.exp(2 * sigma_f) / np.sqrt(np.linalg.det(B))
 
@@ -139,11 +153,11 @@ class MultivariateGP(object):
 
         if self.is_policy:
             # noise for numerical reasons/ridge term
-            cov = scaling_factor * np.einsum('ji,iljk,kl->il', beta, Q, beta) + 1e-6 * np.identity(target_dim)
+            cov = scaling_factor * np.einsum('ji,iljk,kl->il', self.beta, Q, self.beta) + 1e-6 * np.identity(target_dim)
         else:
-            cov = np.einsum('ji,iljk,kl->il', beta, Q, beta)
+            cov = np.einsum('ji,iljk,kl->il', self.beta, Q, self.beta)
 
-            trace = np.hstack(np.array([np.sum(Q[i, i] * gp.K_inv) for i, gp in enumerate(self.gp_container)]))
+            trace = np.hstack(np.array([np.sum(Q[i, i] * self.K_inv[i]) for i in range(target_dim)]))
             cov = (cov - np.diag(trace)) * scaling_factor + np.diag(np.exp(2 * sigma_f))
 
         # Centralize moments
@@ -151,7 +165,16 @@ class MultivariateGP(object):
 
         return mean, cov, input_output_cov
 
-    def optimize(self):
+    def optimize(self) -> None:
+        """
+        optimizes the hyperparameters for all gaussian process models
+        :return: None
+        """
+
+        # reset parameters of gps are changing
+        self.K_inv = None
+        self.beta = None
+
         for i, gp in enumerate(self.gp_container):
             self.logger.info("Optimization for GP (output={}) started.".format(i))
             gp.optimize()
@@ -166,90 +189,34 @@ class MultivariateGP(object):
         [gp.compute_matrices() for gp in self.gp_container]
         return np.array([gp.predict(X) for gp in self.gp_container])
 
-    # def compute_cross_cov(self, i, j, zeta, sigma):
-    #     precision_a_inv = np.diag(1 / self.gp_container[i].length_scales)
-    #     precision_b_inv = np.diag(1 / self.gp_container[j].length_scales)
-    #
-    #     # compute R
-    #     R = sigma @ (precision_a_inv + precision_b_inv) + np.identity(sigma.shape[0])
-    #     R_inv = np.linalg.solve(R, np.identity(R.shape[0]))
-    #
-    #     # compute z
-    #     z = precision_a_inv @ zeta + precision_b_inv @ zeta
-    #
-    #     # compute n using matrix inversion lemma, Appendix A.4 Deisenroth (2010)
-    #     right = (zeta.T @ precision_a_inv @ zeta +
-    #              zeta.T @ precision_b_inv @ zeta -
-    #              z.T @ R_inv @ sigma @ z) / 2
-    #
-    #     const = 2 * (np.log(self.gp_container[i].sigma_f) + np.log(self.gp_container[j].sigma_f))
-    #     n_square = const - right
-    #
-    #     # Compute Q
-    #     Q = np.exp(n_square) / np.sqrt(np.linalg.det(R))
-    #
-    #     return Q
-    #
-    # def predict_from_dist_v2(self, mu, sigma):
-    #     """
-    #     This method should not be used, it is only based on the mathematical description of Deisenroth(2010).
-    #     Use predict_from_dist() in order to get a matlab based method, which is numerically more stable.
-    #     :param mu:
-    #     :param sigma:
-    #     :return:
-    #     """
-    #
-    #     mu_out = np.zeros((self.n_targets,))
-    #     sigma_out = np.zeros((self.n_targets, self.n_targets))
-    #     input_output_cov = np.zeros((self.n_targets, self.X.shape[1]))
-    #
-    #     # calculate combined Expectation of all gps
-    #     for i in range(self.n_targets):
-    #         mu_out[i] = self.gp_container[i].compute_matrices(mu, sigma)
-    #
-    #     # The cov og e.g. delta x is not diagonal, therefor it is necessary to
-    #     # compute the cross-cov between each output
-    #     # This requires to compute the expected value of the GP's outputs
-    #     # from xa,xb - the product of the corresponding mean values from above
-    #
-    #     # compute zeta before hand, it does not change
-    #     zeta = (self.X - mu).T
-    #
-    #     for i in range(self.n_targets):
-    #         beta_a = self.gp_container[i].betas
-    #         input_output_cov[i] = self.compute_input_output_cov(i, beta_a, sigma, zeta)
-    #
-    #         for j in range(self.n_targets):
-    #
-    #             Q = self.compute_cross_cov(i, j, zeta, sigma)
-    #             beta_b = self.gp_container[j].betas
-    #
-    #             # place into cov matrix
-    #             if i == j:
-    #                 cov_ab = beta_a.T @ Q @ beta_a - mu_out[i] ** 2 + self.gp_container[i].sigma_f ** 2 - \
-    #                          np.trace(self.gp_container[i].K_inv @ Q)
-    #             else:
-    #                 cov_ab = beta_a.T @ Q @ beta_b - mu_out[i] * mu_out[j]
-    #
-    #             sigma_out[i, j] = cov_ab
-    #
-    #     return mu_out, sigma_out, input_output_cov
-    #
-    # def compute_input_output_cov(self, i, beta, sigma, zeta):
-    #
-    #     precision = np.diag(self.gp_container[i].length_scales)
-    #     # print(precision, sigma)
-    #     sigma_plus_precision_inv = np.linalg.solve(sigma @ precision, np.identity(sigma.shape[0]))
-    #     return np.sum(beta @ self.gp_container[i].qs * sigma @ sigma_plus_precision_inv @ zeta, axis=1)
-
-    def save(self, reward):
+    def save(self, reward) -> None:
+        """
+        pickle dumps the gp to hard drive
+        :param reward: required for the name of the file.
+        :return:
+        """
         pickle.dump(self, open(f"./checkpoints/dynamics_reward-{reward}.p", "wb"))
 
-    def sigma_fs(self):
+    def sigma_fs(self) -> np.ndarray:
+        """
+        returns signal variance of gp
+        :return: ndarray of [n_targets, 1]
+        """
         return np.array([c.sigma_f for c in self.gp_container])
 
-    def sigma_eps(self):
+    def sigma_eps(self) -> np.ndarray:
+        """
+        returns noise variance of gp
+        :return: ndarray of [n_targets, 1]
+        """
         return np.array([c.sigma_eps for c in self.gp_container])
 
-    def length_scales(self):
+    def length_scales(self) -> np.ndarray:
+        """
+        returns length scales of gp
+        :return: ndarray of [n_targets, input_dim]
+        """
         return np.array([c.length_scales for c in self.gp_container])
+
+    def center_inputs(self, mu):
+        return np.expand_dims(self.X - mu, axis=0)

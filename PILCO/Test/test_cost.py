@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import numpy as np
@@ -6,6 +7,7 @@ import oct2py
 from PILCO.Controller.RBFController import RBFController
 from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
+from PILCO.util.util import parse_args
 
 octave = oct2py.Oct2Py()
 dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"
@@ -79,8 +81,17 @@ def test_trajectory_cost():
 
     # take any env, to avoid issues with gym.make
     # matlab is specified with squashing
-    pilco = PILCO(env_name="MountainCarContinuous-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=loss,
-                  bound=e, gamma=1, start_mu=mu.flatten(), start_cov=sigma)
+
+    args = parse_args([])
+    args.start_cov = sigma
+    args.start_state = mu.flatten()
+    args.max_action = e
+    args.env_name = "MountainCarContinuous-v0"
+    args.features = n_features_rbf
+    args.inducing_points = None
+    args.horizon = horizon
+
+    pilco = PILCO(args, loss=loss)
 
     # Training Dataset for dynamics model
     X0_dyn = np.random.rand(100, state_dim + n_actions)

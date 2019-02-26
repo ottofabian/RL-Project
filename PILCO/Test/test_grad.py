@@ -2,11 +2,11 @@ from functools import partial
 
 from autograd import grad, jacobian
 from autograd.test_util import check_grads
-from scipy.optimize import check_grad
 
 from autograd import numpy as np
 
-from PILCO.Controller.RBFController import RBFController, squash_action_dist
+from PILCO.util.util import squash_action_dist, parse_args
+from PILCO.Controller.RBFController import RBFController
 from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
 
@@ -20,7 +20,7 @@ def test_grad_mgpr():
     n_actions = 1
     n_targets = 2
 
-    n_features_rbf = 100
+    n_features_rbf = 5
     e = np.array([10.0])
 
     horizon = 10
@@ -37,12 +37,19 @@ def test_grad_mgpr():
     # Pilco setup
 
     # setup loss
-    T_inv = np.random.randn(state_dim, state_dim)
+    T_inv = np.diag(np.random.rand(state_dim))
     loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 
     # take any env, to avoid issues with gym.make
-    pilco = PILCO(env_name="MountainCarContinuous-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=loss,
-                  bound=e, gamma=1, start_mu=mu.flatten(), start_cov=sigma)
+    args = parse_args([])
+    args.start_cov = sigma
+    args.start_state = mu.flatten()
+    args.max_action = e
+    args.env_name = "MountainCarContinuous-v0"
+    args.features = n_features_rbf
+    args.horizon = horizon
+
+    pilco = PILCO(args, loss=loss)
 
     # Training Dataset for dynamics model
     X0_dyn = np.random.rand(100, state_dim + n_actions)
@@ -56,6 +63,7 @@ def test_grad_mgpr():
     pilco.n_actions = n_actions
 
     pilco.learn_dynamics_model()
+    print("dynamics learnt")
 
     # ---------------------------------------------------------------------------------------
     # Policy setup
@@ -82,6 +90,8 @@ def test_grad_mgpr():
     # grad_error = check_grad(func=rbf._optimize_hyperparams, grad=grad(rbf._optimize_hyperparams), x0=params)
     # print(grad_error)
     # np.testing.assert_almost_equal(grad_error, 0, decimal=7)
+
+    print(pilco._optimize_hyperparams(params))
 
     check_grads(pilco._optimize_hyperparams)(params)
 
@@ -112,12 +122,20 @@ def test_grad_smgpr():
     # Pilco setup
 
     # setup loss
-    T_inv = np.random.randn(state_dim, state_dim)
+    T_inv = np.diag(np.random.rand(state_dim))
     loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 
     # take any env, to avoid issues with gym.make
-    pilco = PILCO(env_name="MountainCarContinuous-v0", seed=1, n_features=n_features_rbf, Horizon=horizon, loss=loss,
-                  bound=e, gamma=1, start_mu=mu.flatten(), start_cov=sigma, n_inducing_points=n_inducing_points)
+    args = parse_args([])
+    args.start_cov = sigma
+    args.start_state = mu.flatten()
+    args.max_action = e
+    args.env_name = "MountainCarContinuous-v0"
+    args.features = n_features_rbf
+    args.inducing_points = n_inducing_points
+    args.horizon = horizon
+
+    pilco = PILCO(args, loss=loss)
 
     # Training Dataset for dynamics model
     X0_dyn = np.random.rand(n_samples, state_dim + n_actions)
@@ -161,7 +179,7 @@ def test_grad_loss():
     sigma = sigma.dot(sigma.T)
 
     target_state = np.random.rand(state_dim)
-    T_inv = np.random.randn(state_dim, state_dim)
+    T_inv = np.diag(np.random.rand(state_dim))
 
     loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 
@@ -213,6 +231,8 @@ def test_grad_rollout():
     n_features_rbf = 20
     bound = np.array([10.0])
 
+    n_inducing_points = 50
+
     # ---------------------------------------------------------------------------------------
 
     # setup policy
@@ -230,8 +250,13 @@ def test_grad_rollout():
 
     # take any env, to avoid issues with gym.make
     # matlab is specified with squashing, so we assume bound bound
-    pilco = PILCO(env_name="MountainCarContinuous-v0", seed=1, n_features=None, Horizon=None, loss=None,
-                  bound=bound, n_inducing_points=50)
+    args = parse_args([])
+    args.max_action = bound
+    args.env_name = "MountainCarContinuous-v0"
+    args.features = None
+    args.inducing_points = n_inducing_points
+
+    pilco = PILCO(args, loss=None)
 
     # Training Dataset for dynamics model
     X0_dyn = np.random.rand(n_samples, state_dim + n_actions)
@@ -256,7 +281,7 @@ def test_grad_rollout():
     sigma = sigma.dot(sigma.T)
 
     target_state = np.random.rand(state_dim)
-    T_inv = np.random.randn(state_dim, state_dim)
+    T_inv = np.diag(np.random.rand(state_dim))
 
     loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
 

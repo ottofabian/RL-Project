@@ -3,7 +3,8 @@ import os
 import numpy as np
 import oct2py
 
-from PILCO.Controller.RBFController import RBFController, squash_action_dist
+from PILCO.Controller.RBFController import RBFController
+from PILCO.util.util import squash_action_dist
 
 octave = oct2py.Oct2Py()
 dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"

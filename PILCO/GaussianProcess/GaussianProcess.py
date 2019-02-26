@@ -8,6 +8,7 @@ from scipy.optimize import minimize
 from PILCO.Kernels.RBFKernel import RBFKernel
 from PILCO.Kernels.WhiteNoiseKernel import WhiteNoiseKernel
 
+
 class GaussianProcess(object):
 
     def __init__(self, length_scales: np.ndarray, sigma_f: Union[np.ndarray, float] = 1,
@@ -46,7 +47,7 @@ class GaussianProcess(object):
 
         self.logger = logging.getLogger(__name__)
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+    def set_XY(self, X: np.ndarray, y: np.ndarray) -> None:
         """
         set x and y
         :param X: input variables [n_samples, sample dim]
@@ -170,28 +171,6 @@ class GaussianProcess(object):
 
         self.K_inv = np.linalg.solve(self.K, np.identity(self.K.shape[0]))
         self.betas = np.linalg.solve(self.K, self.y).T
-
-    # def compute_mu(self, mu, sigma):
-    #     """
-    #     Returns the new mean value of the predictive dist, e.g. p(u), given x~N(mu, sigma) via Moment matching
-    #     :param mu: mean of input, e.g. state-action distribution
-    #     :param sigma: covar of the input, e.g joint state-action distribution to represent uncertainty
-    #     :return: mu of predictive distribution p(u)
-    #     """
-    #
-    #     # Numerically more stable???
-    #     precision = np.diag(np.exp(self.length_scales))
-    #
-    #     diff = (self.X - mu) @ precision
-    #
-    #     # TODO: This is going to give nan for negative det
-    #     B = precision @ sigma @ precision + np.identity(precision.shape[0])
-    #     t = diff @ B
-    #
-    #     coefficient = np.exp(2 * self.sigma_f) * np.linalg.det(B) ** -.5
-    #     mean = coefficient * self.betas.T @ np.exp(-.5 * np.sum(diff * t, 1))
-    #
-    #     return mean
 
     def unwrap_params(self, params) -> tuple:
         """

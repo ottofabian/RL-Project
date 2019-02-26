@@ -12,13 +12,17 @@ class RBFNetwork(GaussianProcess):
     def __init__(self, length_scales, sigma_f=1, sigma_eps=.01):
         super(RBFNetwork, self).__init__(length_scales, sigma_f, sigma_eps)
 
+    @property
+    def length(self):
+        return self.state_dim * self.X.shape[0] + self.n_targets * self.X.shape[0] + self.state_dim + 1
+
     def wrap_policy_hyperparams(self):
         n_features = self.X.shape[0]
 
         split1 = self.state_dim * n_features  # split for RBF centers
         split2 = self.n_targets * n_features + split1  # split for training targets/weights
 
-        params = np.zeros([self.state_dim * n_features + self.n_targets * n_features + self.state_dim + 1])
+        params = np.zeros([self.length])
 
         params[:split1] = self.X.reshape(self.state_dim * n_features)
         params[split1:split2] = self.y.reshape(self.n_targets * n_features)

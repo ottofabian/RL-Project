@@ -6,6 +6,7 @@ import oct2py
 
 from PILCO.Controller.RBFController import RBFController
 from PILCO.PILCO import PILCO
+from PILCO.util.util import parse_args
 
 octave = oct2py.Oct2Py(logger=oct2py.get_log())
 octave.logger = oct2py.get_log('new_log')
@@ -49,8 +50,14 @@ def test_rollout():
 
     # take any env, to avoid issues with gym.make
     # matlab is specified with squashing, so we assume bound bound
-    pilco = PILCO(env_name="MountainCarContinuous-v0", seed=1, n_features=None, Horizon=horizon, loss=None,
-                  bound=bound)
+    args = parse_args([])
+    args.max_action = bound
+    args.env_name = "MountainCarContinuous-v0"
+    args.features = None
+    args.horizon = horizon
+    args.inducing_points = None
+
+    pilco = PILCO(args, loss=None)
 
     # Training Dataset for dynamics model
     X0_dyn = np.random.rand(n_samples, state_dim + n_actions)
