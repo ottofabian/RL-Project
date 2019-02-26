@@ -134,11 +134,40 @@
     The revival of asynchronous methods has been started by DeepMind
     Massively Parallel Methods for Deep Reinforcement Learning -> reference
     
+    \section{Taxononomy of distributed reinforcement learning}
+    Taxonomy -> Paper: Communication Efficient Distributed Reinforcement Learning
+    
+    Approaches Q-Learning, Policy-Gradient Methods, Actor-Critic Methods
+    
+    2 settings:
+    * multi-agent collaborative RL
+    -- multiple agents aim to maximize the team-averaged long-term reward via collaboration in a common environment
+    * parallel RL
+    -- multiple parallel machines are used for solving large-scale MDPs with larger computational power and higher data efficiency
+    
+    Distributed Methods are applicable in various RL methods
+    * Policy Gradient 
+    * Q-Learning (distributed Q-Learning)
+    * Actor-Critic Approaches (A3C / A2C )
+    
+    -> use a figure here to describe the concept
+    
+    Problem formulation: Multi-agent collaborative RL:
+    * each agent m observes globabl state s\_t e S shared by all agents and takes action a\_m,t e A\_m 
+    local action is determined by local policy
+    
+    Problem formulation: Parallel reinforcement learning
+    * solving large-scale single agent RL task, running in parallel on multiple computation units e.g. workers
+    * advantage training time reduction, training stabilization
+    * aim to learn common policy for different instance of identical  MDP
+    -> losses and initial state is different for each worker
+    
+    
     \section{Superlinearity phenomena}
     \label{sec:1}
     Text with citations \cite{RefB} and \cite{RefJ}.
     Try to give proof for this phenomena otherwise rely on empirical experiments
-        
+     
     \section{Applications}
     \label{sec:2}
     Describe application areas

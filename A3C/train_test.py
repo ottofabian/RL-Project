@@ -87,7 +87,7 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
             while not done:
                 t += 1
 
-                if args.render and i == 0 and t % 1 == 0:
+                if i == 0 and t % 1 == 0:
                     env.render()
 
                 # apply min/max scaling on the environment
