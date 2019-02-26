@@ -167,7 +167,7 @@ class PILCO(object):
         """
         start pilco training run
         :param n_samples: number of initial samples before first policy optimization
-        :param n_steps: maximum umber of learning steps until termination
+        :param n_steps: maximum number of learning steps until termination
         :return: None
         """
 
