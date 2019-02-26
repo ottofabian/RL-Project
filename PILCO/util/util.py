@@ -97,7 +97,7 @@ def parse_args(args):
     parser.add_argument('--initial-samples', type=int, default=300,
                         help='Number of initial samples for learning the dynamics before first policy optimization'
                              ' (default: 300)')
-    parser.add_argument('--max-samples-test_run', type=int, default=300,
+    parser.add_argument('--max-samples-test-run', type=int, default=300,
                         help='Maximum samples taken from one test episode. This is required to avoid running out of'
                              ' memory when not using Sparse GPs (default: 300)')
     parser.add_argument('--weights', type=float, nargs="*", default=None,

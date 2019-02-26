@@ -1,9 +1,7 @@
 import logging
-import os
 import sys
 
 import gym
-from autograd import numpy as np
 
 from Experiments.util.ColorLogger import enable_color_logging
 from Experiments.util.logger_util import show_cmd_args
