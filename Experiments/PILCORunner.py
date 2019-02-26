@@ -68,7 +68,7 @@ def main():
                         help='covariance of starting state for trajectory rollout (default: 1e-2)')
     parser.add_argument('--save-log', default=True, action='store_true',
                         help='exports a log file into the log directory if set to True (default: True)')
-    parser.add_argument('--export_plots', default=False, action='store_true',
+    parser.add_argument('--export-plots', default=False, action='store_true',
                         help='exports the trajectory plots as latex TikZ figures into "./plots/".'
                              ' You need to install "matplotlib2tikz" if set to True. (default: False)')
 
