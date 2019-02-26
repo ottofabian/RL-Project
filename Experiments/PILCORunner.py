@@ -42,9 +42,9 @@ def main():
                              '"--weights 0 1 1 0 0" for "CartpoleStabShort-v0" to only specify the loss for using'
                              'the angle attributes. Make sure to use the same number of entries as there are state'
                              'dimensions (default: None)')
-    parser.add_argument('--max-action', type=float, default=5,
-                        help='maximum allowed action to use, if None the full available action range is used'
-                             ' (default: 5)')
+    parser.add_argument('--max-action', type=float, default=None,
+                        help='maximum allowed action to use, if None then a predefined max action value for the'
+                             ' environment will be used (default: None)')
     parser.add_argument('--steps', type=int, default=20,
                         help='Maximum number of learning steps until termination (default: 20)')
     parser.add_argument('--start-cov', type=float, default=1e-2,

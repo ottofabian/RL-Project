@@ -74,6 +74,7 @@ def evaluate_policy(self, policy) -> tuple:
 
     return X, y
 
+
 class PILCO(object):
 
     def __init__(self, env_name: str, seed: int, n_features: int, Horizon: int, loss: Loss, start_mu: np.ndarray = None,
@@ -540,6 +541,11 @@ class PILCO(object):
             plt.xlabel("rollout steps")
             # plt.fill_between(x, m - s, m + s)
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
+
+            from matplotlib2tikz import save as tikz_save
+
+            tikz_save("test.tex")
+
             plt.show()
 
         # plot action trajectory
