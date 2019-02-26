@@ -3,6 +3,7 @@ import gym
 from autograd import numpy as np
 
 from Experiments.util.ColorLogger import enable_color_logging
+from Experiments.util.logger_util import show_cmd_args
 from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
 import argparse
@@ -63,7 +64,8 @@ def main():
 
     args = parser.parse_args()
 
-    enable_color_logging(logging_lvl=logging.DEBUG)
+    enable_color_logging(logging_lvl=logging.DEBUG, save_log=args.save_log,
+                         logfile_prefix="PILCO_" + args.env_name + "_")
 
     env = gym.make(args.env_name)
     state_dim = env.observation_space.shape[0]
@@ -141,14 +143,10 @@ def main():
     # --------------------------------------------------------
 
     logging.info(
-        f'Start Experiment for {args.env_name} at {time.strftime("%m/%d/%Y, %Hh:%Mm:%Ss", time.gmtime(time.time()))}')
+        f'Start experiment for {args.env_name} at {time.strftime("%m/%d/%Y, %Hh:%Mm:%Ss", time.gmtime(time.time()))}')
 
-    # log all given hyper-parameter command line settings
-    logging.info("Command line parameters:")
-    for arg in vars(args):
-        # for cmd line parameters - is used as a separator in actual python _ is used
-        cmd_parameter = arg.replace("_", "-")
-        logging.info(f"--{cmd_parameter} {getattr(args, arg)}")
+    # show given cmd-parameters
+    show_cmd_args(args)
 
     loss = SaturatedLoss(state_dim=state_dim, target_state=args.target_state, W=args.weights)
     pilco = PILCO(env_name=args.env_name, seed=args.seed, n_features=args.features, Horizon=args.horizon, loss=loss,
