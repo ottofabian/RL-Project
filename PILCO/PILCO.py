@@ -82,6 +82,7 @@ class PILCO(object):
         self.loss = loss
         self.start_mu = args.start_state
         self.start_cov = args.start_cov
+        self.no_render = args.no_render
 
         # -----------------------------------------------------
         # Container for collected experience
@@ -114,7 +115,7 @@ class PILCO(object):
             self.learn_dynamics_model()
             self.learn_policy()
 
-            X_test, y_test = self.execute_test_run()
+            X_test, y_test = self.execute_test_run(no_render=self.no_render)
 
             # add test history to training data set
             self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
@@ -349,11 +350,13 @@ class PILCO(object):
         # cost of trajectory
         return self.compute_trajectory_cost(self.policy, print_trajectory=False)
 
-    def execute_test_run(self, render=True) -> tuple:
+    def execute_test_run(self, no_render=False) -> tuple:
         """
         execute test run for max episode steps and return new training samples
         :return: states, state_deltas, rewards
         """
+
+        self.logger.info("Starting test run.")
 
         X = []
         y = []
@@ -371,7 +374,7 @@ class PILCO(object):
         done = False
         t = 0
         while not done:
-            if render:
+            if not no_render:
                 self.env.render()
             t += 1
 
