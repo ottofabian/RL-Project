@@ -11,6 +11,17 @@ Abdolmaleki, A., Springenberg, J.T., Tassa, Y., Munos, R., Heess, N.,
   Riedmiller, M.: {Maximum a Posteriori Policy Optimisation}  (2018).
 \newblock \urlprefix\url{http://arxiv.org/abs/1806.06920}
 
+\bibitem{Babaeizadeh2017}
+Babaeizadeh, M., Frosio, I., Tyree, S., Clemons, J., Kautz, J.: {Reinforcement
+  Learning through Asynchronous Advantage Actor-Critic on a GPU}  (2017).
+\newblock \urlprefix\url{http://arxiv.org/abs/1611.06256}
+
+\bibitem{Bellemare2017}
+Bellemare, M.G., Dabney, W., Munos, R.: {A Distributional Perspective on
+  Reinforcement Learning}.
+\newblock In: International Conference for Machine Learning (ICML) (2017).
+\newblock \urlprefix\url{http://arxiv.org/abs/1707.06887}
+
 \bibitem{Bellemare2013}
 Bellemare, M.G., Naddaf, Y., Veness, J., Bowling, M.: {The Arcade Learning
   Environment: An Evaluation Platform for General Agents}.
@@ -79,6 +90,26 @@ Ioffe, S., Szegedy, C.: {Batch Normalization: Accelerating Deep Network
   448--456. JMLR.org (2015).
 \newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=3045118.3045167}
 
+\bibitem{Jouppi2017}
+Jouppi, N.P., Young, C., Patil, N., Patterson, D., Agrawal, G., Bajwa, R.,
+  Bates, S., Bhatia, S., Boden, N., Borchers, A., Boyle, R., Cantin, P.l.,
+  Chao, C., Clark, C., Coriell, J., Daley, M., Dau, M., Dean, J., Gelb, B.,
+  Ghaemmaghami, T.V., Gottipati, R., Gulland, W., Hagmann, R., Ho, C.R.,
+  Hogberg, D., Hu, J., Hundt, R., Hurt, D., Ibarz, J., Jaffey, A., Jaworski,
+  A., Kaplan, A., Khaitan, H., Killebrew, D., Koch, A., Kumar, N., Lacy, S.,
+  Laudon, J., Law, J., Le, D., Leary, C., Liu, Z., Lucke, K., Lundin, A.,
+  MacKean, G., Maggiore, A., Mahony, M., Miller, K., Nagarajan, R.,
+  Narayanaswami, R., Ni, R., Nix, K., Norrie, T., Omernick, M., Penukonda, N.,
+  Phelps, A., Ross, J., Ross, M., Salek, A., Samadiani, E., Severn, C.,
+  Sizikov, G., Snelham, M., Souter, J., Steinberg, D., Swing, A., Tan, M.,
+  Thorson, G., Tian, B., Toma, H., Tuttle, E., Vasudevan, V., Walter, R., Wang,
+  W., Wilcox, E., Yoon, D.H.: {In-Datacenter Performance Analysis of a Tensor
+  Processing Unit}.
+\newblock In: International Symposium on Computer Architecture (ISCA), ISCA
+  '17, pp. 1--12. ACM, New York, NY, USA (2017).
+\newblock \doi{10.1145/3079856.3080246}.
+\newblock \urlprefix\url{http://doi.acm.org/10.1145/3079856.3080246}
+
 \bibitem{Kakade2001}
 Kakade, S.: {A Natural Policy Gradient}.
 \newblock In: Proceedings of the 14th International Conference on Neural
@@ -111,6 +142,16 @@ Lin, L.J.: {Self-improving reactive agents based on reinforcement learning,
 \newblock \doi{10.1007/BF00992699}.
 \newblock \urlprefix\url{https://doi.org/10.1007/BF00992699}
 
+\bibitem{Lowe2017}
+Lowe, R., WU, Y.I., Tamar, A., Harb, J., {Pieter Abbeel}, O., Mordatch, I.:
+  {Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments}.
+\newblock In: I.~Guyon, U.V. Luxburg, S.~Bengio, H.~Wallach, R.~Fergus,
+  S.~Vishwanathan, R.~Garnett (eds.) Conference on Neural Information
+  Processing Systems (NIPS), pp. 6379--6390. Curran Associates, Inc., Long
+  Beach, CA, USA (2017).
+\newblock
+  \urlprefix\url{http://papers.nips.cc/paper/7217-multi-agent-actor-critic-for-mixed-cooperative-competitive-environments.pdf}
+
 \bibitem{Martens2015}
 Martens, J., Grosse, R.: {Optimizing Neural Networks with Kronecker-factored
   Approximate Curvature}  (2015).
@@ -142,6 +183,19 @@ Mnih, V., Kavukcuoglu, K., Silver, D., Rusu, A.A., Veness, J., Bellemare, M.G.,
 \newblock Nature \textbf{518}(7540), 529--533 (2015).
 \newblock \doi{10.1038/nature14236}.
 \newblock \urlprefix\url{http://www.nature.com/articles/nature14236}
+
+\bibitem{Munos2016}
+Munos, R., Stepleton, T., Harutyunyan, A., Bellemare, M.: {Safe and Efficient
+  Off-Policy Reinforcement Learning}.
+\newblock In: D.D. Lee, M.~Sugiyama, U.V. Luxburg, I.~Guyon, R.~Garnett (eds.)
+  Advances in Neural Information Processing Systems 29, pp. 1054--1062. Curran
+  Associates, Inc. (2016).
+\newblock
+  \urlprefix\url{http://papers.nips.cc/paper/6538-safe-and-efficient-off-policy-reinforcement-learning.pdf}
+
+\bibitem{Peters2008a}
+Peters, J., Schaal, S.: {Natural actor-critic}.
+\newblock Neurocomputing \textbf{71}(7-9), 1180--1190 (2008)
 
 \bibitem{Riedmiller2005}
 Riedmiller, M.: {Neural Fitted Q Iteration - First Experiences with a Data
@@ -183,12 +237,39 @@ van Seijen, H., van Hasselt, H., Whiteson, S., Wiering, M.: {A theoretical and
   Reinforcement Learning, pp. 177--184 (2009).
 \newblock \doi{10.1109/ADPRL.2009.4927542}
 
+\bibitem{Silver2016}
+Silver, D., Huang, A., Maddison, C.J., Guez, A., Sifre, L., van~den Driessche,
+  G., Schrittwieser, J., Antonoglou, I., Panneershelvam, V., Lanctot, M.,
+  Dieleman, S., Grewe, D., Nham, J., Kalchbrenner, N., Sutskever, I.,
+  Lillicrap, T., Leach, M., Kavukcuoglu, K., Graepel, T., Hassabis, D.:
+  {Mastering the game of Go with deep neural networks and tree search}.
+\newblock Nature \textbf{529}(7587), 484--489 (2016).
+\newblock \doi{10.1038/nature16961}.
+\newblock \urlprefix\url{http://www.nature.com/articles/nature16961}
+
+\bibitem{Silver2017}
+Silver, D., Hubert, T., Schrittwieser, J., Antonoglou, I., Lai, M., Guez, A.,
+  Lanctot, M., Sifre, L., Kumaran, D., Graepel, T., Lillicrap, T., Simonyan,
+  K., Hassabis, D.: {Mastering Chess and Shogi by Self-Play with a General
+  Reinforcement Learning Algorithm} pp. 1--19 (2017).
+\newblock \doi{10.1002/acn3.501}.
+\newblock \urlprefix\url{http://arxiv.org/abs/1712.01815}
+
 \bibitem{Silver2014}
 Silver, D., Lever, G., Heess, N., Degris, T., Wierstra, D., Riedmiller, M.:
   {Deterministic Policy Gradient Algorithms}.
 \newblock In: International Conference on Machine Learning (ICML), ICML'14, pp.
   I--387----I--395. JMLR.org, Beijing, China (2014).
 \newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=3044805.3044850}
+
+\bibitem{Silver2017a}
+Silver, D., Schrittwieser, J., Simonyan, K., Antonoglou, I., Huang, A., Guez,
+  A., Hubert, T., Baker, L., Lai, M., Bolton, A., Chen, Y., Lillicrap, T., Hui,
+  F., Sifre, L., van~den Driessche, G., Graepel, T., Hassabis, D.: {Mastering
+  the game of Go without human knowledge}.
+\newblock Nature \textbf{550}(7676), 354--359 (2017).
+\newblock \doi{10.1038/nature24270}.
+\newblock \urlprefix\url{http://www.nature.com/doifinder/10.1038/nature24270}
 
 \bibitem{Sutton1990}
 Sutton, R.S.: {Integrated architectures for learning, planning, reacting based
@@ -214,6 +295,13 @@ Todorov, E., Li, W.: {A generalized iterative LQG method for locally-optimal
   feedback control of constrained nonlinear stochastic systems}.
 \newblock In: American Control Conference, pp. 300--306 vol. 1 (2005).
 \newblock \doi{10.1109/ACC.2005.1469949}
+
+\bibitem{Wang2017}
+Wang, Z., Bapst, V., Heess, N., Mnih, V., Munos, R., Kavukcuoglu, K.,
+  de~Freitas, N.: {Sample Efficient Actor-Critic with Experience Replay}.
+\newblock In: International Conference on Learning Representations (ICLR)
+  (2017).
+\newblock \urlprefix\url{http://arxiv.org/abs/1611.01224}
 
 \bibitem{Wang2016}
 Wang, Z., Schaul, T., Hessel, M., {Van Hasselt}, H., Lanctot, M., {De Freitas},
