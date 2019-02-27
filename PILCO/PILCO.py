@@ -15,6 +15,9 @@ from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 from PILCO.GaussianProcess.SparseMultivariateGP import SparseMultivariateGP
 
+# define the plotting style
+plt.style.use('seaborn-whitegrid')
+
 
 class PILCO(object):
 
@@ -82,7 +85,7 @@ class PILCO(object):
         self.loss = loss
         self.start_mu = args.start_state
         self.start_cov = args.start_cov
-        self.no_render = args.no_render
+        self.render = args.render
 
         # -----------------------------------------------------
         # Container for collected experience
@@ -115,7 +118,7 @@ class PILCO(object):
             self.learn_dynamics_model()
             self.learn_policy()
 
-            X_test, y_test = self.execute_test_run(no_render=self.no_render)
+            X_test, y_test = self.execute_test_run(render=self.render)
 
             # add test history to training data set
             self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
@@ -350,7 +353,7 @@ class PILCO(object):
         # cost of trajectory
         return self.compute_trajectory_cost(self.policy, print_trajectory=False)
 
-    def execute_test_run(self, no_render=False) -> tuple:
+    def execute_test_run(self, render=False) -> tuple:
         """
         execute test run for max episode steps and return new training samples
         :return: states, state_deltas, rewards
@@ -374,7 +377,7 @@ class PILCO(object):
         done = False
         t = 0
         while not done:
-            if not no_render:
+            if render:
                 self.env.render()
             t += 1
 
