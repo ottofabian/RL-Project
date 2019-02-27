@@ -1,5 +1,7 @@
 import logging
 import pickle
+import os
+import datetime
 
 import autograd.numpy as np
 import gym
@@ -14,6 +16,9 @@ from PILCO.CostFunctions.Loss import Loss
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 from PILCO.GaussianProcess.SparseMultivariateGP import SparseMultivariateGP
+
+# define the plotting style
+plt.style.use('seaborn-whitegrid')
 
 
 class PILCO(object):
@@ -82,7 +87,7 @@ class PILCO(object):
         self.loss = loss
         self.start_mu = args.start_state
         self.start_cov = args.start_cov
-        self.no_render = args.no_render
+        self.render = args.render
 
         # -----------------------------------------------------
         # Container for collected experience
@@ -97,6 +102,8 @@ class PILCO(object):
         # Run parameters
         self.n_samples = args.initial_samples
         self.n_steps = args.steps
+        self.test = args.test  # test is a boolean which can disable learning
+        self.data_loaded = False  # defines if the state state-action- and state-deltas-values have been loaded
 
         # -----------------------------------------------------
         # Plotting options
@@ -109,13 +116,16 @@ class PILCO(object):
         :return: None
         """
 
-        self.sample_inital_data_set(n_init=self.n_samples)
+        if not self.data_loaded:
+            self.sample_inital_data_set(n_init=self.n_samples)
 
         for _ in range(self.n_steps):
-            self.learn_dynamics_model()
-            self.learn_policy()
 
-            X_test, y_test = self.execute_test_run(no_render=self.no_render)
+            if not self.test:
+                self.learn_dynamics_model()
+                self.learn_policy()
+
+            X_test, y_test = self.execute_test_run(render=self.render)
 
             # add test history to training data set
             self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
@@ -320,11 +330,11 @@ class PILCO(object):
         options = {'maxiter': 150, 'disp': True}
 
         try:
-            self.logger.info("Starting to optimize policy with L-BFGS-B.")
+            logging.info("Starting to optimize policy with L-BFGS-B.")
             res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B',
                            jac=True, options=options)
         except Exception:
-            self.logger.info("Starting to optimize policy with CG.")
+            logging.info("Starting to optimize policy with CG.")
             res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='CG', jac=True,
                            options=options)
 
@@ -336,7 +346,7 @@ class PILCO(object):
         # increase trajectory length if below threshold cost
         if cost < self.cost_threshold:
             self.horizon += int(self.horizon * self.horizon_increase)
-            self.logger.info(f"Rollout horizon was increased to {self.horizon}.")
+            logging.info(f"Rollout horizon was increased to {self.horizon}.")
 
     def _optimize_hyperparams(self, params):
         """
@@ -350,13 +360,13 @@ class PILCO(object):
         # cost of trajectory
         return self.compute_trajectory_cost(self.policy, print_trajectory=False)
 
-    def execute_test_run(self, no_render=False) -> tuple:
+    def execute_test_run(self, render=False) -> tuple:
         """
         execute test run for max episode steps and return new training samples
         :return: states, state_deltas, rewards
         """
 
-        self.logger.info("Starting test run.")
+        logging.info("Starting test run.")
 
         X = []
         y = []
@@ -374,7 +384,7 @@ class PILCO(object):
         done = False
         t = 0
         while not done:
-            if not no_render:
+            if render:
                 self.env.render()
             t += 1
 
@@ -394,11 +404,20 @@ class PILCO(object):
             rewards += reward
             state_prev = state
 
-        self.logger.info(f"reward={rewards}, episode_len={t}")
+        logging.info(f"reward={rewards}, episode_len={t}")
 
-        self.policy.save(rewards)
-        self.dynamics_model.save(rewards)
-        self.save_data(rewards)
+        if not self.test:  # don't save the models when only testing
+            try:
+                # create a directory where all models and data will be saved
+                timestamp = datetime.datetime.now().strftime('%Y%m%d')  # -%H%M%S')
+                save_dir = "checkpoints/{}-reward-{:.5f}-{}/".format(timestamp, rewards, self.env_name)
+                os.mkdir(save_dir)
+            except OSError:
+                print("Creation of the directory %s failed" % save_dir)
+
+            self.policy.save(save_dir)
+            self.dynamics_model.save(save_dir)
+            self.save_data(save_dir)
 
         if len(X) < self.max_samples_test_run:
             X = np.array(X)
@@ -493,10 +512,22 @@ class PILCO(object):
     def load_dynamics(self, path):
         self.dynamics_model = pickle.load(open(path, "rb"))
 
-    def save_data(self, reward):
-        np.save(open(f"./checkpoints/state-delta_reward-{reward}.npy", "wb"), self.state_delta)
-        np.save(open(f"./checkpoints/state-action_reward-{reward}.npy", "wb"), self.state_action_pairs)
+    def save_data(self, save_dir):
+        """
+        Saves the the stat-action pairs and targets
+        :param save_dir: Directory where the state-actions and targets will be saved
+        :return:
+        """
+        np.save(open(f"{save_dir}state-delta.npy", "wb"), self.state_delta)
+        np.save(open(f"{save_dir}state-action.npy", "wb"),  self.state_action_pairs)
 
     def load_data(self, path_state_action, path_delta):
+        """
+        Loads the state-action and delta values
+        :param path_state_action: Path where the state-actions are stored
+        :param path_delta: Path where the delta values are stored
+        :return:
+        """
         self.state_action_pairs = np.load(open(f"{path_state_action}", "rb"))
         self.state_delta = np.load(open(f"{path_delta}", "rb"))
+        self.data_loaded = True

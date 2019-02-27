@@ -176,7 +176,7 @@ class MultivariateGP(object):
         self.beta = None
 
         for i, gp in enumerate(self.gp_container):
-            self.logger.info("Optimization for GP (output={}) started.".format(i))
+            logging.info("Optimization for GP (output={}) started.".format(i))
             gp.optimize()
 
     def predict(self, X: np.ndarray):
@@ -189,13 +189,13 @@ class MultivariateGP(object):
         [gp.compute_matrices() for gp in self.gp_container]
         return np.array([gp.predict(X) for gp in self.gp_container])
 
-    def save(self, reward) -> None:
+    def save(self, save_dir) -> None:
         """
         pickle dumps the gp to hard drive
-        :param reward: required for the name of the file.
+        :param save_dir: directory where the dynamic model will be saved
         :return:
         """
-        pickle.dump(self, open(f"./checkpoints/dynamics_reward-{reward}.p", "wb"))
+        pickle.dump(self, open(f"{save_dir}dynamics.p", "wb"))
 
     def sigma_fs(self) -> np.ndarray:
         """

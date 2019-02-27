@@ -37,8 +37,6 @@ class SparseMultivariateGP(MultivariateGP):
         self.is_policy = is_policy
         self.n_inducing_points = n_inducing_points
 
-        self.logger = logging.getLogger(__name__)
-
         self.gp_container = []
         idx = np.random.permutation(X.shape[0])[:min(n_inducing_points, X.shape[0])]
         Z = X.view(np.ndarray)[idx].copy()
@@ -203,16 +201,16 @@ class SparseMultivariateGP(MultivariateGP):
 
     def optimize(self):
         for i, gp in enumerate(self.gp_container):
-            self.logger.info("Optimization for GP (output={}) started.".format(i))
+            logging.info("Optimization for GP (output={}) started.".format(i))
             try:
-                self.logger.info("Optimization with L-BFGS-B started.")
+                logging.info("Optimization with L-BFGS-B started.")
                 gp.optimize("lbfgsb", messages=True)
             except Exception:
-                self.logger.info("Optimization with SCG started.")
+                logging.info("Optimization with SCG started.")
                 gp.optimize('scg', messages=True)
 
-            self.logger.info(gp)
-            self.logger.info("Length scales: {}".format(gp.kern.lengthscale.values))
+            logging.info(gp)
+            logging.info("Length scales: {}".format(gp.kern.lengthscale.values))
 
     def sigma_fs(self):
         return np.log(np.sqrt(np.array([gp.kern.variance.values for gp in self.gp_container])))

@@ -349,7 +349,7 @@ class Worker(Process):
                     state = torch.from_numpy(state)
                 done = False
 
-            print("T={} -- mean reward={:.5f} -- mean episode length={:.5f} -- global reward={:.5f}".format(self.T.value,
+            print("T={} -- total reward avg over 10 runs={:.5f} -- mean episode length={:.5f} -- global reward={:.5f}".format(self.T.value,
                                                                                                 rewards.mean(),
                                                                                                 eps_len.mean(),
                                                                                                 self.global_reward.value))

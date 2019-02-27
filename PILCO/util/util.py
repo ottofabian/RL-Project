@@ -130,13 +130,20 @@ def parse_args(args):
                              '"CartpoleStabShort-v0" environment. (default: None)')
     parser.add_argument('--start-cov', type=float, default=1e-2,
                         help='covariance of starting state for trajectory rollout (default: 1e-2)')
+    parser.add_argument('--weight-dir', type=str, default=None,
+                        help='directory for the weights:'
+                             ' "policy.p", "dynamics.p", "state-action.npy", "state-delta.npy"'
+                             ' If only testing is enabled you only need to include "policy.p" in the directory'
+                             ' (default: None)')
+    parser.add_argument('--test', default=False, action='store_true',
+                        help='do testing only (default: False)')
     parser.add_argument('--save-log', default=True, action='store_true',
                         help='exports a log file into the log directory if set to True (default: True)')
     parser.add_argument('--export-plots', default=False, action='store_true',
                         help='exports the trajectory plots as latex TikZ figures into "./plots/".'
                              ' You need to install "matplotlib2tikz" if set to True. (default: False)')
-    parser.add_argument('--no-render', action='store_true',
-                        help='do not render the test run (default: False)')
+    parser.add_argument('--render', default=True, action='store_true',
+                        help='enables/disables rendering. (default: True)')
 
     args = parser.parse_args(args)
 

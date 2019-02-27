@@ -45,8 +45,6 @@ class GaussianProcess(object):
         self.betas = None
         self.K_inv = None
 
-        self.logger = logging.getLogger(__name__)
-
     def set_XY(self, X: np.ndarray, y: np.ndarray) -> None:
         """
         set x and y
@@ -94,25 +92,25 @@ class GaussianProcess(object):
         # bounds for noise variance to be lower than 1e-10
         # bounds = [(None, None) for _ in range(len(params) - 1)] + [(None, np.log(1e-10))]
 
-        self.logger.debug("Length scales before: {}".format(np.array2string(np.exp(self.length_scales))))
-        self.logger.debug("Sigma_f before: {}".format(np.array2string(np.exp(self.sigma_f))))
-        self.logger.debug("Sigma_eps before: {}".format(np.array2string(np.exp(self.sigma_eps))))
+        logging.debug("Length scales before: {}".format(np.array2string(np.exp(self.length_scales))))
+        logging.debug("Sigma_f before: {}".format(np.array2string(np.exp(self.sigma_f))))
+        logging.debug("Sigma_eps before: {}".format(np.array2string(np.exp(self.sigma_eps))))
 
         try:
-            self.logger.info("Optimization with L-BFGS-B started.")
+            logging.info("Optimization with L-BFGS-B started.")
             res = minimize(value_and_grad(self._optimize_hyperparams), params, jac=True, method='L-BFGS-B')
         except Exception:
             # use CG if numerical instablities occur during optimization
-            self.logger.info("Optimization with CG started.")
+            logging.info("Optimization with CG started.")
             res = minimize(value_and_grad(self._optimize_hyperparams), params, jac=True, method='CG')
 
         best_params = res.x
 
         self.length_scales, self.sigma_f, self.sigma_eps = self.unwrap_params(best_params)
 
-        self.logger.debug("Length scales after: {}".format(np.array2string(np.exp(self.length_scales))))
-        self.logger.debug("Sigma_f after: {}".format(np.array2string(np.exp(self.sigma_f))))
-        self.logger.debug("Sigma_eps after: {}".format(np.array2string(np.exp(self.sigma_eps))))
+        logging.debug("Length scales after: {}".format(np.array2string(np.exp(self.length_scales))))
+        logging.debug("Sigma_f after: {}".format(np.array2string(np.exp(self.sigma_f))))
+        logging.debug("Sigma_eps after: {}".format(np.array2string(np.exp(self.sigma_eps))))
 
         # compute betas and K_inv which is required for later predictions
         self.compute_matrices()
