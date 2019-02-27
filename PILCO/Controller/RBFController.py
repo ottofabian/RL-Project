@@ -56,10 +56,10 @@ class RBFController(MultivariateGP, Controller):
         """
         raise ValueError("Cannot be used for optimization")
 
-    def save(self, reward) -> None:
+    def save(self, save_dir) -> None:
         """
         pickle dumps the policy to hard drive
-        :param reward: required for the name of the file.
+        :param save_dir: directory where the policy will be saved
         :return:
         """
-        pickle.dump(self, open(f"./checkpoints/policy_reward-{reward}.p", "wb"))
+        pickle.dump(self, open(f"{save_dir}policy.p", "wb"))

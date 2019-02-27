@@ -130,11 +130,10 @@ def parse_args(args):
                              '"CartpoleStabShort-v0" environment. (default: None)')
     parser.add_argument('--start-cov', type=float, default=1e-2,
                         help='covariance of starting state for trajectory rollout (default: 1e-2)')
-    parser.add_argument('--policy-path', type=str, default=None,
-                        help='path where the policy is stored. Typically named as "policy_reward--XXX.p"'
-                             ' (default: None)')
-    parser.add_argument('--dynamics-path', type=str, default=None,
-                        help='path where the dynamic model is stored. Typically named as "dynamics_reward--XXX.p"'
+    parser.add_argument('--weight-dir', type=str, default=None,
+                        help='directory for the weights:'
+                             ' "policy.p", "dynamics.p", "state-action.npy", "state-delta.npy"'
+                             ' If only testing is enabled you only need to include "policy.p" in the directory'
                              ' (default: None)')
     parser.add_argument('--test', default=False, action='store_true',
                         help='do testing only (default: False)')

@@ -31,11 +31,18 @@ def main():
     loss = SaturatedLoss(state_dim=state_dim, target_state=args.target_state, W=args.weights)
     pilco = PILCO(args, loss=loss)
 
-    # load the models if they are given
-    if args.dynamics_path:
-        pilco.load_dynamics(args.dynamics_path)
-    if args.policy_path:
-        pilco.load_policy(args.policy_path)
+    # load the models if "args.weight_dir" is given
+    if args.weight_dir:
+        # make sure that the dir ends with an "/"
+        if args.weight_dir[-1] != '/':
+            args.weight_dir += '/'
+
+        # load the policy
+        pilco.load_policy(f"{args.weight_dir}policy.p")
+        if not args.test:
+            # load the remaining models and stats to continue training
+            pilco.load_dynamics(f"{args.weight_dir}dynamics.p")
+            pilco.load_data(f"{args.weight_dir}state-action.npy", f"{args.weight_dir}state-delta.npy")
 
     pilco.run()
 
