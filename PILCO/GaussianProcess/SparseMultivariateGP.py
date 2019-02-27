@@ -211,8 +211,8 @@ class SparseMultivariateGP(MultivariateGP):
                 self.logger.info("Optimization with SCG started.")
                 gp.optimize('scg', messages=True)
 
-            print(gp)
-            print("Length scales:", gp.kern.lengthscale.values)
+            self.logger.info(gp)
+            self.logger.info("Length scales: {}".format(gp.kern.lengthscale.values))
 
     def sigma_fs(self):
         return np.log(np.sqrt(np.array([gp.kern.variance.values for gp in self.gp_container])))
