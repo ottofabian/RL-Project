@@ -30,6 +30,13 @@ def main():
 
     loss = SaturatedLoss(state_dim=state_dim, target_state=args.target_state, W=args.weights)
     pilco = PILCO(args, loss=loss)
+
+    # load the models if they are given
+    if args.dynamics_path:
+        pilco.load_dynamics(args.dynamics_path)
+    if args.policy_path:
+        pilco.load_policy(args.policy_path)
+
     pilco.run()
 
 

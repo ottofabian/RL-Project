@@ -100,6 +100,7 @@ class PILCO(object):
         # Run parameters
         self.n_samples = args.initial_samples
         self.n_steps = args.steps
+        self.test = args.test  # test is a boolean which can disable learning
 
         # -----------------------------------------------------
         # Plotting options
@@ -115,8 +116,10 @@ class PILCO(object):
         self.sample_inital_data_set(n_init=self.n_samples)
 
         for _ in range(self.n_steps):
-            self.learn_dynamics_model()
-            self.learn_policy()
+
+            if not self.test:
+                self.learn_dynamics_model()
+                self.learn_policy()
 
             X_test, y_test = self.execute_test_run(render=self.render)
 
