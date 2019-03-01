@@ -8,8 +8,9 @@ from Experiments.util.logger_util import show_cmd_args
 from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
 import time
+import numpy as np
 
-from PILCO.util.util import parse_args
+from PILCO.util.util import parse_args, evaluate_policy
 
 
 def main():
@@ -43,6 +44,9 @@ def main():
             # load the remaining models and stats to continue training
             pilco.load_dynamics(f"{args.weight_dir}dynamics.p")
             pilco.load_data(f"{args.weight_dir}state-action.npy", f"{args.weight_dir}state-delta.npy")
+
+    if args.test:
+        evaluate_policy(pilco.policy, pilco.env, max_action=np.array([5]))
 
     pilco.run()
 

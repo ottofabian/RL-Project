@@ -4,9 +4,10 @@ import autograd.numpy as np
 import gym
 
 from PILCO.Controller.Controller import Controller
+import logging
 
 
-def evaluate_policy(self, policy: Controller, env: gym.Env, n_runs: int = 100, max_action: int = 1) -> None:
+def evaluate_policy(policy: Controller, env: gym.Env, n_runs: int = 100, max_action: np.array = np.array([1])) -> None:
     """
     execute test run for given env and PILCO policy
     :return: None
@@ -16,31 +17,31 @@ def evaluate_policy(self, policy: Controller, env: gym.Env, n_runs: int = 100, m
     lengths = np.zeros(n_runs)
 
     for i in range(n_runs):
-        state_prev = self.env.reset().flatten()
+        state_prev = env.reset().flatten()
 
         if env.spec.id == "Pendulum-v0":
             # some noise to avoid starting upright
             theta = 0 + np.random.normal(0, .1, 1)[0]
             state_prev = np.array([np.cos(theta), np.sin(theta), 0])
-            self.env.env.state = [theta, 0]
+            env.env.state = [theta, 0]
 
         done = False
         while not done:
-            self.env.render()
+            env.render()
             lengths[i] += 1
 
             # no uncertainty during testing required
             action, _, _ = policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), bound=max_action)
             action = action.flatten()
 
-            state, reward, done, _ = self.env.step(action)
+            state, reward, done, _ = env.step(action)
             state = state.flatten()
 
             rewards[i] += reward
             state_prev = state
 
-        self.logger.info(f"episode reward={rewards[i]}, episode length={t}")
-    self.logger.info(f"mean over {n_runs} runs: reward={rewards.mean()}, length={t}")
+        logging.info(f"episode reward={rewards[i]}, episode length={lengths[i]}")
+    logging.info(f"mean over {n_runs} runs: reward={rewards.mean()}, length={lengths.mean()}")
 
 
 def squash_action_dist(mu: np.ndarray, sigma: np.ndarray, input_output_cov: np.ndarray, bound: np.ndarray) -> tuple:
