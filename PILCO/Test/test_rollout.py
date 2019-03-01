@@ -41,9 +41,7 @@ def test_rollout():
     Y0_rbf = np.sin(X0_rbf).dot(A_rbf) + 1e-3 * (np.random.rand(n_features_rbf, n_actions) - 0.5)
     length_scales_rbf = np.random.rand(n_actions, state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features_rbf, length_scales=length_scales_rbf)
-    rbf.fit(X0_rbf, Y0_rbf)
-
+    rbf = RBFController(X0_rbf, Y0_rbf, n_actions=n_actions, length_scales=length_scales_rbf)
     # ---------------------------------------------------------------------------------------
 
     # Pilco setup

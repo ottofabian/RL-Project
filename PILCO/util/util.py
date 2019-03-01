@@ -143,7 +143,7 @@ def parse_args(args):
     parser.add_argument('--export-plots', default=False, action='store_true',
                         help='exports the trajectory plots as latex TikZ figures into "./plots/".'
                              ' You need to install "matplotlib2tikz" if set to True. (default: False)')
-    parser.add_argument('--render', default=True, action='store_true',
+    parser.add_argument('--render', default=False, action='store_true',
                         help='enables/disables rendering. (default: True)')
 
     args = parser.parse_args(args)

@@ -1,23 +1,18 @@
 import logging
-# from functools import partial
-
 from typing import Union, Type
 
 import dill as pickle
 import autograd.numpy as np
-# from autograd.test_util import check_grads
 
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 from PILCO.GaussianProcess.RBFNetwork import RBFNetwork
 
 
-# check_grads = partial(check_grads, modes=['rev'])
-
-
 class MultivariateGP(object):
 
-    def __init__(self, n_targets: int, container: Union[Type[GaussianProcess], Type[RBFNetwork]],
-                 length_scales: np.ndarray, sigma_f: np.ndarray, sigma_eps: np.ndarray, is_policy: bool = False):
+    def __init__(self, X: np.ndarray, y: np.ndarray, n_targets: int,
+                 container: Union[Type[GaussianProcess], Type[RBFNetwork]], length_scales: np.ndarray,
+                 sigma_f: np.ndarray, sigma_eps: np.ndarray, is_policy: bool = False):
         """
         Multivariate Gaussian Process Regression
         :param n_targets: amount of target, each dimension of data inputs requires one target
@@ -29,8 +24,8 @@ class MultivariateGP(object):
                           the moment matching is consequently computed differently
         """
 
-        self.X = None
-        self.y = None
+        self.X = X
+        self.y = y
         self.n_targets = n_targets
         self.is_policy = is_policy
 
@@ -41,6 +36,9 @@ class MultivariateGP(object):
         self.gp_container = [
             container(length_scales=length_scales[i], sigma_eps=sigma_eps[i], sigma_f=sigma_f[i]) for i in
             range(self.n_targets)]
+
+        for i in range(self.n_targets):
+            self.gp_container[i].set_XY(X, y[:, i:i + 1])
 
         self.logger = logging.getLogger(__name__)
 

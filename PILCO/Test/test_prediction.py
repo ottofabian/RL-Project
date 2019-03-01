@@ -28,9 +28,8 @@ def test_mgpr():
     sigma_f = np.ones(state_dim)
     sigma_eps = np.ones(state_dim)
 
-    mgpr = MultivariateGP(container=GaussianProcess, length_scales=length_scales, n_targets=n_targets, sigma_f=sigma_f,
-                          sigma_eps=sigma_eps)
-    mgpr.fit(X0, Y0)
+    mgpr = MultivariateGP(X0, Y0, container=GaussianProcess, length_scales=length_scales, n_targets=n_targets,
+                          sigma_f=sigma_f, sigma_eps=sigma_eps)
 
     mgpr.optimize()
 

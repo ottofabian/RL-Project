@@ -9,19 +9,23 @@ from PILCO.util.util import squash_action_dist
 
 
 class RBFController(MultivariateGP, Controller):
-    """RBF Controller/Policy"""
 
-    def __init__(self, n_actions, n_features, length_scales):
+    def __init__(self, X, y, n_actions, length_scales):
+        """
+        Deisenroth (2010), Nonlinear Model: RBF Network
+        :param X: pseudo inputs
+        :param y: pseudo targets
+        :param n_actions: number of actions/GP models
+        :param n_features: number of
+        :param length_scales:
+        """
         # sigma_f is fixed for the RBF Controller, if it is seen as deterministic GP
         # sigma_eps is .01 to ensure a numerical stable computation
         sigma_f = np.log(np.ones((n_actions,)))
         sigma_eps = np.log(np.ones((n_actions,)) * .01)
 
-        MultivariateGP.__init__(self, length_scales=length_scales, n_targets=n_actions, sigma_f=sigma_f,
+        MultivariateGP.__init__(self, X=X, y=y, length_scales=length_scales, n_targets=n_actions, sigma_f=sigma_f,
                                 sigma_eps=sigma_eps, container=RBFNetwork, is_policy=True)
-
-        self.n_features = n_features
-        self.opt_ctr = 0
 
     def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: np.ndarray = None) -> tuple:
         """
