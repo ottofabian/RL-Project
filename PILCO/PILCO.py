@@ -289,9 +289,6 @@ class PILCO(object):
         # get mean and covar of next action, optionally with squashing and scaling towards an action bound
         action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
                                                                               bound=self.bound)
-        print(action_mu)
-        print(action_cov)
-        print(action_input_output_cov)
 
         # ------------------------------------------------
         # get joint dist p(x,u)
@@ -317,7 +314,7 @@ class PILCO(object):
 
     def optimize_policy(self) -> None:
         """
-        optimize policy with regards to pseudo inputs and targets
+        optimize policy with respect to pseudo inputs and targets
         :return: None
         """
         params = np.array([gp.wrap_policy_hyperparams() for gp in self.policy.gp_container]).flatten()

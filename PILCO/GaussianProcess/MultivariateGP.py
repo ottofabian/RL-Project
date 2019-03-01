@@ -20,8 +20,8 @@ class MultivariateGP(object):
         :param length_scales: prior for length scales
         :param sigma_f: prior for signal variance
         :param sigma_eps: prior for noise variance
-        :param is_policy: is this instanced used as RBF policy or not,
-                          the moment matching is consequently computed differently
+        :param is_policy: is this instance used as RBF policy or not,
+                          the moment matching is computed slightly different based on that.
         """
 
         self.X = X

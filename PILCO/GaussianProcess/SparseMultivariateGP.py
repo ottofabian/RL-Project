@@ -20,6 +20,8 @@ class SparseMultivariateGP(MultivariateGP):
 
         """
         Multivariate Gaussian Process Regression
+        :param X: inputs [n_samples, state_dim]
+        :param y: targets
         :param n_targets: amount of target, each dimension of data inputs requires one target
         :param container: submodel type for each target, this depends on whether this should model dynamics of RBF policy
         :param length_scales: prior for length scales
