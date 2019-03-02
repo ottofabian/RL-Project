@@ -14,6 +14,8 @@ environment boundaries.
 
 19999.95442 +/- 0.03550 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Stabilization/A2C/max_action_5/100_test_runs/openaigym.episode_batch.0.15325.stats.json))
 
+![a2c_cartpolestabshort_real_world](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Stabilization/Reduced action range/a2c_cartpolestabshort_real_world.gif)
+
 | done | contributor | comment                                     | solved env | type |lr-actor|lr-critic|shared-model|value-loss-weight|discount| tau | entropy-loss-weight | max-grad-norm | seed | worker | rollout steps|max-episode-length|shared-optimizer|optimizer|lr-scheduler|max-action|normalizer|n-envs| test reward (10 episodes) | steps                | training time             |
 | ---- | ----------- | ------------------------------------------- | ---------- | ---  |------- | ------- | -----------| ----------------|------- | --- | --------------------| ------------- | -----| ------ | ------------ | ---------------- | -------------- | ------- | ---------- | -------- | -------- | ---- | ------------------------- | -------------------- | ------------------------- |
 | [x]  | BD          | baseline                                    | [x]        | A2C  | 1e-4   | 1e-3    | FALSE      | 0.5             | 0.99   |0.99 | 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | 9999.27 - 9999.97         | 788,195 - 19,492,710 | 00h 05m 34s - 02h 23m 00s |
