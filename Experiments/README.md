@@ -10,6 +10,7 @@ With the Swing-up we fine-tuned our final policy with 5,000 episode length using
 environment boundaries.
 
 ## CartpoleStabShort-v0
+![a2c_cartpolestab_short](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Stabilization/A2C/max_action_5/100_test_runs/a2c_cartpolestab_short.gif)
 
 | done | contributor | comment                                     | solved env | type |lr-actor|lr-critic|shared-model|value-loss-weight|discount| tau | entropy-loss-weight | max-grad-norm | seed | worker | rollout steps|max-episode-length|shared-optimizer|optimizer|lr-scheduler|max-action|normalizer|n-envs| test reward (10 episodes) | steps                | training time             |
 | ---- | ----------- | ------------------------------------------- | ---------- | ---  |------- | ------- | -----------| ----------------|------- | --- | --------------------| ------------- | -----| ------ | ------------ | ---------------- | -------------- | ------- | ---------- | -------- | -------- | ---- | ------------------------- | -------------------- | ------------------------- |
