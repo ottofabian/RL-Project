@@ -16,7 +16,7 @@ def test_rbf():
     np.random.seed(0)
 
     state_dim = 5
-    n_actions = 1
+    n_actions = 2
     n_features = 10
 
     # Training Dataset
@@ -25,8 +25,7 @@ def test_rbf():
     Y0 = np.sin(X0).dot(A) + 1e-3 * (np.random.rand(n_features, n_actions) - 0.5)
     length_scales = np.random.rand(n_actions, state_dim)
 
-    rbf = RBFController(n_actions=n_actions, n_features=n_features, length_scales=length_scales)
-    rbf.fit(X0, Y0)
+    rbf = RBFController(X0, Y0, n_actions=n_actions, length_scales=length_scales)
 
     # Generate input
     mu = np.random.rand(1, state_dim)
@@ -55,16 +54,13 @@ def test_rbf():
     gpmodel.targets = Y0
 
     M_mat, S_mat, V_mat = octave.gp2(gpmodel, mu.T, sigma, nout=3)
-    M_mat = np.asarray([M_mat])
+    M_mat = np.asarray(M_mat)[:, 0]
     S_mat = np.atleast_2d(S_mat)
     V_mat = np.asarray(V_mat)
 
     assert M.shape == M_mat.T.shape
     assert S.shape == S_mat.shape
     assert V.shape == V_mat.shape
-
-    print(M)
-    print(M_mat.T)
 
     np.testing.assert_allclose(M, M_mat.T, rtol=1e-5)
     np.testing.assert_allclose(S, S_mat, rtol=1e-5)

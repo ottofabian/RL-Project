@@ -54,10 +54,9 @@ class PILCO(object):
         if self.env_name == "Pendulum-v0":
             self.state_names = ["cos($\\theta$)", "sin($\\theta$)", "$\\dot{\\theta}$"]
         elif "Cartpole" in self.env_name:
-            # self.state_names = self.env.observation_space.labels
             self.state_names = ["x", "sin($\\theta$)", "cos($\\theta$)", "$\\dot{x}$", "$\\dot{\\theta}$"]
         elif self.env_name == "Qube-v0":
-            self.state_names = ["sin($\\theta$)", "cos($\\theta$)", "sin($\\alpha)", "cos($\\alpha)",
+            self.state_names = ["sin($\\theta$)", "cos($\\theta$)", "sin($\\alpha$)", "cos($\\alpha$)",
                                 "$\\dot{\\theta}$", "$\\dot{\\alpha}$"]
 
         # get the number of available action from the environment
@@ -87,7 +86,6 @@ class PILCO(object):
         self.loss = loss
         self.start_mu = args.start_state
         self.start_cov = args.start_cov
-        self.render = args.render
 
         # -----------------------------------------------------
         # Container for collected experience
@@ -102,13 +100,16 @@ class PILCO(object):
         # Run parameters
         self.n_samples = args.initial_samples
         self.n_steps = args.steps
-        self.test = args.test  # test is a boolean which can disable learning
         self.data_loaded = False  # defines if the state state-action- and state-deltas-values have been loaded
 
         # -----------------------------------------------------
         # Plotting options
         self.export_plots = args.export_plots
         self.plot_id = 0  # is a counter variable which is increment for each plot
+
+        # -----------------------------------------------------
+        # Test rendering
+        self.render = args.render
 
     def run(self) -> None:
         """
@@ -120,10 +121,8 @@ class PILCO(object):
             self.sample_inital_data_set(n_init=self.n_samples)
 
         for _ in range(self.n_steps):
-
-            if not self.test:
-                self.learn_dynamics_model()
-                self.learn_policy()
+            self.learn_dynamics_model()
+            self.learn_policy()
 
             X_test, y_test = self.execute_test_run(render=self.render)
 
@@ -137,9 +136,6 @@ class PILCO(object):
         :param n_init: amount of samples to be generated
         :return: None
         """
-        # state_action_pairs = np.zeros((n_init, self.state_dim + self.n_actions))
-        # state_delta = np.zeros((n_init, self.state_dim))
-        # rewards = np.zeros((n_init,))
 
         state_action_pairs = []
         state_delta = []
@@ -155,8 +151,6 @@ class PILCO(object):
 
         # sample more than init until current episode is over, select randomly at the end.
         while not done or i < n_init:
-
-            # self.env.render()
 
             # take initial random action
             if self.bound:
@@ -196,18 +190,17 @@ class PILCO(object):
         """
 
         if self.dynamics_model is None:
-            l, sigma_f, sigma_eps = self.get_init_hyperparams()
+            length_scales, sigma_f, sigma_eps = self.get_init_hyperparams()
             if self.n_inducing_points:
                 self.dynamics_model = SparseMultivariateGP(X=self.state_action_pairs, y=self.state_delta,
                                                            n_targets=self.state_dim, container=GaussianProcess,
-                                                           length_scales=l, sigma_f=sigma_f, sigma_eps=sigma_eps,
+                                                           length_scales=length_scales, sigma_f=sigma_f,
+                                                           sigma_eps=sigma_eps,
                                                            n_inducing_points=self.n_inducing_points)
             else:
-                self.dynamics_model = MultivariateGP(n_targets=self.state_dim, container=GaussianProcess,
-                                                     length_scales=l,
-                                                     sigma_f=sigma_f, sigma_eps=sigma_eps)
-
-                self.dynamics_model.fit(self.state_action_pairs, self.state_delta)
+                self.dynamics_model = MultivariateGP(X=self.state_action_pairs, y=self.state_delta,
+                                                     n_targets=self.state_dim, container=GaussianProcess,
+                                                     length_scales=length_scales, sigma_f=sigma_f, sigma_eps=sigma_eps)
 
         else:
             self.dynamics_model.fit(self.state_action_pairs, self.state_delta)
@@ -226,16 +219,14 @@ class PILCO(object):
         # initialize policy if we do not already have one
         if self.policy is None:
             # init model params
-            policy_X = np.random.multivariate_normal(self.start_mu, self.start_cov, size=(self.n_features,))
-            policy_y = target_noise * np.random.randn(self.n_features, self.n_actions)
+            X = np.random.multivariate_normal(self.start_mu, self.start_cov, size=(self.n_features,))
+            y = target_noise * np.random.randn(self.n_features, self.n_actions)
 
             # augmented states would be initialized with .7, but we already have sin and cos given
             # and do not need to compute this with gaussian_trig
             length_scales = np.repeat(np.ones(self.state_dim).reshape(1, -1), self.n_actions, axis=0)
 
-            self.policy = RBFController(n_actions=self.n_actions, n_features=self.n_features,
-                                        length_scales=length_scales)
-            self.policy.fit(policy_X, policy_y)
+            self.policy = RBFController(X=X, y=y, n_actions=self.n_actions, length_scales=length_scales)
 
         self.optimize_policy()
 
@@ -253,27 +244,28 @@ class PILCO(object):
 
         cost = 0
 
-        mu_state_container = []
-        sigma_state_container = []
+        if print_trajectory:
+            # container required plotting later on
+            mu_state_container = []
+            sigma_state_container = []
+            mu_action_container = []
+            sigma_action_container = []
 
-        mu_state_container.append(state_mu)
-        sigma_state_container.append(state_cov)
+            mu_state_container.append(state_mu)
+            sigma_state_container.append(state_cov)
 
-        mu_action_container = []
-        sigma_action_container = []
-
-        for t in range(0, self.horizon):
+        for t in range(self.horizon):
             state_next_mu, state_next_cov, action_mu, action_cov = self.rollout(policy, state_mu, state_cov)
 
             # compute value of current state prediction
             l = self.loss.compute_loss(state_next_mu, state_next_cov)
             cost = cost + self.discount ** t * l.flatten()
 
-            mu_state_container.append(state_next_mu)
-            sigma_state_container.append(state_next_cov)
-
-            mu_action_container.append(action_mu)
-            sigma_action_container.append(action_cov)
+            if print_trajectory:
+                mu_state_container.append(state_next_mu)
+                sigma_state_container.append(state_next_cov)
+                mu_action_container.append(action_mu)
+                sigma_action_container.append(action_cov)
 
             state_mu = state_next_mu
             state_cov = state_next_cov
@@ -295,7 +287,6 @@ class PILCO(object):
 
         # ------------------------------------------------
         # get mean and covar of next action, optionally with squashing and scaling towards an action bound
-        # Deisenroth (2010), page 44, Nonlinear Model: RBF Network
         action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
                                                                               bound=self.bound)
 
@@ -323,7 +314,7 @@ class PILCO(object):
 
     def optimize_policy(self) -> None:
         """
-        optimize policy with regards to pseudo inputs and targets
+        optimize policy with respect to pseudo inputs and targets
         :return: None
         """
         params = np.array([gp.wrap_policy_hyperparams() for gp in self.policy.gp_container]).flatten()
@@ -519,7 +510,7 @@ class PILCO(object):
         :return:
         """
         np.save(open(f"{save_dir}state-delta.npy", "wb"), self.state_delta)
-        np.save(open(f"{save_dir}state-action.npy", "wb"),  self.state_action_pairs)
+        np.save(open(f"{save_dir}state-action.npy", "wb"), self.state_action_pairs)
 
     def load_data(self, path_state_action, path_delta):
         """

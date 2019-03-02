@@ -15,6 +15,13 @@ Supervision: Jan Peters, Samuele Tosatto
 - [Cart-pole swing-up](Experiments/A3CRunner.py) ([Further info](https://www.google.com/search?source=hp&ei=EQffW4yLJYPKwQKQjoOIAQ&q=Cart-pole+swing-up&btnK=Google+Search&oq=Cart-pole+swing-up&gs_l=psy-ab.3..0i22i30.730.730..901...0.0..0.123.123.0j1......0....1j2..gws-wiz.sjBBp2UuE9A))
 - [Furuta pendulum swing-up](Experiments/A3CRunner.py) ([Further info](https://www.google.com/search?source=hp&ei=EQffW4yLJYPKwQKQjoOIAQ&q=Furuta+pendulum+swing-up&btnK=Google+Search&oq=Furuta+pendulum+swing-up&gs_l=psy-ab.3..0i22i30.716.716..808...0.0..0.64.64.1......0....1j2..gws-wiz.roZTOV-jxVs))
 
-## Research Paper
+## Installation
 
-- Todo
+The following Python packages are required:
+- Tensorflow
+- pytorch
+- numpy 
+- matplotlib
+
+
+
