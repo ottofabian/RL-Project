@@ -109,16 +109,16 @@ class SparseMultivariateGP(MultivariateGP):
         """
 
         for i, gp in enumerate(self.gp_container):
-            self.logger.info("Optimization for GP (output={}) started.".format(i))
+            logging.info("Optimization for GP (output={}) started.".format(i))
             try:
-                self.logger.info("Optimization with L-BFGS-B started.")
+                logging.info("Optimization with L-BFGS-B started.")
                 msg = gp.optimize("lbfgsb", messages=True)
             except Exception:
-                self.logger.info("Optimization with SCG started.")
+                logging.info("Optimization with SCG started.")
                 msg = gp.optimize('scg', messages=True)
 
-            self.logger.info(msg)
-            self.logger.info(gp)
+            logging.info(msg)
+            logging.info(gp)
             print("Length scales:", gp.kern.lengthscale.values)
 
     def sigma_fs(self):

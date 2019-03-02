@@ -112,9 +112,6 @@ class Worker(Process):
         self.T = T
         self.global_reward = global_reward
 
-        # logging instance
-        self.logger = logging.getLogger(__name__)
-
     def run(self):
         if self.is_train:
             self._train()

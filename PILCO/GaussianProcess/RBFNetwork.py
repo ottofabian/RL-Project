@@ -2,7 +2,7 @@ import autograd.numpy as np
 from pandas.io import pickle
 
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
-
+import logging
 
 class RBFNetwork(GaussianProcess):
     """
@@ -52,6 +52,6 @@ class RBFNetwork(GaussianProcess):
         self.X, self.y, self.length_scales, self.sigma_eps = X, y, length_scales, np.atleast_1d(sigma_eps)
 
     def optimize(self):
-        self.logger.warning(
+        logging.warning(
             "RBF networks are only optimized during the trajectory rollout, calling this method does nothing.")
         pass

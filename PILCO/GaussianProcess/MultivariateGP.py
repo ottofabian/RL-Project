@@ -40,8 +40,6 @@ class MultivariateGP(object):
         for i in range(self.n_targets):
             self.gp_container[i].set_XY(X, y[:, i:i + 1])
 
-        self.logger = logging.getLogger(__name__)
-
     def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         """
         set x and y
