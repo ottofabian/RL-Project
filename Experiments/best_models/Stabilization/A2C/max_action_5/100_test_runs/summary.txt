@@ -1,0 +1,2 @@
+2019-03-02 16:34:08 root[9812] INFO Time: 00h 07m 15s, T=53420290 -- n_runs=100 -- mean total reward=19999.94853 -- std total reward=0.03719 -- mean episode length=10000.00 -- global reward=7597.67863
+
