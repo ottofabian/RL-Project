@@ -38,10 +38,10 @@
 %
 \RequirePackage{fix-cm}
 %
-%\documentclass{svjour3}                     % onecolumn (standard format)
+\documentclass{svjour3}                     % onecolumn (standard format)
 %\documentclass[smallcondensed]{svjour3}     % onecolumn (ditto)
 %\documentclass[smallextended]{svjour3}       % onecolumn (second format)
-\documentclass[twocolumn]{svjour3}          % twocolumn
+%\documentclass[twocolumn]{svjour3}          % twocolumn
 %
 \smartqed  % flush right qed marks, e.g. at end of proof
 %
@@ -66,7 +66,7 @@
 
 \begin{document}
 
-    \title{Deep Reinforcement Learning -- Methods and Applications%\thanks{Grants or other notes
+    \title{Model-free Deep Reinforcement Learning -- Methods and Applications%\thanks{Grants or other notes
     %about the article that should go on the front page should be
     %placed here. General acknowledgments should be placed at the end of the article.}
     }
@@ -119,10 +119,10 @@
     $\mathcal{R}:\mathcal{S} \times \mathcal{A} \rightarrow \mathbb{R}$ returns the expected immediate reward for taking each action in each state. 
     This paper mainly considers the infinite horizon MDP, which tries to maximize the expected discounted cumulative reward:
     \[
-    G_t = \mathbb{E} \left[ \sum_{\tau=t}^{k=\infty} \gamma^{\tau-t} \mathcal{R}(s_\tau,a_\tau)\middle|s_\tau,a_\tau \right]
+    G_t = \mathbb{E} \left[ \sum_{\tau=t}^{\infty} \gamma^{\tau-t} \mathcal{R}(s_\tau,a_\tau)\middle|s_\tau,a_\tau \right]
 	\]
-    Here $\gamma \in \left[0,1\right)$ describes the discount factor, which trades of immediate and future rewards.
-    By choosing $\gamma=1$ and setting the horizon $k$ to an finite value, the optimization target of finite horizon MDP can be described.\\
+    Here $\gamma \in \left[0,1\right)$ describes the discount factor, which trades of immediate and future rewards.\\
+%    By choosing $\gamma=1$ and setting the horizon $k$ to an finite value, the optimization target of finite horizon MDP can be described.\\
     RL algorithms now aim to find a policy $\pi:\mathcal{S} \rightarrow \mathcal{A}$, which describes the optimal behavior to maximize the expected future reward from all states.
     Consequently, an action-value function, which returns the value of taking an action $a$ in state $s$, under the policy $\pi$ is defined as:
     \[
@@ -136,7 +136,7 @@
     In contrast to value-based methods, policy-based methods directly parameterize a policy $\pi(s;\theta)$. 
     One such method is REINFORCE \cite{Williams1992}, it updates the policy parameters $\theta$ in the direction $\nabla_\theta \mathbb{E}[G_t]\approx \nabla_\theta\log\pi(s_t;\theta)G_t$.
     In order to reduce variance and keeping the estimate unbiased, a baseline $b(s_t)$ is subtracted from the return $\nabla_\theta\log\pi(s;\theta)(G_t - b(s_t))$. 
-    For this baseline, it is common to use an estimate of the value function $b(s_t)\approx V^\pi(s_t)$.
+    For this baseline, it is common to use an estimate of the value function $b(s_t)\approx V_\pi(s_t)$.
     By applying the policy gradient theorem, $G_t-b(s_t)$ can be seen as an estimate of the advantage function $A_\pi(s_t,a_t) = Q_\pi(s_t,a_t) - V_\pi(s_t)$.
     Combining parameterized policies and value function estimator results in \textit{actor-critic} (AC) methods. 
     
@@ -218,7 +218,7 @@
 	The most important improvement, however, are delayed updates, i.e. the policy network as well as the target networks are updated less frequently than the Q-network.
 	This reduces the risk of optimizing the policy based on incorrect value estimates and hence the policy is less likely to diverge.	
 	Building upon the idea of entropy reinforcement learning from SAC, Maximum a-posteriori policy optimization (MPO) \cite{Abdolmaleki2018} transforms the RL problem in an inference problem, which allows them to utilize expectation maximization (EM) for training, while optimizing a relative-entropy objective.
-	Combining DDPG with distributed actors, such as the on-policy \textit{asynchronous advantage actor critic} (A3C) \cite{Mnih2016}, and a distributional value estimate results in \textit{Distributional Distributed DDPG} (D4PG) \cite{Bellemare2017}.
+	Combining DDPG with distributed actors, such as the on-policy \textit{asynchronous advantage actor critic} (A3C) \cite{Mnih2016}, and a distributional value estimate \cite{Bellemare2017} results in \textit{Distributional Distributed DDPG} (D4PG) \cite{Barth-Maron2018}.
 	A3C also has an off-policy counterpart \textit{actor-critic with experience replay} (ACER) \cite{Wang2017}, which outperforms A3C by significant margin regarding performance and sample efficiency. 
 	This is achieved by Retrace \cite{Munos2016} Q-value estimation, which reduces the bias of policy gradient estimates, whereas truncated importance weights help to reduce variance.
 	Additionally, maintaining a running average of past policies forces the new policy to stay close to this average.
@@ -278,6 +278,11 @@
     One major criticism is the underlying computational power, e.g. training for AlphaZero was executed on 5,000 TPUs \cite{Jouppi2017}. 
     Therefore, it is questionable if the same algorithm performs equally well with less computational power. 
     
+    \section{problems}
+    convergence 
+    hyperparams
+    forgetting
+    ???
 %    \paragraph{Paragraph headings}
 %    % For one-column wide figures use
 %    \begin{figure}

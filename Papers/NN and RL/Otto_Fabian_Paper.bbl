@@ -16,6 +16,12 @@ Babaeizadeh, M., Frosio, I., Tyree, S., Clemons, J., Kautz, J.: {Reinforcement
   Learning through Asynchronous Advantage Actor-Critic on a GPU}  (2017).
 \newblock \urlprefix\url{http://arxiv.org/abs/1611.06256}
 
+\bibitem{Barth-Maron2018}
+Barth-Maron, G., Hoffman, M.W., Budden, D., Dabney, W., Horgan, D., TB, D.,
+  et~al.: {Distributed Distributional Deterministic Policy Gradients}.
+\newblock In: International Conference on Learning Representations (2018).
+\newblock \urlprefix\url{http://arxiv.org/abs/1804.08617}
+
 \bibitem{Bellemare2017}
 Bellemare, M.G., Dabney, W., Munos, R.: {A Distributional Perspective on
   Reinforcement Learning}.
@@ -53,9 +59,8 @@ Gu, S., Lillicrap, T., Sutskever, I., Levine, S.: {Continuous Deep Q-Learning
 \newblock \urlprefix\url{http://arxiv.org/abs/1603.00748}
 
 \bibitem{Haarnoja2018}
-Haarnoja, T., Zhou, A., Hartikainen, K., Tucker, G., Ha, S., Tan, J., Kumar,
-  V., Zhu, H., Gupta, A., Abbeel, P., Levine, S.: {Soft Actor-Critic Algorithms
-  and Applications}  (2018).
+Haarnoja, T., Zhou, A., Hartikainen, K., Tucker, G., Ha, S., Tan, J., et~al.:
+  {Soft Actor-Critic Algorithms and Applications}  (2018).
 \newblock \urlprefix\url{http://arxiv.org/abs/1812.05905}
 
 \bibitem{VanHasselt2010}
@@ -74,9 +79,8 @@ van Hasselt, H., Guez, A., Silver, D.: {Deep Reinforcement Learning with Double
 \newblock \urlprefix\url{http://arxiv.org/abs/1509.06461}
 
 \bibitem{Heess2017}
-Heess, N., TB, D., Sriram, S., Lemmon, J., Merel, J., Wayne, G., Tassa, Y.,
-  Erez, T., Wang, Z., Eslami, S.M.A., Riedmiller, M., Silver, D.: {Emergence of
-  Locomotion Behaviours in Rich Environments}  (2017).
+Heess, N., TB, D., Sriram, S., Lemmon, J., Merel, J., Wayne, G., et~al.:
+  {Emergence of Locomotion Behaviours in Rich Environments}  (2017).
 \newblock \urlprefix\url{http://arxiv.org/abs/1707.02286}
 
 \bibitem{Hunter2004}
@@ -92,19 +96,7 @@ Ioffe, S., Szegedy, C.: {Batch Normalization: Accelerating Deep Network
 
 \bibitem{Jouppi2017}
 Jouppi, N.P., Young, C., Patil, N., Patterson, D., Agrawal, G., Bajwa, R.,
-  Bates, S., Bhatia, S., Boden, N., Borchers, A., Boyle, R., Cantin, P.l.,
-  Chao, C., Clark, C., Coriell, J., Daley, M., Dau, M., Dean, J., Gelb, B.,
-  Ghaemmaghami, T.V., Gottipati, R., Gulland, W., Hagmann, R., Ho, C.R.,
-  Hogberg, D., Hu, J., Hundt, R., Hurt, D., Ibarz, J., Jaffey, A., Jaworski,
-  A., Kaplan, A., Khaitan, H., Killebrew, D., Koch, A., Kumar, N., Lacy, S.,
-  Laudon, J., Law, J., Le, D., Leary, C., Liu, Z., Lucke, K., Lundin, A.,
-  MacKean, G., Maggiore, A., Mahony, M., Miller, K., Nagarajan, R.,
-  Narayanaswami, R., Ni, R., Nix, K., Norrie, T., Omernick, M., Penukonda, N.,
-  Phelps, A., Ross, J., Ross, M., Salek, A., Samadiani, E., Severn, C.,
-  Sizikov, G., Snelham, M., Souter, J., Steinberg, D., Swing, A., Tan, M.,
-  Thorson, G., Tian, B., Toma, H., Tuttle, E., Vasudevan, V., Walter, R., Wang,
-  W., Wilcox, E., Yoon, D.H.: {In-Datacenter Performance Analysis of a Tensor
-  Processing Unit}.
+  et~al.: {In-Datacenter Performance Analysis of a Tensor Processing Unit}.
 \newblock In: International Symposium on Computer Architecture (ISCA), ISCA
   '17, pp. 1--12. ACM, New York, NY, USA (2017).
 \newblock \doi{10.1145/3079856.3080246}.
@@ -129,8 +121,7 @@ Kulkarni, T.D., Narasimhan, K., Saeedi, A., Tenenbaum, J.: {Hierarchical Deep
 
 \bibitem{Lillicrap2016}
 Lillicrap, T.P., Hunt, J.J., Pritzel, A., Heess, N., Erez, T., Tassa, Y.,
-  Silver, D., Wierstra, D.: {Continuous control with deep reinforcement
-  learning}.
+  et~al.: {Continuous control with deep reinforcement learning}.
 \newblock In: International Conference on Learning Representations (ICLR) 2016.
   London, UK (2016).
 \newblock \urlprefix\url{http://arxiv.org/abs/1509.02971}
@@ -159,8 +150,7 @@ Martens, J., Grosse, R.: {Optimizing Neural Networks with Kronecker-factored
 
 \bibitem{Mnih2016}
 Mnih, V., Badia, A.P.A.P., Mirza, M., Graves, A., Lillicrap, T.P., Harley, T.,
-  Silver, D., Kavukcuoglu, K.: {Asynchronous Methods for Deep Reinforcement
-  Learning}.
+  et~al.: {Asynchronous Methods for Deep Reinforcement Learning}.
 \newblock In: M.F. Balcan, K.Q. Weinberger (eds.) Proceedings of The 33rd
   International Conference on Machine Learning, \emph{Proceedings of Machine
   Learning Research}, vol.~48, pp. 1928--1937. PMLR, New York, New York, USA
@@ -176,10 +166,7 @@ Mnih, V., Kavukcuoglu, K., Silver, D., Graves, A., Antonoglou, I., Wierstra,
 
 \bibitem{Mnih2015}
 Mnih, V., Kavukcuoglu, K., Silver, D., Rusu, A.A., Veness, J., Bellemare, M.G.,
-  Graves, A., Riedmiller, M., Fidjeland, A.K., Ostrovski, G., Petersen, S.,
-  Beattie, C., Sadik, A., Antonoglou, I., King, H., Kumaran, D., Wierstra, D.,
-  Legg, S., Hassabis, D.: {Human-level control through deep reinforcement
-  learning}.
+  et~al.: {Human-level control through deep reinforcement learning}.
 \newblock Nature \textbf{518}(7540), 529--533 (2015).
 \newblock \doi{10.1038/nature14236}.
 \newblock \urlprefix\url{http://www.nature.com/articles/nature14236}
@@ -239,19 +226,16 @@ van Seijen, H., van Hasselt, H., Whiteson, S., Wiering, M.: {A theoretical and
 
 \bibitem{Silver2016}
 Silver, D., Huang, A., Maddison, C.J., Guez, A., Sifre, L., van~den Driessche,
-  G., Schrittwieser, J., Antonoglou, I., Panneershelvam, V., Lanctot, M.,
-  Dieleman, S., Grewe, D., Nham, J., Kalchbrenner, N., Sutskever, I.,
-  Lillicrap, T., Leach, M., Kavukcuoglu, K., Graepel, T., Hassabis, D.:
-  {Mastering the game of Go with deep neural networks and tree search}.
+  G., et~al.: {Mastering the game of Go with deep neural networks and tree
+  search}.
 \newblock Nature \textbf{529}(7587), 484--489 (2016).
 \newblock \doi{10.1038/nature16961}.
 \newblock \urlprefix\url{http://www.nature.com/articles/nature16961}
 
 \bibitem{Silver2017}
 Silver, D., Hubert, T., Schrittwieser, J., Antonoglou, I., Lai, M., Guez, A.,
-  Lanctot, M., Sifre, L., Kumaran, D., Graepel, T., Lillicrap, T., Simonyan,
-  K., Hassabis, D.: {Mastering Chess and Shogi by Self-Play with a General
-  Reinforcement Learning Algorithm} pp. 1--19 (2017).
+  et~al.: {Mastering Chess and Shogi by Self-Play with a General Reinforcement
+  Learning Algorithm} pp. 1--19 (2017).
 \newblock \doi{10.1002/acn3.501}.
 \newblock \urlprefix\url{http://arxiv.org/abs/1712.01815}
 
@@ -264,9 +248,7 @@ Silver, D., Lever, G., Heess, N., Degris, T., Wierstra, D., Riedmiller, M.:
 
 \bibitem{Silver2017a}
 Silver, D., Schrittwieser, J., Simonyan, K., Antonoglou, I., Huang, A., Guez,
-  A., Hubert, T., Baker, L., Lai, M., Bolton, A., Chen, Y., Lillicrap, T., Hui,
-  F., Sifre, L., van~den Driessche, G., Graepel, T., Hassabis, D.: {Mastering
-  the game of Go without human knowledge}.
+  A., et~al.: {Mastering the game of Go without human knowledge}.
 \newblock Nature \textbf{550}(7676), 354--359 (2017).
 \newblock \doi{10.1038/nature24270}.
 \newblock \urlprefix\url{http://www.nature.com/doifinder/10.1038/nature24270}

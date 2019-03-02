@@ -405,9 +405,17 @@ FUNCTION {format.names}
       format.name$
       bibinfo bibinfo.check
       't :=
-      nameptr #1 >
-        {
-          namesleft #1 >
+	nameptr #1 >
+		 {
+		  nameptr #6
+		  #1 + =
+		  numnames #7
+		  > and
+		    { "others" 't :=
+		      #1 'namesleft := }
+		    'skip$
+		  if$
+		  namesleft #1 >
             { ", " * t * }
             {
               "," *
