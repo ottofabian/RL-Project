@@ -1,0 +1,2 @@
+2019-03-01 18:55:14 root[7077] INFO Time: 00h 01m 40s, T=164122000 -- mean reward=0.05942-- mean episode length=300.00 -- global reward=3.66047
+
