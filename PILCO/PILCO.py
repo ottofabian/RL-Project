@@ -93,10 +93,6 @@ class PILCO(object):
         self.state_delta = None
 
         # -----------------------------------------------------
-        # logging instance
-        self.logger = logging.getLogger(__name__)
-
-        # -----------------------------------------------------
         # Run parameters
         self.n_samples = args.initial_samples
         self.n_steps = args.steps
@@ -110,6 +106,7 @@ class PILCO(object):
         # -----------------------------------------------------
         # Test rendering
         self.render = args.render
+        self.test = args.test
 
     def run(self) -> None:
         """
@@ -119,6 +116,12 @@ class PILCO(object):
 
         if not self.data_loaded:
             self.sample_inital_data_set(n_init=self.n_samples)
+        elif "RR" in self.env_name and self.policy:
+            X_test, y_test = self.execute_test_run(render=False)
+
+            # add test history to training data set
+            self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
+            self.state_delta = np.append(self.state_delta, y_test, axis=0)
 
         for _ in range(self.n_steps):
             self.learn_dynamics_model()

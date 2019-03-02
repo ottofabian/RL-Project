@@ -37,8 +37,6 @@ class A3C(object):
         # worker handling
         self.worker_pool = []
 
-        self.logger = logging.getLogger(__name__)
-
         # validity check for input parameter
         if args.optimizer not in ['rmsprop', 'adam']:
             raise Exception('Your given optimizer %s is currently not supported. Choose either "rmsprop" or "adam"',
