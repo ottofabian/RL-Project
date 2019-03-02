@@ -80,6 +80,10 @@ environment boundaries.
 
 ## Qube-v0 / a.k.a Furuta-Pendulum
 
+![a2c_qube](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Qube/high_score/100_test_runs/a2c_qube.gif)
+
+5.51419 +/- 0.00966 total reward with episode length of 3000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Qube/high_score/100_test_runs/openaigym.episode_batch.0.18809.stats.json))
+
 | done | contributor | comment                                            | solved env | type |lr-actor|lr-critic|shared-model|value-loss-weight|discount| tau | entropy-loss-weight | max-grad-norm | seed | worker | rollout steps|max-episode-length|shared-optimizer|optimizer|lr-scheduler|max-action|normalizer|n-envs| test reward (10 episodes) | steps                    | training time              |
 | ---- | ------------| -------------------------------------------------- | ---------- | ---- |------- | ------- | -----------| ----------------|------- | --- | --------------------| ------------- | -----| ------ | ------------ | ---------------- | -------------- | ------- | ---------- | -------- | -------- | ---- | ------------------------- | ------------------------ | -------------------------- |
 | [x]  | BD          | baseline, seed=1                                   | [x]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    |        5.52               |              164,100,000 |              3d 22h 2m 45s |
