@@ -19,6 +19,7 @@ from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
 
 from A3C.util.util import get_normalizer, make_env, sync_grads, log_to_tensorboard, get_optimizer
+from gym.wrappers.monitor import Monitor
 
 
 def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_reward: Value = None,
@@ -44,7 +45,11 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
     if "RR" in args.env_name:
         env = quanser_robots.GentlyTerminating(gym.make(args.env_name))
     else:
-        env = gym.make(args.env_name)
+        if args.monitor:
+            env = Monitor(gym.make(args.env_name), '100_test_runs', video_callable=lambda count: count % 100 == 0,
+                          force=True)
+        else:
+            env = gym.make(args.env_name)
 
     env.seed(args.seed + worker_id)
 
@@ -83,13 +88,19 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
         eps_len = []
         n_runs = 10
 
+        sleep = True
+
         # make 10 runs to get current avg performance
         for i in range(n_runs):
             while not done:
                 t += 1
 
-                if i == 0 and t % 1 == 0 and "RR" not in args.env_name:
-                    env.render()
+                if not args.no_render:
+                    if i == 0 and t % 1 == 0 and "RR" not in args.env_name:
+                        env.render()
+                        if args.monitor and sleep:  # add a small delay to do a screen capture of the test run if needed
+                            time.sleep(1)
+                            sleep = False
 
                 # apply min/max scaling on the environment
 
@@ -133,8 +144,8 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
         writer.add_scalar("episode/length", np.mean(eps_len), int(T.value))
 
         log_string = f"Time: {time_print}, T={T.value} -- n_runs={n_runs} -- mean total reward={rewards:.5f} " \
-                     f"-- std total reward={std_reward:.5f} -- mean episode length={np.mean(eps_len):.2f} " \
-                     f"-- global reward={global_reward.value:.5f}"
+                     f" +/- {std_reward:.5f} -- mean episode length={np.mean(eps_len):.5f}" \
+                     f" +/- {np.std(eps_len):.5f} -- global reward={global_reward.value:.5f}"
 
         if new_best:
             # highlight messages if progress was done
