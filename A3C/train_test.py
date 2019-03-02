@@ -19,6 +19,7 @@ from A3C.Worker import save_checkpoint
 from tensorboardX import SummaryWriter
 
 from A3C.util.util import get_normalizer, make_env, sync_grads, log_to_tensorboard, get_optimizer
+from gym.wrappers.monitor import Monitor
 
 
 def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_reward: Value = None,
@@ -44,7 +45,11 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
     if "RR" in args.env_name:
         env = quanser_robots.GentlyTerminating(gym.make(args.env_name))
     else:
-        env = gym.make(args.env_name)
+        if args.monitor:
+            env = Monitor(gym.make(args.env_name), '100_test_runs', video_callable=lambda count: count % 100 == 0,
+                          force=True)
+        else:
+            env = gym.make(args.env_name)
 
     env.seed(args.seed + worker_id)
 
@@ -81,14 +86,21 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
 
         rewards = []
         eps_len = []
+        n_runs = 10
+
+        sleep = True
 
         # make 10 runs to get current avg performance
-        for i in range(10):
+        for i in range(n_runs):
             while not done:
                 t += 1
 
-                if i == 0 and t % 1 == 0:
-                    env.render()
+                if not args.no_render:
+                    if i == 0 and t % 1 == 0 and "RR" not in args.env_name:
+                        env.render()
+                        if args.monitor and sleep:  # add a small delay to do a screen capture of the test run if needed
+                            time.sleep(1)
+                            sleep = False
 
                 # apply min/max scaling on the environment
 
@@ -124,14 +136,16 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
 
         time_print = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start_time))
 
+        std_reward = np.std(rewards)
         rewards = np.mean(rewards)
 
         new_best = rewards > best_test_reward
         writer.add_scalar("reward/test", rewards, int(T.value))
         writer.add_scalar("episode/length", np.mean(eps_len), int(T.value))
 
-        log_string = f"Time: {time_print}, T={T.value} -- mean reward={rewards:.5f}" + \
-                     f"-- mean episode length={np.mean(eps_len):.2f} -- global reward={global_reward.value:.5f}"
+        log_string = f"Time: {time_print}, T={T.value} -- n_runs={n_runs} -- mean total reward={rewards:.5f} " \
+                     f" +/- {std_reward:.5f} -- mean episode length={np.mean(eps_len):.5f}" \
+                     f" +/- {np.std(eps_len):.5f} -- global reward={global_reward.value:.5f}"
 
         if new_best:
             # highlight messages if progress was done
@@ -176,7 +190,10 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
 
     if args.worker == 1:
         logging.info(f"Running A2C with {args.n_envs} environments.")
-        env = SubprocVecEnv([make_env(args.env_name, args.seed, i, args.log_dir) for i in range(args.n_envs)])
+        if "RR" not in args.env_name:
+            env = SubprocVecEnv([make_env(args.env_name, args.seed, i, args.log_dir) for i in range(args.n_envs)])
+        else:
+            env = DummyVecEnv([make_env(args.env_name, args.seed, worker_id, args.log_dir)])
     else:
         logging.info(f"Running A3C: training worker {worker_id} started.")
         env = DummyVecEnv([make_env(args.env_name, args.seed, worker_id, args.log_dir)])
@@ -246,7 +263,7 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
 
             # make selected move
             action = np.clip(action.detach().numpy(), -args.max_action, args.max_action)
-            state, reward, dones, _ = env.step(action if args.worker == 1 else action[0])
+            state, reward, dones, _ = env.step(action[0] if not args.worker == 1 or "RR" in args.env_name else action)
 
             # optional parameters
             # -------------------
@@ -291,7 +308,7 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
 
                     episode_reward[i] = 0
                     t[i] = 0
-                    if args.worker != 1:
+                    if args.worker != 1 or "RR" in args.env_name:
                         env.reset()
 
             with T.get_lock():

@@ -16,6 +16,7 @@ from PILCO.CostFunctions.Loss import Loss
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 from PILCO.GaussianProcess.SparseMultivariateGP import SparseMultivariateGP
+from gym.wrappers.monitor import Monitor
 
 # define the plotting style
 plt.style.use('seaborn-whitegrid')
@@ -41,8 +42,12 @@ class PILCO(object):
         if 'RR' in self.env_name:
             self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
         else:
-            # use the official gym env as default
-            self.env = gym.make(self.env_name)
+            if args.monitor:
+                self.env = Monitor(gym.make(args.env_name), '100_test_runs',
+                                   video_callable=lambda count: count % 100 == 0, force=True)
+            else:
+                # use the official gym env as default
+                self.env = gym.make(self.env_name)
 
         # if max_episode_steps is not None:
         #     self.env._max_episode_steps = max_episode_steps
@@ -93,10 +98,6 @@ class PILCO(object):
         self.state_delta = None
 
         # -----------------------------------------------------
-        # logging instance
-        self.logger = logging.getLogger(__name__)
-
-        # -----------------------------------------------------
         # Run parameters
         self.n_samples = args.initial_samples
         self.n_steps = args.steps
@@ -109,7 +110,8 @@ class PILCO(object):
 
         # -----------------------------------------------------
         # Test rendering
-        self.render = args.render
+        self.no_render = args.no_render
+        self.test = args.test
 
     def run(self) -> None:
         """
@@ -119,12 +121,18 @@ class PILCO(object):
 
         if not self.data_loaded:
             self.sample_inital_data_set(n_init=self.n_samples)
+        elif "RR" in self.env_name and self.policy:
+            X_test, y_test = self.execute_test_run(no_render=True)
+
+            # add test history to training data set
+            self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
+            self.state_delta = np.append(self.state_delta, y_test, axis=0)
 
         for _ in range(self.n_steps):
             self.learn_dynamics_model()
             self.learn_policy()
 
-            X_test, y_test = self.execute_test_run(render=self.render)
+            X_test, y_test = self.execute_test_run(no_render=self.no_render)
 
             # add test history to training data set
             self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
@@ -351,7 +359,7 @@ class PILCO(object):
         # cost of trajectory
         return self.compute_trajectory_cost(self.policy, print_trajectory=False)
 
-    def execute_test_run(self, render=False) -> tuple:
+    def execute_test_run(self, no_render=True) -> tuple:
         """
         execute test run for max episode steps and return new training samples
         :return: states, state_deltas, rewards
@@ -375,7 +383,7 @@ class PILCO(object):
         done = False
         t = 0
         while not done:
-            if render:
+            if not no_render:
                 self.env.render()
             t += 1
 

@@ -46,7 +46,7 @@ def main():
             pilco.load_data(f"{args.weight_dir}state-action.npy", f"{args.weight_dir}state-delta.npy")
 
     if args.test:
-        evaluate_policy(pilco.policy, pilco.env, max_action=np.array([5]))
+        evaluate_policy(pilco.policy, pilco.env, max_action=args.max_action, no_render=args.no_render)
 
     pilco.run()
 

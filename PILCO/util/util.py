@@ -1,4 +1,5 @@
 import argparse
+import time
 
 import autograd.numpy as np
 import gym
@@ -7,9 +8,11 @@ from PILCO.Controller.Controller import Controller
 import logging
 
 
-def evaluate_policy(policy: Controller, env: gym.Env, n_runs: int = 100, max_action: np.array = np.array([1])) -> None:
+def evaluate_policy(policy: Controller, env: gym.Env, n_runs: int = 100, max_action: np.array = np.array([1]),
+                    no_render: bool=False) -> None:
     """
     execute test run for given env and PILCO policy
+
     :return: None
     """
 
@@ -26,8 +29,15 @@ def evaluate_policy(policy: Controller, env: gym.Env, n_runs: int = 100, max_act
             env.env.state = [theta, 0]
 
         done = False
+        sleep = True
+
         while not done:
-            env.render()
+            if not no_render and "RR" not in env.spec.id and i == 0:
+                env.render()
+                if sleep:  # add a small delay to do a screen capture of the test run if needed
+                    time.sleep(1)
+                    sleep = False
+
             lengths[i] += 1
 
             # no uncertainty during testing required
@@ -41,7 +51,8 @@ def evaluate_policy(policy: Controller, env: gym.Env, n_runs: int = 100, max_act
             state_prev = state
 
         logging.info(f"episode reward={rewards[i]}, episode length={lengths[i]}")
-    logging.info(f"mean over {n_runs} runs: reward={rewards.mean()}, length={lengths.mean()}")
+    logging.info(f"mean over {n_runs} runs: reward={rewards.mean()} +/- {rewards.std()}, length={lengths.mean()}"
+                 f" +/- {lengths.std()}")
 
 
 def squash_action_dist(mu: np.ndarray, sigma: np.ndarray, input_output_cov: np.ndarray, bound: np.ndarray) -> tuple:
@@ -143,8 +154,10 @@ def parse_args(args):
     parser.add_argument('--export-plots', default=False, action='store_true',
                         help='exports the trajectory plots as latex TikZ figures into "./plots/".'
                              ' You need to install "matplotlib2tikz" if set to True. (default: False)')
-    parser.add_argument('--render', default=False, action='store_true',
-                        help='enables/disables rendering. (default: True)')
+    parser.add_argument('--no-render', default=False, action='store_true',
+                        help='enables/disables rendering. (default: False)')
+    parser.add_argument('--monitor', default=False, action='store_true',
+                        help='enables monitoring of the environment. (default: False)')
 
     args = parser.parse_args(args)
 
