@@ -97,7 +97,7 @@ environment boundaries.
 | [ ]  | BD          | baseline, seed=3                                   | [ ]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    |        5.52               |              164,100,000 |              3d 22h 2m 45s |
 | [x]  | QG          | baseline, seed=1                                   | [-]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | 0.00965                   | 19,777,750               | 03h 11m 09s (run for >10h) |
 | [x]  | QG          | baseline, tau=1.0                                  | [x]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 1.0 | 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | 2.85 - 3.44               | 15,7983,845 - 72,839,490 | 10h 00m 00s - 15h 00m 00s  |
-| [ ]  | QG          | baseline, A3C                                      | [?]        | A3C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | 2.85 - 3.44               | 15,7983,845 - 72,839,490 | 10h 00m 00s - 15h 00m 00s  |
+| [x]  | QG          | baseline, type=A3C                                 | [-]        | A3C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | 0.04178                   | 535,700                  | 00h 38m 37s (run for >10h  |
 | [ ]  | BD          | baseline, scale-reward(100)                        | [?]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | 2.85 - 3.44               | 15,7983,845 - 72,839,490 | 10h 00m 00s - 15h 00m 00s  |
 | [x]  | BD          | baseline, no-exp-reward                            | [-]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    |        0.18               |               60,980,000 | 3d                         | 
 | [x]  | BD          | baseline, entropy-loss-weight 1e-6                 | [-]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.000001            | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    |        0.15               |               92,710,000 | 3d                         |
@@ -143,7 +143,7 @@ All experiments are with frequency 50Hz, if not stated otherwise.
 
 
 * [x] solved in simulation
-* [?] solved in Q-Lab (real world)
+* [ ] solved in Q-Lab (real world)
 
 
 ## CartpoleSwingShort-v0
@@ -162,8 +162,8 @@ All experiments are with frequency 100Hz, if not stated otherwise.
 | [ ]  | BD          | baseline, n_features=25                                   | [-]        | SparseGP  | 300               | 300              | 50      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,-1,0,0] | 1e-2 * I  |  1   | 300                      |    57.50    | 20       | -                                              |             32.0h          |
 
 
-* [?] solved in simulation
-* [?] solved in Q-Lab (real world)
+* [ ] solved in simulation
+* [ ] solved in Q-Lab (real world)
 
 ## Qube-v0
 
@@ -177,15 +177,6 @@ All experiments are with frequency 100Hz, if not stated otherwise.
 | [ ]  | QG          | baseline, weight=[1,1,1,1,0,0]                            | [ ]        | SparseGP  | 300               | 300              | 50      | 0                | -np.inf        | 50         | 1        | Exponential  | [1,1,1,1,1]  | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      |    57.50    | 20       | -                                              |             32.0h          |
 | [ ]  | QG          | baseline                                                  | [ ]        | SparseGP  | 300               | 300              | 50      | 0                | -np.inf        | 50         | 1        | Exponential  | [1,1,1,1,1]  | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      |    57.50    | 20       | -                                              |             32.0h          |
 
-
-
-* [?] solved in simulation
-* [?] solved in Q-Lab (real world)
-
 * [ ] solved in simulation
 * [ ] solved in Q-Lab (real world)
 
-QG Qube-v0 / a.k.a Furuta-Pendulum
-
-* [ ] solved in simulation
-* [ ] solved in Q-Lab (real world)
