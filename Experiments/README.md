@@ -51,6 +51,10 @@ environment boundaries.
 
 ## CartpoleSwingShort-v0
 
+![a2c_cartpoleswingshort](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/SwingUp/a2c/100_test_runs/a2c_cartpoleswingshort.gif)
+
+19521.84018  +/- 3.81556 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/SwingUp/a2c/100_test_runs/openaigym.episode_batch.0.6170.stats.json))
+
 | done | contributor | comment                                                           | solved env | type |lr-actor|lr-critic|shared-model|value-loss-weight|discount| tau | entropy-loss-weight | max-grad-norm | seed | worker | rollout steps|max-episode-length|shared-optimizer|optimizer|lr-scheduler|max-action|normalizer|n-envs| test reward (10 episodes) | steps                    | training time              |
 | ---- | ----------- | ----------------------------------------------------------------- | ---------- | ---  |------- | ------- | -----------| ----------------|------- | --- | --------------------| ------------- | -----| ------ | ------------ | ---------------- | -------------- | ------- | ---------- | -------- | -------- | ---- | ------------------------- | ------------------------ | ----------------------     |
 | [x]  | QG          | baseline                                                          | [x]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-10    | None     | 5    | 9523                      | 15,060,000               | 01h 45m 04s                |
