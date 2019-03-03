@@ -16,7 +16,7 @@ from torch.multiprocessing import Value
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
 from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
-from A3C.util.util import get_normalizer, make_env, sync_grads, log_to_tensorboard, get_optimizer
+from A3C.util.util import get_normalizer, make_env, sync_grads, log_to_tensorboard, get_optimizer, shape_reward
 from A3C.util.util import save_checkpoint
 
 
@@ -219,7 +219,7 @@ def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNet
     # if no shared optimizer is provided use individual one
     if not optimizer:
         optimizer, optimizer_critic = get_optimizer(args.optimizer, global_model, args.lr,
-                                                    shared_model_critic=global_model_critic, lr_critic=args.lr_critic)
+                                                    model_critic=global_model_critic, lr_critic=args.lr_critic)
 
     state = torch.Tensor(env.reset())
 
@@ -269,7 +269,7 @@ def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNet
             action = np.clip(action.detach().numpy(), -args.max_action, args.max_action)
             state, reward, dones, _ = env.step(action[0] if not args.worker == 1 or "RR" in args.env_name else action)
 
-            reward = shape_reward(args, reward)
+            reward = shape_reward(args, reward, state)
 
             episode_reward += reward
 

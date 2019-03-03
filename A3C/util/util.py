@@ -22,18 +22,18 @@ from A3C.util.normalizer.base_normalizer import BaseNormalizer
 from A3C.util.normalizer.mean_std_normalizer import MeanStdNormalizer
 
 
-def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> None:
+def sync_grads(model: ActorCriticNetwork, global_model: ActorCriticNetwork) -> None:
     """
     This method synchronizes the grads of the local network with the global network.
     :return:
     :param model: local worker model
-    :param shared_model: shared global model
+    :param global_model: shared global model
     :return:
     """
-    for param, shared_param in zip(model.parameters(), shared_model.parameters()):
-        if shared_param.grad is not None:
+    for param, global_param in zip(model.parameters(), global_model.parameters()):
+        if global_param.grad is not None:
             return
-        shared_param._grad = param.grad  #
+        global_param._grad = param.grad  #
 
 
 def save_checkpoint(state: dict, path='./checkpoint.pth.tar') -> None:
@@ -134,39 +134,39 @@ def get_model(env: gym.Env, shared: bool = False, path: str = None, T: Value = N
         return shared_model_actor, shared_model_critic
 
 
-def get_optimizer(optimizer_name: str, shared_model: torch.nn.Module, lr: float,
-                  shared_model_critic: torch.nn.Module = None, lr_critic: float = None):
+def get_optimizer(optimizer_name: str, model: torch.nn.Module, lr: float, model_critic: torch.nn.Module = None,
+                  lr_critic: float = None):
     """
     return optimizer for given model and optional second critic model without shared statistics
-    :param optimizer_name:
-    :param shared_model:
-    :param lr:
-    :param shared_model_critic:
-    :param lr_critic:
-    :return:
+    :param model: model to create optimizer for
+    :param optimizer_name: which optimizer to use
+    :param lr: learning rate for optimizer
+    :param model_critic: possible separate critic model to load if non shared network is used
+    :param lr_critic: learning rate for separate critic model
+    :return: Optimizer instance or tuple of two optimizers
     """
     if optimizer_name == "rmsprop":
-        optimizer = torch.optim.RMSprop(shared_model.parameters(), lr=lr)
+        optimizer = torch.optim.RMSprop(model.parameters(), lr=lr)
     elif optimizer_name == "adam":
-        optimizer = torch.optim.Adam(shared_model.parameters(), lr=lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     else:
         raise ValueError("Selected optimizer is not supported as shared optimizer.")
 
-    if shared_model_critic:
+    if model_critic:
         if optimizer_name == "rmsprop":
-            optimizer_critic = torch.optim.RMSprop(shared_model_critic.parameters(), lr=lr_critic)
+            optimizer_critic = torch.optim.RMSprop(model_critic.parameters(), lr=lr_critic)
         elif optimizer_name == "adam":
-            optimizer_critic = torch.optim.Adam(shared_model_critic.parameters(), lr=lr_critic)
+            optimizer_critic = torch.optim.Adam(model_critic.parameters(), lr=lr_critic)
 
         return optimizer, optimizer_critic
     return optimizer, None
 
 
 def get_shared_optimizer(model: Module, optimizer_name: str, lr: float, path=None, model_critic: Module = None,
-                         optimizer_name_critic: str = None, lr_critic: float = None) -> Union[
-    torch.optim.Optimizer, Tuple[torch.optim.Optimizer, torch.optim.Optimizer]]:
+                         optimizer_name_critic: str = None, lr_critic: float = None) \
+        -> Union[torch.optim.Optimizer, Tuple[torch.optim.Optimizer, torch.optim.Optimizer]]:
     """
-    return optimizer for given model and optional second critic model with shared statistics
+    get optimizer for given model and optional second critic model with shared statistics
     :param model: model to create optimizer for
     :param optimizer_name: which optimizer to use
     :param lr: learning rate for optimizer
@@ -174,7 +174,7 @@ def get_shared_optimizer(model: Module, optimizer_name: str, lr: float, path=Non
     :param model_critic: possible separate critic model to load if non shared network is used
     :param optimizer_name_critic: optimizer for separate critic model
     :param lr_critic: learning rate for separate critic model
-    :return:
+    :return: Optimizer instance or tuple of two optimizers
     """
 
     if optimizer_name == 'rmsprop':
@@ -229,7 +229,7 @@ def get_normalizer(normalizer_type: str) -> BaseNormalizer:
     return normalizer
 
 
-def make_env(env_id, seed, rank, log_dir=None) -> callable:
+def make_env(env_id: str, seed: int, rank: int, log_dir=None) -> callable:
     """
     returns callable to create gym environment or monitor
     from https://github.com/ShangtongZhang/DeepRL/blob/master/deep_rl/component/envs.py
@@ -318,7 +318,7 @@ def log_to_tensorboard(writer: SummaryWriter, model: Module, optimizer: torch.op
     writer.add_scalar("loss/entropy", entropy_loss, iteration)
 
 
-def shape_reward(args, reward, state):
+def shape_reward(args, reward: np.ndarray, state):
     """
         # optional reward shaping
 
@@ -326,8 +326,8 @@ def shape_reward(args, reward, state):
     :param reward:
     :return:
     """
-    # sent the current x-position as a negative reward when edge fear is active
-    if args.edge_fear:
+    if args.edge_fear_threshold:
+        # sent the current x-position as a negative reward when edge fear is active
         # edge fear is triggered when the cart is close to the border
         for idx, cur_state in enumerate(state):
             if np.abs(cur_state[0]) > args.edge_fear_threshold:
