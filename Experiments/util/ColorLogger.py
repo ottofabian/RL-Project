@@ -167,8 +167,8 @@ def enable_color_logging(logging_lvl=logging.DEBUG, save_log=False, logfile_pref
         timestmp = datetime.datetime.fromtimestamp(time()).strftime("%Y-%m-%d-%H-%M-%S")
         formatter = logging.Formatter("%(asctime)s %(message)s")
 
-        if not os.path.isdir("logs/"):
-            os.mkdir("logs/")
+        if not os.path.isdir("./Experiments/logs/"):
+            os.mkdir("./Experiments/logs/")
 
         file_handler = logging.FileHandler("logs/" + logfile_prefix + timestmp + ".log", mode='w')
         file_handler.setFormatter(formatter)

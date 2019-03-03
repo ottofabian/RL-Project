@@ -1,6 +1,5 @@
 import copy
 import logging
-import math
 import time
 from typing import Union
 
@@ -10,33 +9,32 @@ import quanser_robots
 import torch
 from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
+from gym.wrappers.monitor import Monitor
+from tensorboardX import SummaryWriter
 from torch.multiprocessing import Value
 
 from A3C.Models.ActorCriticNetwork import ActorCriticNetwork
 from A3C.Models.ActorNetwork import ActorNetwork
 from A3C.Models.CriticNetwork import CriticNetwork
-from A3C.Worker import save_checkpoint
-from tensorboardX import SummaryWriter
-
 from A3C.util.util import get_normalizer, make_env, sync_grads, log_to_tensorboard, get_optimizer
-from gym.wrappers.monitor import Monitor
+from A3C.util.util import save_checkpoint
 
 
-def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_reward: Value = None,
-         optimizer: torch.optim.Optimizer = None, shared_model_critic: CriticNetwork = None,
+def test(args, worker_id: int, global_model: torch.nn.Module, T: Value, global_reward: Value = None,
+         optimizer: torch.optim.Optimizer = None, global_model_critic: CriticNetwork = None,
          optimizer_critic: torch.optim.Optimizer = None):
     """
     Start worker in _test mode, i.e. no training is done, only testing is used to validate current performance
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/_test.py
-    :param args:
-    :param worker_id:
-    :param shared_model:
-    :param shared_model_critic:
-    :param T:
-    :param optimizer:
-    :param optimizer_critic:
-    :param global_reward:
-    :return:
+    :param args: console arguments
+    :param worker_id: id of worker to differentiatethem and init different seeds
+    :param global_model: global model, which is optimized/ for split models: actor
+    :param T: global counter of steps
+    :param global_reward: global running reward value
+    :param optimizer: optimizer for shared model/ for split models: actor model
+    :param global_model_critic: optional global critic model for split networks
+    :param optimizer_critic: optional critic optimizer for split networks
+    :return: None
     """
 
     logging.info("Test worker started.")
@@ -56,12 +54,12 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
     normalizer = get_normalizer(args.normalizer)
 
     # get an instance of the current global model state
-    model = copy.deepcopy(shared_model)
+    model = copy.deepcopy(global_model)
     model.eval()
 
     model_critic = None
-    if shared_model_critic:
-        model_critic = copy.deepcopy(shared_model_critic)
+    if global_model_critic:
+        model_critic = copy.deepcopy(global_model_critic)
         model_critic.eval()
 
     state = torch.from_numpy(env.reset())
@@ -80,9 +78,9 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
     while True:
 
         # Get params from shared global model
-        model.load_state_dict(shared_model.state_dict())
+        model.load_state_dict(global_model.state_dict())
         if not args.shared_model:
-            model_critic.load_state_dict(shared_model_critic.state_dict())
+            model_critic.load_state_dict(global_model_critic.state_dict())
 
         rewards = []
         eps_len = []
@@ -144,8 +142,8 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
         writer.add_scalar("episode/length", np.mean(eps_len), int(T.value))
 
         log_string = f"Time: {time_print}, T={T.value} -- n_runs={n_runs} -- mean total reward={rewards:.5f} " \
-                     f" +/- {std_reward:.5f} -- mean episode length={np.mean(eps_len):.5f}" \
-                     f" +/- {np.std(eps_len):.5f} -- global reward={global_reward.value:.5f}"
+            f" +/- {std_reward:.5f} -- mean episode length={np.mean(eps_len):.5f}" \
+            f" +/- {np.std(eps_len):.5f} -- global reward={global_reward.value:.5f}"
 
         if new_best:
             # highlight messages if progress was done
@@ -164,29 +162,35 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
                 'optimizer': optimizer.state_dict() if optimizer else None,
                 'optimizer_critic': optimizer_critic.state_dict() if optimizer_critic else None,
             },
-                filename=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value:.5f}_test-{rewards:.5f}.pth.tar")
+                path=f"./Experiments/checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value:.5f}_test-{rewards:.5f}.pth.tar")
         else:
             # use by default only debug messages if no progress was reached
             logging.debug(log_string)
 
-        # delay _test run for 10s to give the network some time to train
-        # time.sleep(10)
         global_iter += 1
 
 
-def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNetwork], T: Value, global_reward: Value,
-          optimizer: torch.optim.Optimizer = None, shared_model_critic: CriticNetwork = None,
+def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNetwork], T: Value, global_reward: Value,
+          optimizer: torch.optim.Optimizer = None, global_model_critic: CriticNetwork = None,
           optimizer_critic: torch.optim.Optimizer = None, lr_scheduler: torch.optim.lr_scheduler = None,
           lr_scheduler_critic: torch.optim.lr_scheduler = None):
     """
     Start worker in training mode, i.e. training the shared model with backprop
     loosely based on https://github.com/ikostrikov/pytorch-a3c/blob/master/train.py
+    :param args: console arguments
+    :param worker_id: id of worker to differentiatethem and init different seeds
+    :param global_model: global model, which is optimized/ for split models: actor
+    :param T: global counter of steps
+    :param global_reward: global running reward value
+    :param optimizer: optimizer for shared model/ for split models: actor model
+    :param global_model_critic: optional global critic model for split networks
+    :param optimizer_critic: optional critic optimizer for split networks
+    :param lr_scheduler: optional learning rate scheduler instance for shared model
+    / for fixed model: actor learning rate scheduler
+    :param lr_scheduler_critic: optional learning rate scheduler instance for critic model
     :return: None
     """
     torch.manual_seed(args.seed + worker_id)
-
-    # defines the border area when negativ rewards are sent
-    edge_fear_threshold = 0.3
 
     if args.worker == 1:
         logging.info(f"Running A2C with {args.n_envs} environments.")
@@ -203,19 +207,19 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
     normalizer = get_normalizer(args.normalizer)
 
     # init local NN instance for worker thread
-    model = copy.deepcopy(shared_model)
+    model = copy.deepcopy(global_model)
     model.train()
 
     model_critic = None
 
-    if shared_model_critic:
-        model_critic = copy.deepcopy(shared_model_critic)
+    if global_model_critic:
+        model_critic = copy.deepcopy(global_model_critic)
         model_critic.train()
 
     # if no shared optimizer is provided use individual one
     if not optimizer:
-        optimizer, optimizer_critic = get_optimizer(args.optimizer, shared_model, args.lr,
-                                                    shared_model_critic=shared_model_critic, lr_critic=args.lr_critic)
+        optimizer, optimizer_critic = get_optimizer(args.optimizer, global_model, args.lr,
+                                                    shared_model_critic=global_model_critic, lr_critic=args.lr_critic)
 
     state = torch.Tensor(env.reset())
 
@@ -228,9 +232,9 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
 
     while True:
         # Get state of the global model
-        model.load_state_dict(shared_model.state_dict())
+        model.load_state_dict(global_model.state_dict())
         if not args.shared_model:
-            model_critic.load_state_dict(shared_model_critic.state_dict())
+            model_critic.load_state_dict(global_model_critic.state_dict())
 
         # containers for computing loss
         values = []
@@ -265,24 +269,7 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
             action = np.clip(action.detach().numpy(), -args.max_action, args.max_action)
             state, reward, dones, _ = env.step(action[0] if not args.worker == 1 or "RR" in args.env_name else action)
 
-            # optional parameters
-            # -------------------
-            # sent the current x-position as a negative reward when edge fear is active
-            if args.edge_fear:
-                # edge fear is triggered when the cart is close to the border
-                for idx, cur_state in enumerate(state):
-                    if np.abs(cur_state[0]) > edge_fear_threshold:
-                        reward[idx] = -np.abs(cur_state[0])
-
-            if args.squared_reward:
-                # use quadratic of reward
-                for idx, r in enumerate(reward):
-                    reward[idx] *= reward[idx]
-            # ------------------------------------------
-
-            # TODO: check if this is better
-            # reward += (-state[2]+1) * np.exp(- np.abs(state[0]) ** 2)
-            # reward = min(max(-1, reward), 1)
+            reward = shape_reward(args, reward)
 
             episode_reward += reward
 
@@ -375,12 +362,12 @@ def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNet
             total_loss = policy_loss + args.value_loss_weight * value_loss - args.entropy_loss_weight * entropy_loss
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-        sync_grads(model, shared_model)
+        sync_grads(model, global_model)
         optimizer.step()
 
         if not args.shared_model:
             torch.nn.utils.clip_grad_norm_(model_critic.parameters(), args.max_grad_norm)
-            sync_grads(model_critic, shared_model_critic)
+            sync_grads(model_critic, global_model_critic)
             optimizer_critic.step()
 
         global_iter += 1

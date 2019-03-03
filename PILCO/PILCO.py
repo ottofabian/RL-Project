@@ -409,7 +409,7 @@ class PILCO(object):
             try:
                 # create a directory where all models and data will be saved
                 timestamp = datetime.datetime.now().strftime('%Y%m%d')  # -%H%M%S')
-                save_dir = "checkpoints/{}-reward-{:.5f}-{}/".format(timestamp, rewards, self.env_name)
+                save_dir = "./Experiments/checkpoints/{}-reward-{:.5f}-{}/".format(timestamp, rewards, self.env_name)
                 os.mkdir(save_dir)
             except OSError:
                 print("Creation of the directory %s failed" % save_dir)
@@ -487,7 +487,7 @@ class PILCO(object):
 
             if self.export_plots:
                 from matplotlib2tikz import save as tikz_save
-                tikz_save("./plots/state_trajectory" + str(self.plot_id) + str(i) + ".tex")
+                tikz_save("./Experiments/plots/state_trajectory" + str(self.plot_id) + str(i) + ".tex")
 
             plt.show()
 
@@ -499,7 +499,7 @@ class PILCO(object):
         plt.title("Trajectory prediction for actions")
         if self.export_plots:
             from matplotlib2tikz import save as tikz_save
-            tikz_save("./plots/action_trajectory" + str(self.plot_id) + ".tex")
+            tikz_save("./Experiments/plots/action_trajectory" + str(self.plot_id) + ".tex")
 
         plt.show()
 

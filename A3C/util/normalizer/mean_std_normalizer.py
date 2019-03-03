@@ -10,6 +10,7 @@ from baselines.common.running_mean_std import RunningMeanStd
 from A3C.util.normalizer.base_normalizer import BaseNormalizer
 import torch
 
+
 class MeanStdNormalizer(BaseNormalizer):
     def __init__(self, read_only=False, clip=10.0, epsilon=1e-8):
 
@@ -25,4 +26,4 @@ class MeanStdNormalizer(BaseNormalizer):
         if not self.read_only:
             self.rms.update(x)
         return torch.from_numpy(np.clip((x - self.rms.mean) / np.sqrt(self.rms.var + self.epsilon),
-                       -self.clip, self.clip))
+                                        -self.clip, self.clip))

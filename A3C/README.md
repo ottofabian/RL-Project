@@ -1,91 +1,48 @@
 # A3C - Asynchronous Advantage Actor-Critic 
 
-Source:\
-[Asynchronous Methods for Deep Reinforcement Learning
-](https://arxiv.org/abs/1602.01783)
+This is our implementation of A3C and the corresponding synchronous version A2C based on the paper [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783) from Mnih, et al.
+We also combined this with [General Advantage Estimation](https://arxiv.org/abs/1506.02438) as it has shown improved performance for policy gradient methods.   
+
+Our code structure is defined the following:
+- [Models](./Models): Neural Network models for actor and critic.  
+- [Optimizers](./Optimizers): Optimizers with shared statistics for A3C.  
+- [util](./util): Helper methods to make main code more readable.
 
 
-## Best Parameter Settings: 
+## Executing experiments
+1) Activate the anaconda environment
+```bash
+source activate my_env
+```
+2) Execute the [A3CRunner](../A3CRunner.py) script (the default environment is CartpoleStabShort-v0)
 
-### Pendulum-v0:  
+Training run from scratch:
+```bash
+python3 my/path/to/A3CRunner.py
+```
 
-- network critic: \[3, 100, 1\]
-- network actor: \[3, 200, (1,torch.Tensor(\[1e-1\]))\]
-- network init: nn.init.normal_(m.weight.data, 0, .1)
-- lr: 
-    - Actor: .0001
-    - Critic: .001
-- t_max/batch size: 10
-- max episode steps: 200
-- gamma: .9
-- tau: 1
-- beta: 0.01
+Training run from an existing policy:
+```bash
+python3 my/path/to/A3CRunner.py --path my_model_path
+```
 
-### CartpoleStabShort:  
+More console arguments (e.g. hyperparameter changes) can be added to the run, for details see
+```bash
+python3 my/path/to/A3CRunner.py --help
+```
 
-Mean reward over 10 episodes: 9999.1377045691
+3) (Optional) Start tensorboard to monitor training progress
+```bash
+tensorboard --logdir=./Experiments/runs 
+```
 
-- network critic: \[5, 100, 1\]
-- network actor: \[5, 200, (1,1)\]
-- network init: nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
-- optimizer: 
-- max-grad-norm: 
-- lr: 
-    - Actor: .0001
-    - Critic: .001
-- t_max/batch size: 50
-- max episode steps: 5000
-- gamma: .99
-- tau: 1
-- beta: .01
-- max_action: 5
-    
-### CartpoleStabLong:  
-TODO
+## Executing evaluation run for existing policy
+1) Activate the anaconda environment
+```bash
+source activate my_env
+```
 
-- lr: 
-    - Actor: .0001
-    - Critic: .001
-- t_max/batch size: 128
-- max episode steps: 5000
-- gamma: .9
-- tau: 1
-- beta: .01
-
-### CartpoleSwingShort:  
-
-- lr: 
-    - Actor: .00001
-    - Critic: .0001
-- t_max/batch size: 128
-- max episode steps: 5000
-- gamma: .999
-- tau: 1
-- beta: .1
-
-- actor network: 
-    - 2 hidden layer 200 nodes
-
-### CartpoleSwingLong:  
-TODO
-
-- lr: 
-    - Actor: .0001
-    - Critic: .001
-- t_max/batch size: 128
-- max episode steps: 5000
-- gamma: .9
-- tau: 1
-- beta: .01
-
-### Qube/Furuta Pendulum:  
-TODO
-
-- lr: 
-    - Actor: .0001
-    - Critic: .001
-- t_max/batch size: 128
-- max episode steps: 5000
-- gamma: .9
-- tau: 1
-- beta: .01
+2) Execute the [A3CRunner](../A3CRunner.py) script
+```bash
+python3 my/path/to/A3CRunner.py --path my_model_path --test
+``

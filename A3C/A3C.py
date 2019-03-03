@@ -1,12 +1,9 @@
-import logging
 import time
 
-import numpy as np
-
-import torch
-
 import gym
+import numpy as np
 import quanser_robots
+import torch
 from torch.multiprocessing import Value, Process
 
 from A3C.train_test import train, test
@@ -42,55 +39,6 @@ class A3C(object):
             raise Exception('Your given optimizer %s is currently not supported. Choose either "rmsprop" or "adam"',
                             args.optimizer)
 
-    # def run(self):
-    #
-    #     shared_model = ActorCriticNetwork(n_inputs=env.observation_space.shape[0],
-    #                                       action_space=env.action_space,
-    #                                       max_action=self.args.max_action)
-    #
-    #     if "RR" in self.args.env_name:
-    #         env = quanser_robots.GentlyTerminating(gym.make(self.args.env_name))
-    #     else:
-    #         env = gym.make(self.args.env_name)
-    #
-    #     if self.args.optimizer == 'rmsprop':
-    #         optimizer = SharedRMSProp(shared_model.parameters(), lr=self.args.lr_combined_actor_critic)
-    #         optimizer.share_memory()
-    #     elif self.args.optimizer == 'adam':
-    #         optimizer = SharedAdam(shared_model.parameters(), lr=self.args.lr_actor_critic)
-    #         optimizer.share_memory()
-    #     else:
-    #         optimizer = None
-    #         # raise Exception('Unexpected optimizer_name: %s' % self.optimizer_name)
-    #
-    #     if path is not None:
-    #         if optimizer is not None:
-    #             load_saved_model(shared_model, path, self.T, self.global_reward, optimizer)
-    #         else:
-    #             load_saved_model(shared_model, path, self.T, self.global_reward)
-    #
-    #     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
-    #     scheduler = None
-    #
-    #     # start the test worker which is visualized to see how the current progress is
-    #     w = Worker(args=self.args, worker_id=self.args.worker, shared_model=shared_model, T=self.T,
-    #                optimizer=optimizer, scheduler=scheduler, is_train=False,
-    #                global_reward=self.global_reward)
-    #     w.start()
-    #     self.worker_pool.append(w)
-    #
-    #     # start all training workers which update the model parameters
-    #     for wid in range(0, self.args.worker):
-    #         self.logger.info("Worker {} created".format(wid))
-    #         w = Worker(self.args, worker_id=wid, shared_model=shared_model, T=self.T,
-    #                    optimizer=optimizer, scheduler=scheduler, is_train=True,
-    #                    global_reward=self.global_reward)
-    #         w.start()
-    #         self.worker_pool.append(w)
-    #
-    #     for w in self.worker_pool:
-    #         w.join()
-
     def run(self):
 
         torch.manual_seed(self.args.seed)
@@ -120,18 +68,10 @@ class A3C(object):
                                                                    optimizer_name_critic=self.args.optimizer,
                                                                    lr_critic=self.args.lr_critic)
 
-        # okish swing up:
-        # optimizer_actor = SharedRMSProp(shared_model_actor.parameters(), lr=0.0001)
-        # optimizer_critic = SharedRMSProp(shared_model_critic.parameters(), lr=0.0005)
-        # p = Process(target=train, args=(
-        #     self.env_name, rank, shared_model_actor, shared_model_critic, self.seed,
-        #     self.T, 5000, 128, .9975, 1, .05, optimizer_actor, optimizer_critic, lr_scheduler,
-        #     lr_scheduler_critic, True, self.is_discrete,
-
         lr_scheduler = None
         lr_scheduler_critic = None
 
-        if self.args.lr_scheduler:
+        if self.args.lr_scheduler == "ExponentialLR":
             # TODO
             # lr_scheduler_critic = torch.optim.lr_scheduler.ExponentialLR(optimizer_critic, gamma=0.95)
             # lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer_actor, gamma=0.95)

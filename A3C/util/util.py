@@ -1,13 +1,15 @@
+import argparse
 import os
 
 from baselines import bench
+from tensorboardX import SummaryWriter
 from torch.multiprocessing import Value
 
 import numpy as np
 import gym
 import torch
 
-from typing import Tuple, Union
+from typing import Tuple, Union, List
 
 from torch.nn import Module
 
@@ -34,8 +36,23 @@ def sync_grads(model: ActorCriticNetwork, shared_model: ActorCriticNetwork) -> N
         shared_param._grad = param.grad  #
 
 
-def save_checkpoint(state, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(state: dict, path='./checkpoint.pth.tar') -> None:
+    """
+    save model checkpoint.
+    Example of checkpoint dict:
+    {
+        'epoch': T.value,
+        'model': model.state_dict(),
+        'model_critic': model_critic.state_dict(),
+        'global_reward': global_reward.value,
+        'optimizer': optimizer.state_dict(),
+        'optimizer_critic': optimizer_critic.state_dict()
+    }
+    :param state: dict of checkpoint info
+    :param path: path to save the file to
+    :return: None
+    """
+    torch.save(state, path)
 
 
 def load_saved_optimizer(optimizer: torch.optim.Optimizer, path: str, optimizer_critic: torch.optim.Optimizer = None):
@@ -120,7 +137,7 @@ def get_model(env: gym.Env, shared: bool = False, path: str = None, T: Value = N
 def get_optimizer(optimizer_name: str, shared_model: torch.nn.Module, lr: float,
                   shared_model_critic: torch.nn.Module = None, lr_critic: float = None):
     """
-
+    return optimizer for given model and optional second critic model without shared statistics
     :param optimizer_name:
     :param shared_model:
     :param lr:
@@ -149,7 +166,7 @@ def get_shared_optimizer(model: Module, optimizer_name: str, lr: float, path=Non
                          optimizer_name_critic: str = None, lr_critic: float = None) -> Union[
     torch.optim.Optimizer, Tuple[torch.optim.Optimizer, torch.optim.Optimizer]]:
     """
-    return optimizer for given model and optional second critic model
+    return optimizer for given model and optional second critic model with shared statistics
     :param model: model to create optimizer for
     :param optimizer_name: which optimizer to use
     :param lr: learning rate for optimizer
@@ -192,7 +209,12 @@ def get_shared_optimizer(model: Module, optimizer_name: str, lr: float, path=Non
     return optimizer
 
 
-def get_normalizer(normalizer_type: str):
+def get_normalizer(normalizer_type: str) -> BaseNormalizer:
+    """
+    returns normalizer instance based on specified type
+    :param normalizer_type: string of normalizer instance
+    :return: BaseNormalizer instance
+    """
     if normalizer_type == "MinMax":
         # TODO fix this to api
         raise NotImplementedError()
@@ -207,17 +229,18 @@ def get_normalizer(normalizer_type: str):
     return normalizer
 
 
-def make_env(env_id, seed, rank, log_dir=None):
+def make_env(env_id, seed, rank, log_dir=None) -> callable:
     """
+    returns callable to create gym environment or monitor
     from https://github.com/ShangtongZhang/DeepRL/blob/master/deep_rl/component/envs.py
     :param env_id: gym id
     :param seed: seed for env
     :param rank: rank if multiple env are used
-    :param log_dir: default log for env
-    :return:
+    :param log_dir: default log for env, results in returning a monitor instance
+    :return: callable
     """
 
-    def _thunk():
+    def _get_env():
         env = gym.make(env_id)
         env.seed(seed + rank)
 
@@ -226,11 +249,29 @@ def make_env(env_id, seed, rank, log_dir=None):
 
         return env
 
-    return _thunk
+    return _get_env
 
 
-def log_to_tensorboard(writer, model, optimizer, rewards, values, loss, policy_loss, value_loss, entropy_loss, iteration,
-                       model_critic=None, optimizer_critic=None):
+def log_to_tensorboard(writer: SummaryWriter, model: Module, optimizer: torch.optim.Optimizer,
+                       rewards: List[torch.Tensor], values: List[torch.Tensor], loss: float, policy_loss: float,
+                       value_loss: float, entropy_loss: float, iteration: int, model_critic: Module = None,
+                       optimizer_critic: torch.optim.Optimizer = None) -> None:
+    """
+    log training info to tensorboard
+    :param writer: tensorboard writer
+    :param model: current global model/ for split model: actor model
+    :param optimizer: current optimizer/ for split model: actor optimizer
+    :param rewards: list of tensor rewards of last test run
+    :param values: list of tensor values of last test run
+    :param loss: combined loss value
+    :param policy_loss: policy loss value
+    :param value_loss: value loss value
+    :param entropy_loss: entropy loss value
+    :param iteration: current iteration to log for (best use global counter T)
+    :param model_critic: optional critic model for split architecture
+    :param optimizer_critic: optional critic optimizer for split architecture
+    :return: None
+    """
     if not model_critic:
         grads = np.concatenate([p.grad.data.cpu().numpy().flatten()
                                 for p in model.parameters()
@@ -275,3 +316,111 @@ def log_to_tensorboard(writer, model, optimizer, rewards, values, loss, policy_l
     writer.add_scalar("loss/policy", policy_loss, iteration)
     writer.add_scalar("loss/value", value_loss, iteration)
     writer.add_scalar("loss/entropy", entropy_loss, iteration)
+
+
+def shape_reward(args, reward, state):
+    """
+        # optional reward shaping
+
+    :param args:
+    :param reward:
+    :return:
+    """
+    # sent the current x-position as a negative reward when edge fear is active
+    if args.edge_fear:
+        # edge fear is triggered when the cart is close to the border
+        for idx, cur_state in enumerate(state):
+            if np.abs(cur_state[0]) > args.edge_fear_threshold:
+                reward[idx] = -np.abs(cur_state[0])
+
+    if args.squared_reward:
+        # use quadratic of reward
+        # for idx, r in enumerate(reward):
+        #     reward[idx] *= reward[idx]
+        reward = reward ** 2
+
+    if args.scale_reward:
+        reward *= args.scale_reward
+
+
+def parse_args(args: list) -> argparse.Namespace:
+    """
+    parse console arguments
+    :param args: console arguments
+    :return: parsed consoled arguments
+    """
+    parser = argparse.ArgumentParser(description='A3C')
+    parser.add_argument('--env-name', default='CartpoleStabShort-v0',
+                        help='Name of the gym environment to use.'
+                             'All environments based on OpenAI\'s gym are supported.'
+                             '(default: CartpoleStabShort-v0)')
+    parser.add_argument('--rollout-steps', type=int, default=50,
+                        help='Number of forward steps for n-step return (default: 50)')
+    parser.add_argument('--max-action', type=float, default=None,
+                        help='Maximum allowed action to use,'
+                             'if None the full available action range is used (default: None)')
+    parser.add_argument('--shared-model', default=False, action='store_true',
+                        help='Use shared network for actor and critic (default: False)')
+    parser.add_argument('--lr', type=float, default=1e-4,
+                        help='learning rate for shared model or actor network (default: 1e-4)')
+    parser.add_argument('--lr-critic', type=float, default=1e-3,
+                        help='Separate critic learning rate, if no shared network is used (default: 1e-3)')
+    parser.add_argument('--value-loss-weight', type=float, default=0.5,
+                        help='Value loss coefficient, which defines the weighting between value and policy loss '
+                             'for shared model (default: 0.5)')
+    parser.add_argument('--discount', type=float, default=0.99,
+                        help='Discount factor for rewards (default: 0.99)')
+    parser.add_argument('--gae', default=True, action='store_true',
+                        help='Enable general advantage estimation (default: True)')
+    parser.add_argument('--tau', type=float, default=0.99,
+                        help='Adjusts the bias-variance tradeoff for GAE (default: 0.99)')
+    parser.add_argument('--entropy-loss-weight', type=float, default=1e-4,
+                        help='Entropy term coefficient (default: 1e-4)')
+    parser.add_argument('--max-grad-norm', type=float, default=1,
+                        help='Maximum gradient norm (default: 1)')
+    parser.add_argument('--seed', type=int, default=1,
+                        help='Random seed (default: 1)')
+    parser.add_argument('--worker', type=int, default=1,
+                        help='Number of training workers/threads to use. If set to 1, A2C .'
+                             'For >1 A3C is used with the specified number of workers (default: 1)')
+    parser.add_argument('--n-envs', type=int, default=5,
+                        help='Number of environment for A2C (--worker 1) in one batch (default: 5)')
+    parser.add_argument('--max-episode-length', type=int, default=5000,
+                        help='Maximum length of an episode (default: 5000)')
+    parser.add_argument('--shared-optimizer', default=True, action='store_true',
+                        help='Use optimizer with shared statistics (default: True)')
+    parser.add_argument('--optimizer', type=str, default="adam",
+                        help='Type of optimizer, supported: [rmsprop, adam] (default: adam)')
+    parser.add_argument('--lr-scheduler', type=str, default=None,
+                        help='Type of learning rate scheduler to use, supported: [None, ExponentialLR] (default: None)')
+    parser.add_argument('--normalizer', type=str, default=None,
+                        help='Type of normalizer, supported: [None, MeanStd, MinMax] (default: None)')
+    parser.add_argument('--test', default=False, action='store_true',
+                        help='Start run without training (default: False)')
+    parser.add_argument('--path', type=str, default=None,
+                        help='Weight location for the models to load (default: None)')
+    parser.add_argument('--log-dir', type=str, default=None,
+                        help='Directory for monitor logging of each environment (default: None)')
+    parser.add_argument('--no_log', default=False, action='store_true',
+                        help='Avoid exporting a log file to the log directory (default: False)')
+    parser.add_argument('--log-frequency', default=100,
+                        help='Defines how often a sample is logged to tensorboard to avoid unnecessary bloating.'
+                             'If set to X every X metric sample will be logged. (default: 100)')
+    parser.add_argument('--edge-fear-threshold', type=float, default=None,
+                        help='Threshold when crossed gives negative rewards to avoid suicidal policies.'
+                             'This reward shaping is meant for evaluation and not part of the original environment.'
+                             '(default: False)')
+    parser.add_argument('--squared-reward', default=False, action='store_true',
+                        help='Manipulates the reward by squaring it.'
+                             'This reward shaping is meant for evaluation and not part of the original environment.'
+                             '(default: False)')
+    parser.add_argument('--scale_reward', type=float, default=None,
+                        help='Multiply reward by specified factor. '
+                             'This reward shaping is meant for evaluation and not part of the original environment.'
+                             '(default: None)')
+    parser.add_argument('--no-render', default=False, action='store_true',
+                        help='Disables rendering. (default: False)')
+    parser.add_argument('--monitor', default=False, action='store_true',
+                        help='Enables monitoring with video capturing of the test worker. (default: False)')
+
+    return parser.parse_args(args)
