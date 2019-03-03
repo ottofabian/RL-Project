@@ -124,6 +124,10 @@ environment boundaries.
 
 All experiments are with frequency 50Hz, if not stated otherwise.
 
+![PILCO_CartpoleStabShort](https://github.com/BoboDance/RL-Project/blob/master/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/100_test_runs/PILCO_cartpolestabshort.gif)
+
+19999.87513 +/- 0.10077 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](https://github.com/BoboDance/RL-Project/blob/master/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/100_test_runs/openaigym.episode_batch.0.13206.stats.json))
+
 | done | contributor | comment                                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights | start_mu    | start_cov | seed | max_samples_per_test_run | test reward | episodes | total steps before solved (w/o inital samples) | training time              |
 | ---- | ------------| ----------------------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | ------------| --------- | -----| ------------------------ | ----------- | -------- | ---------------------------------------------- | -------------------------- |
 | [x]  | BD          | baseline, seed=1                                      | [x]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | 19999.98    | 3        | 128+226+400                                    |             3.5h           |
