@@ -7,8 +7,8 @@ Supervision: Jan Peters, Samuele Tosatto
 - Fabian Otto
 
 ## Algorithms
-- [A3C](./A3C/README.md)
-- [PILCO](./PILCO/README.md)
+- [A3C](a3c/README.md)
+- [PILCO](pilco/README.md)
 
 ## Platforms
 - Cartpole stabilization ([Further info](https://www.google.com/search?source=hp&ei=EQffW4yLJYPKwQKQjoOIAQ&q=Cart-pole+stabilization&btnK=Google+Search&oq=Cart-pole+stabilization&gs_l=psy-ab.3...480.480..991...0.0..0.85.85.1......0....1j2..gws-wiz.ns_kSRav_wc))
@@ -43,6 +43,6 @@ The following is required for PILCO Test cases:
 
 We also offer to install all required packages directly through our [anaconda environment export](./conda_env.yaml).
 
-In order to run Experiments with [A3C](./A3C/README.md) or [PILCO](./PILCO/README.md), please check the corresponding README.
+In order to run experiments with [A3C](a3c/README.md) or [PILCO](pilco/README.md), please check the corresponding README.
 
 
