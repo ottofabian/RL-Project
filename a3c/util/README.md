@@ -8,7 +8,7 @@ Here you can find the following functionalities:
 - [get_model](./util.py#get_model) gets model instance, required for handling different types of models as specified [here](../models/README.md)
 - [get_optimizer](./util.py#get_optimizer) returns optimizer instance without shared statistics, supports split and shared model
 - [get_shared_optimizer](./util.py#get_shared_optimizer) return optimizer instance without shared statistics, supports split and shared model
-- [get_normalizer](./util.py#get_normalizer) get normalizer instance
+- [get_normalizer](./util.py#L212) get normalizer instance
 - [make_env](./util.py#make_env) gets callable to create env instance
 - [log_to_tensorboard](./util.py#log_to_tensorboard) logs training info to tensorboard 
 - [parse_args](./util.py#parse_args) parses console arguments 
