@@ -4,8 +4,8 @@ This is our implementation of A3C and the corresponding synchronous version A2C 
 We also combined this with [General Advantage Estimation](https://arxiv.org/abs/1506.02438) as it has shown improved performance for policy gradient methods.   
 
 Our code structure is defined the following:
-- [Models](./Models): Neural Network models for actor and critic.  
-- [Optimizers](./Optimizers): Optimizers with shared statistics for A3C.  
+- [Models](models): Neural Network models for actor and critic.  
+- [Optimizers](optimizers): Optimizers with shared statistics for A3C.  
 - [util](./util): Helper methods to make main code more readable.
 
 

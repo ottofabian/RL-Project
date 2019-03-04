@@ -13,11 +13,11 @@ from typing import Tuple, Union, List
 
 from torch.nn import Module
 
-from a3c.Models.ActorCriticNetwork import ActorCriticNetwork
-from a3c.Models.ActorNetwork import ActorNetwork
-from a3c.Models.CriticNetwork import CriticNetwork
-from a3c.Optimizers.SharedAdam import SharedAdam
-from a3c.Optimizers.SharedRMSProp import SharedRMSProp
+from a3c.models.actor_critic_network import ActorCriticNetwork
+from a3c.models.actor_network import ActorNetwork
+from a3c.models.critic_network import CriticNetwork
+from a3c.optimizers.shared_adam import SharedAdam
+from a3c.optimizers.shared_rmsprop import SharedRMSProp
 from a3c.util.normalizer.base_normalizer import BaseNormalizer
 from a3c.util.normalizer.mean_std_normalizer import MeanStdNormalizer
 

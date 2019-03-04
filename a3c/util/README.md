@@ -5,7 +5,7 @@ Here you can find the following functionalities:
 - [save_checkpoint](./util.py#save_checkpoint) for saving a model checkpoint
 - [load_saved_optimizer](./util.py#load_saved_optimizer) loads previously stored optimizer from given path
 - [load_saved_model](./util.py#load_saved_model) loads previously stored model from given path
-- [get_model](./util.py#get_model) gets model instance, required for handling different types of models as specified [here](../Models/README.md)
+- [get_model](./util.py#get_model) gets model instance, required for handling different types of models as specified [here](../models/README.md)
 - [get_optimizer](./util.py#get_optimizer) returns optimizer instance without shared statistics, supports split and shared model
 - [get_shared_optimizer](./util.py#get_shared_optimizer) return optimizer instance without shared statistics, supports split and shared model
 - [get_normalizer](./util.py#get_normalizer) get normalizer instance

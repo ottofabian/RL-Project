@@ -13,9 +13,9 @@ from gym.wrappers.monitor import Monitor
 from tensorboardX import SummaryWriter
 from torch.multiprocessing import Value
 
-from a3c.Models.ActorCriticNetwork import ActorCriticNetwork
-from a3c.Models.ActorNetwork import ActorNetwork
-from a3c.Models.CriticNetwork import CriticNetwork
+from a3c.models.actor_critic_network import ActorCriticNetwork
+from a3c.models.actor_network import ActorNetwork
+from a3c.models.critic_network import CriticNetwork
 from a3c.util.util import get_normalizer, make_env, sync_grads, log_to_tensorboard, get_optimizer, shape_reward
 from a3c.util.util import save_checkpoint
 

@@ -1,5 +1,5 @@
 """
-@file: SharedAdam.py
+@file: shared_adam.py
 
 Definition of the Adam optimizer for shared usage.
 One example for shared usage is multiprocessing for example.

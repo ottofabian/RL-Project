@@ -9,8 +9,8 @@ import torch.multiprocessing as mp
 from a3c.A3C_LSTM.ActorCriticNetworkLSTM import ActorCriticNetworkLSTM
 from a3c.A3C_LSTM.test import test
 from a3c.A3C_LSTM.train import train
-from a3c.Optimizers.SharedAdam import SharedAdam
-from a3c.Optimizers.SharedRMSProp import SharedRMSProp
+from a3c.optimizers.shared_adam import SharedAdam
+from a3c.optimizers.shared_rmsprop import SharedRMSProp
 
 quanser_robots
 
