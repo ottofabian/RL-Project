@@ -4,11 +4,11 @@ This folder contains the best models for all three environments.
 Feel free to reload them in order to see the final policy performance.
 
 ## A3C
-- [CartpoleStabShort-v0](A3C/Stabilization)
-- [CartpoleSwingShort-v0](A3C/SwingUp)
-- [Qube-v0](A3C/Qube)
+- [CartpoleStabShort-v0](a3c/stabilization)
+- [CartpoleSwingShort-v0](a3c/swing_up)
+- [Qube-v0](a3c/qube)
 
 ## PILCO
-- [CartpoleStabShort-v0](PILCO/Stabilization)
-- [CartpoleSwingShort-v0](PILCO/SwingUp)
-- [Qube-v0](PILCO/Qube)
+- [CartpoleStabShort-v0](pilco/stabilization)
+- [CartpoleSwingShort-v0](pilco/swing_up)
+- [Qube-v0](pilco/qube)
