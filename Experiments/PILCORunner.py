@@ -46,9 +46,9 @@ def main():
             pilco.load_data(f"{args.weight_dir}state-action.npy", f"{args.weight_dir}state-delta.npy")
 
     if args.test:
-        evaluate_policy(pilco.policy, pilco.env, max_action=args.max_action, no_render=args.no_render)
-
-    pilco.run()
+        evaluate_policy(pilco.policy, pilco.env, max_action=args.max_action, no_render=args.no_render, n_runs=100)
+    else:
+        pilco.run()
 
 
 if __name__ == '__main__':

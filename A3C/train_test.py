@@ -77,101 +77,105 @@ def test(args, worker_id: int, shared_model: torch.nn.Module, T: Value, global_r
     best_global_reward = -np.inf
     best_test_reward = -np.inf
 
-    while True:
+    # while True:
 
-        # Get params from shared global model
-        model.load_state_dict(shared_model.state_dict())
-        if not args.shared_model:
-            model_critic.load_state_dict(shared_model_critic.state_dict())
+    # Get params from shared global model
+    model.load_state_dict(shared_model.state_dict())
+    if not args.shared_model:
+        model_critic.load_state_dict(shared_model_critic.state_dict())
 
-        rewards = []
-        eps_len = []
-        n_runs = 10
+    rewards = []
+    eps_len = []
+    n_runs = 20 #1
 
-        sleep = True
+    sleep = True
 
-        # make 10 runs to get current avg performance
-        for i in range(n_runs):
-            while not done:
-                t += 1
+    # make 10 runs to get current avg performance
+    for i in range(n_runs):
+        while not done:
+            t += 1
 
-                if not args.no_render:
-                    if i == 0 and t % 1 == 0 and "RR" not in args.env_name:
-                        env.render()
-                        if args.monitor and sleep:  # add a small delay to do a screen capture of the test run if needed
-                            time.sleep(1)
-                            sleep = False
+            if not args.no_render:
+                if i == 0 and t % 1 == 0 and "RR" not in args.env_name:
+                    env.render()
+                    if args.monitor and sleep:  # add a small delay to do a screen capture of the test run if needed
+                        time.sleep(1)
+                        sleep = False
 
-                # apply min/max scaling on the environment
+            # apply min/max scaling on the environment
 
-                with torch.no_grad():
+            with torch.no_grad():
 
-                    # select mean of normal dist as action --> Expectation
-                    if args.shared_model:
-                        _, mu, _ = model(normalizer(state))
-                    else:
-                        mu, _ = model(normalizer(state))
+                # select mean of normal dist as action --> Expectation
+                if args.shared_model:
+                    _, mu, _ = model(normalizer(state))
+                else:
+                    mu, _ = model(normalizer(state))
 
-                    action = mu.detach()
+                action = mu.detach()
 
-                state, reward, done, _ = env.step(np.clip(action.numpy(), -args.max_action, args.max_action))
+            state, reward, done, _ = env.step(np.clip(action.numpy(), -args.max_action, args.max_action))
 
-                done = done or t >= args.max_episode_length
-                episode_reward += reward
+            done = done or t >= args.max_episode_length
+            episode_reward += reward
 
-                if done:
-                    # reset current cumulated reward and episode counter as well as env
-                    rewards.append(episode_reward)
-                    episode_reward = 0
+            if done:
+                if "RR" in args.env_name:
+                    log_string = f"episode reward={episode_reward:.5f} episode length={t}"
+                    logging.info(log_string)
 
-                    eps_len.append(t)
-                    t = 0
+                # reset current cumulated reward and episode counter as well as env
+                rewards.append(episode_reward)
+                episode_reward = 0
 
-                    state = env.reset()
+                eps_len.append(t)
+                t = 0
 
-                state = torch.from_numpy(state)
+                state = env.reset()
 
-            # necessary to make more than one run
-            done = False
+            state = torch.from_numpy(state)
 
-        time_print = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start_time))
+        # necessary to make more than one run
+        done = False
 
-        std_reward = np.std(rewards)
-        rewards = np.mean(rewards)
+    time_print = time.strftime("%Hh %Mm %Ss", time.gmtime(time.time() - start_time))
 
-        new_best = rewards > best_test_reward
-        writer.add_scalar("reward/test", rewards, int(T.value))
-        writer.add_scalar("episode/length", np.mean(eps_len), int(T.value))
+    std_reward = np.std(rewards)
+    rewards = np.mean(rewards)
 
-        log_string = f"Time: {time_print}, T={T.value} -- n_runs={n_runs} -- mean total reward={rewards:.5f} " \
-                     f" +/- {std_reward:.5f} -- mean episode length={np.mean(eps_len):.5f}" \
-                     f" +/- {np.std(eps_len):.5f} -- global reward={global_reward.value:.5f}"
+    new_best = rewards > best_test_reward
+    writer.add_scalar("reward/test", rewards, int(T.value))
+    writer.add_scalar("episode/length", np.mean(eps_len), int(T.value))
 
-        if new_best:
-            # highlight messages if progress was done
-            logging.info(log_string)
+    log_string = f"Time: {time_print}, T={T.value} -- n_runs={n_runs} -- mean total reward={rewards:.5f} " \
+                 f" +/- {std_reward:.5f} -- mean episode length={np.mean(eps_len):.5f}" \
+                 f" +/- {np.std(eps_len):.5f} -- global reward={global_reward.value:.5f}"
 
-            best_global_reward = global_reward.value if global_reward.value > best_global_reward else best_global_reward
-            best_test_reward = rewards if rewards > best_test_reward else best_test_reward
-            model_type = 'shared' if args.shared_model else 'split'
+    if new_best:
+        # highlight messages if progress was done
+        logging.info(log_string)
 
-            save_checkpoint({
-                'epoch': T.value,
-                'model': model.state_dict(),
-                'model_critic': model_critic.state_dict() if model_critic is not None else None,
-                'global_reward': global_reward.value,
-                # only save optimizers if shared ones are used
-                'optimizer': optimizer.state_dict() if optimizer else None,
-                'optimizer_critic': optimizer_critic.state_dict() if optimizer_critic else None,
-            },
-                filename=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value:.5f}_test-{rewards:.5f}.pth.tar")
-        else:
-            # use by default only debug messages if no progress was reached
-            logging.debug(log_string)
+        best_global_reward = global_reward.value if global_reward.value > best_global_reward else best_global_reward
+        best_test_reward = rewards if rewards > best_test_reward else best_test_reward
+        model_type = 'shared' if args.shared_model else 'split'
 
-        # delay _test run for 10s to give the network some time to train
-        # time.sleep(10)
-        global_iter += 1
+        save_checkpoint({
+            'epoch': T.value,
+            'model': model.state_dict(),
+            'model_critic': model_critic.state_dict() if model_critic is not None else None,
+            'global_reward': global_reward.value,
+            # only save optimizers if shared ones are used
+            'optimizer': optimizer.state_dict() if optimizer else None,
+            'optimizer_critic': optimizer_critic.state_dict() if optimizer_critic else None,
+        },
+            filename=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value:.5f}_test-{rewards:.5f}.pth.tar")
+    else:
+        # use by default only debug messages if no progress was reached
+        logging.debug(log_string)
+
+    # delay _test run for 10s to give the network some time to train
+    # time.sleep(10)
+    global_iter += 1
 
 
 def train(args, worker_id: int, shared_model: Union[ActorNetwork, ActorCriticNetwork], T: Value, global_reward: Value,
