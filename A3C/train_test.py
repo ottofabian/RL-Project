@@ -162,7 +162,7 @@ def test(args, worker_id: int, global_model: torch.nn.Module, T: Value, global_r
                 'optimizer': optimizer.state_dict() if optimizer else None,
                 'optimizer_critic': optimizer_critic.state_dict() if optimizer_critic else None,
             },
-                path=f"./Experiments/checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value:.5f}_test-{rewards:.5f}.pth.tar")
+                path=f"./checkpoints/model_{model_type}_T-{T.value}_global-{global_reward.value:.5f}_test-{rewards:.5f}.pth.tar")
         else:
             # use by default only debug messages if no progress was reached
             logging.debug(log_string)

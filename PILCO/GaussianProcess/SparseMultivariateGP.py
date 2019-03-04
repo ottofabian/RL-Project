@@ -73,7 +73,7 @@ class SparseMultivariateGP(MultivariateGP):
 
         Kmm_sqrt_inv_Kmn = np.stack(np.array([scipy.linalg.solve_triangular(Kmm_cho[i], Kmn[i], lower=True) for i in
                                               range(target_dim)]))  # inv(sqrt(Kmm)) * Kmn
-        G = np.exp(2 * self.sigma_fs()) - np.sum(Kmm_sqrt_inv_Kmn ** 2, axis=1)
+        G = np.exp(2 * self.sigma_f()) - np.sum(Kmm_sqrt_inv_Kmn ** 2, axis=1)
         G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))  # this can be nan when no contraints are used for optimizing
         Kmm_sqrt_inv_Kmn_scaled = Kmm_sqrt_inv_Kmn / G[:, None]
 
@@ -98,7 +98,7 @@ class SparseMultivariateGP(MultivariateGP):
             np.array(
                 [sig_B_cho_inv[i].T @ sig_B_cho_inv[i] * np.exp(2 * self.sigma_eps()[i]) for i in range(target_dim)]))
 
-        # covariance matrix for predictive variances
+        # inverse gram matrix
         self.K_inv = np.stack(
             np.array([np.linalg.solve(Kmm[i], np.identity(induced_dim)) for i in range(target_dim)])) - B_inv
 
@@ -121,7 +121,7 @@ class SparseMultivariateGP(MultivariateGP):
             logging.info(gp)
             print("Length scales:", gp.kern.lengthscale.values)
 
-    def sigma_fs(self):
+    def sigma_f(self):
         return np.log(np.sqrt(np.array([gp.kern.variance.values for gp in self.gp_container])))
 
     def sigma_eps(self):

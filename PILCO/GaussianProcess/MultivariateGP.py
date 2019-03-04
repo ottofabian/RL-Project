@@ -51,8 +51,8 @@ class MultivariateGP(object):
         self.y = y
 
         # reset cached matrices when new data is added
-        self.K_inv = None
-        self.beta = None
+        # self.K_inv = None
+        # self.beta = None
 
         for i in range(self.n_targets):
             self.gp_container[i].set_XY(X, y[:, i:i + 1])
@@ -88,7 +88,7 @@ class MultivariateGP(object):
         self.cache()
 
         length_scales = self.length_scales()
-        sigma_f = self.sigma_fs().reshape(self.n_targets)
+        sigma_f = self.sigma_f().reshape(self.n_targets)
 
         precision_inv = np.stack(np.array([np.diag(np.exp(-l)) for l in length_scales]))
         precision_inv2 = np.stack(np.array([np.diag(np.exp(-2 * l)) for l in length_scales]))
@@ -168,8 +168,8 @@ class MultivariateGP(object):
         """
 
         # reset parameters of gps are changing
-        self.K_inv = None
-        self.beta = None
+        # self.K_inv = None
+        # self.beta = None
 
         for i, gp in enumerate(self.gp_container):
             logging.info("Optimization for GP (output={}) started.".format(i))
@@ -193,7 +193,7 @@ class MultivariateGP(object):
         """
         pickle.dump(self, open(f"{save_dir}dynamics.p", "wb"))
 
-    def sigma_fs(self) -> np.ndarray:
+    def sigma_f(self) -> np.ndarray:
         """
         returns signal variance of gp
         :return: ndarray of [n_targets, 1]

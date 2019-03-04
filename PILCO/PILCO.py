@@ -1,25 +1,26 @@
-import logging
-import pickle
-import os
 import datetime
+import logging
+import os
 
 import autograd.numpy as np
-import gym
 import matplotlib.pyplot as plt
 import quanser_robots
 from autograd import value_and_grad
 from scipy.optimize import minimize
 
 from PILCO.Controller.Controller import Controller
+from PILCO.Controller.LinearController import LinearController
 from PILCO.Controller.RBFController import RBFController
 from PILCO.CostFunctions.Loss import Loss
 from PILCO.GaussianProcess.GaussianProcess import GaussianProcess
 from PILCO.GaussianProcess.MultivariateGP import MultivariateGP
 from PILCO.GaussianProcess.SparseMultivariateGP import SparseMultivariateGP
-from gym.wrappers.monitor import Monitor
+from PILCO.util.util import load_model, get_env
 
 # define the plotting style
 plt.style.use('seaborn-whitegrid')
+# avoid import optim issues
+quanser_robots
 
 
 class PILCO(object):
@@ -33,34 +34,23 @@ class PILCO(object):
 
         # -----------------------------------------------------
         # general
-        self.env_name = args.env_name
-        self.seed = args.seed
+        self.args = args
 
         # -----------------------------------------------------
         # env setup
         # check if the requested environment is a real robot env
-        if 'RR' in self.env_name:
-            self.env = quanser_robots.GentlyTerminating(gym.make(self.env_name))
-        else:
-            if args.monitor:
-                self.env = Monitor(gym.make(args.env_name), '100_test_runs',
-                                   video_callable=lambda count: count % 100 == 0, force=True)
-            else:
-                # use the official gym env as default
-                self.env = gym.make(self.env_name)
+        self.env = get_env(args.env_name)
 
-        # if max_episode_steps is not None:
-        #     self.env._max_episode_steps = max_episode_steps
         self.max_samples_test_run = args.max_samples_test_run
 
-        self.env.seed(self.seed)
-        np.random.seed(self.seed)
+        self.env.seed(args.seed)
+        np.random.seed(args.seed)
 
-        if self.env_name == "Pendulum-v0":
+        if args.env_name == "Pendulum-v0":
             self.state_names = ["cos($\\theta$)", "sin($\\theta$)", "$\\dot{\\theta}$"]
-        elif "Cartpole" in self.env_name:
+        elif "Cartpole" in args.env_name:
             self.state_names = ["x", "sin($\\theta$)", "cos($\\theta$)", "$\\dot{x}$", "$\\dot{\\theta}$"]
-        elif self.env_name == "Qube-v0":
+        elif args.env_name == "Qube-v0":
             self.state_names = ["sin($\\theta$)", "cos($\\theta$)", "sin($\\alpha$)", "cos($\\alpha$)",
                                 "$\\dot{\\theta}$", "$\\dot{\\alpha}$"]
 
@@ -69,22 +59,9 @@ class PILCO(object):
         self.n_actions = self.env.action_space.shape[0]
 
         # -----------------------------------------------------
-        # training params
-        self.discount = args.discount  # discount factor
-
-        # -----------------------------------------------------
-        # dynamics
+        # dynamics and policy model
         self.dynamics_model = None
-        self.n_inducing_points = args.inducing_points
-
-        # -----------------------------------------------------
-        # policy
         self.policy = None
-        self.bound = args.max_action
-        self.n_features = args.features
-        self.horizon = args.horizon
-        self.cost_threshold = args.cost_threshold
-        self.horizon_increase = args.horizon_increase
 
         # -----------------------------------------------------
         # rollout variables
@@ -99,18 +76,16 @@ class PILCO(object):
 
         # -----------------------------------------------------
         # Run parameters
-        self.n_samples = args.initial_samples
-        self.n_steps = args.steps
-        self.data_loaded = False  # defines if the state state-action- and state-deltas-values have been loaded
+        # defines if the state state-action- and state-deltas-values have been loaded
+        self.data_loaded = False
 
         # -----------------------------------------------------
         # Plotting options
-        self.export_plots = args.export_plots
-        self.plot_id = 0  # is a counter variable which is increment for each plot
+        # is a counter variable which is increment for each plot
+        self.plot_id = 0
 
         # -----------------------------------------------------
         # Test rendering
-        self.no_render = args.no_render
         self.test = args.test
 
     def run(self) -> None:
@@ -120,19 +95,19 @@ class PILCO(object):
         """
 
         if not self.data_loaded:
-            self.sample_inital_data_set(n_init=self.n_samples)
-        elif "RR" in self.env_name and self.policy:
-            X_test, y_test = self.execute_test_run(no_render=True)
+            self.sample_inital_data_set(n_init=self.args.initial_samples)
+        elif "RR" in self.args.env_name and self.policy:
+            X_test, y_test = self.execute_test_run()
 
             # add test history to training data set
             self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
             self.state_delta = np.append(self.state_delta, y_test, axis=0)
 
-        for _ in range(self.n_steps):
+        for _ in range(self.args.steps):
             self.learn_dynamics_model()
             self.learn_policy()
 
-            X_test, y_test = self.execute_test_run(no_render=self.no_render)
+            X_test, y_test = self.execute_test_run()
 
             # add test history to training data set
             self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
@@ -152,7 +127,7 @@ class PILCO(object):
         state_prev = self.env.reset()
         done = False
 
-        if self.env_name == "Pendulum-v0":
+        if self.args.env_name == "Pendulum-v0":
             theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
             self.env.env.state = [theta, 0]
             state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
@@ -161,8 +136,8 @@ class PILCO(object):
         while not done or i < n_init:
 
             # take initial random action
-            if self.bound:
-                action = np.random.uniform(-self.bound, self.bound, 1)
+            if self.args.max_action:
+                action = np.random.uniform(-self.args.max_action, self.args.max_action, 1)
             else:
                 action = self.env.action_space.sample()
             state, reward, done, _ = self.env.step(action)
@@ -177,7 +152,7 @@ class PILCO(object):
             # reset env if terminal state was reached before max samples were generated
             if done:
                 state = self.env.reset()
-                if self.env_name == "Pendulum-v0":
+                if self.args.env_name == "Pendulum-v0":
                     theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
                     self.env.env.state = [theta, 0]
                     state = np.array([np.cos(theta), np.sin(theta), 0.])
@@ -199,12 +174,12 @@ class PILCO(object):
 
         if self.dynamics_model is None:
             length_scales, sigma_f, sigma_eps = self.get_init_hyperparams()
-            if self.n_inducing_points:
+            if self.args.inducing_points:
                 self.dynamics_model = SparseMultivariateGP(X=self.state_action_pairs, y=self.state_delta,
                                                            n_targets=self.state_dim, container=GaussianProcess,
                                                            length_scales=length_scales, sigma_f=sigma_f,
                                                            sigma_eps=sigma_eps,
-                                                           n_inducing_points=self.n_inducing_points)
+                                                           n_inducing_points=self.args.inducing_points)
             else:
                 self.dynamics_model = MultivariateGP(X=self.state_action_pairs, y=self.state_delta,
                                                      n_targets=self.state_dim, container=GaussianProcess,
@@ -218,23 +193,30 @@ class PILCO(object):
     def learn_policy(self, target_noise: float = 0.1) -> None:
         """
         learn the policy based by trajectory rollouts
-        :param mu: mean for sampling pseudo input
-        :param sigma: covariance for sampling pseudo input
         :param target_noise: noise for sampling pseudo targets
-        :return:
+        :return: None
         """
 
         # initialize policy if we do not already have one
         if self.policy is None:
-            # init model params
-            X = np.random.multivariate_normal(self.start_mu, self.start_cov, size=(self.n_features,))
-            y = target_noise * np.random.randn(self.n_features, self.n_actions)
 
-            # augmented states would be initialized with .7, but we already have sin and cos given
-            # and do not need to compute this with gaussian_trig
-            length_scales = np.repeat(np.ones(self.state_dim).reshape(1, -1), self.n_actions, axis=0)
+            # rbf policy
+            if self.args.policy == "rbf":
+                # init model params
+                X = np.random.multivariate_normal(self.start_mu, self.start_cov, size=(self.args.features,))
+                y = target_noise * np.random.randn(self.args.features, self.n_actions)
 
-            self.policy = RBFController(X=X, y=y, n_actions=self.n_actions, length_scales=length_scales)
+                # augmented states would be initialized with .7, but we already have sin and cos given
+                # and do not need to compute this with gaussian_trig
+                length_scales = np.repeat(np.ones(self.state_dim).reshape(1, -1), self.n_actions, axis=0)
+                self.policy = RBFController(X, y, n_actions=self.n_actions, length_scales=length_scales)
+
+            # linear policy
+            elif self.args.policy == "linear":
+                self.policy = LinearController(self.state_dim, n_actions=self.n_actions)
+
+            else:
+                raise ValueError(f"Invalid specified policy {self.args.policy} found.")
 
         self.optimize_policy()
 
@@ -262,12 +244,12 @@ class PILCO(object):
             mu_state_container.append(state_mu)
             sigma_state_container.append(state_cov)
 
-        for t in range(self.horizon):
+        for t in range(self.args.horizon):
             state_next_mu, state_next_cov, action_mu, action_cov = self.rollout(policy, state_mu, state_cov)
 
             # compute value of current state prediction
             l = self.loss.compute_loss(state_next_mu, state_next_cov)
-            cost = cost + self.discount ** t * l.flatten()
+            cost = cost + self.args.discount ** t * l.flatten()
 
             if print_trajectory:
                 mu_state_container.append(state_next_mu)
@@ -296,7 +278,7 @@ class PILCO(object):
         # ------------------------------------------------
         # get mean and covar of next action, optionally with squashing and scaling towards an action bound
         action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
-                                                                              bound=self.bound)
+                                                                              bound=self.args.max_action)
 
         # ------------------------------------------------
         # get joint dist p(x,u)
@@ -325,7 +307,7 @@ class PILCO(object):
         optimize policy with respect to pseudo inputs and targets
         :return: None
         """
-        params = np.array([gp.wrap_policy_hyperparams() for gp in self.policy.gp_container]).flatten()
+        params = self.policy.get_params()
         options = {'maxiter': 150, 'disp': True}
 
         try:
@@ -343,9 +325,9 @@ class PILCO(object):
         cost = self.compute_trajectory_cost(policy=self.policy, print_trajectory=True)
 
         # increase trajectory length if below threshold cost
-        if cost < self.cost_threshold:
-            self.horizon += int(self.horizon * self.horizon_increase)
-            logging.info(f"Rollout horizon was increased to {self.horizon}.")
+        if cost < self.args.cost_threshold:
+            self.args.horizon += int(self.args.horizon * self.args.horizon_increase)
+            logging.info(f"Rollout horizon was increased to {self.args.horizon}.")
 
     def _optimize_hyperparams(self, params):
         """
@@ -359,7 +341,7 @@ class PILCO(object):
         # cost of trajectory
         return self.compute_trajectory_cost(self.policy, print_trajectory=False)
 
-    def execute_test_run(self, no_render=True) -> tuple:
+    def execute_test_run(self) -> tuple:
         """
         execute test run for max episode steps and return new training samples
         :return: states, state_deltas, rewards
@@ -375,7 +357,7 @@ class PILCO(object):
         # [1,3] is returned and is reduced to 1D
         state_prev = state_prev.flatten()
 
-        if self.env_name == "Pendulum-v0":
+        if self.args.env_name == "Pendulum-v0":
             theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
             state_prev = np.array([np.cos(theta), np.sin(theta), 0])
             self.env.env.state = [theta, 0]
@@ -383,12 +365,13 @@ class PILCO(object):
         done = False
         t = 0
         while not done:
-            if not no_render:
+            if not self.args.no_render:
                 self.env.render()
             t += 1
 
             # no uncertainty during testing required
-            action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)), bound=self.bound)
+            action, _, _ = self.policy.choose_action(state_prev, 0 * np.identity(len(state_prev)),
+                                                     bound=self.args.max_action)
             action = action.flatten()
 
             state, reward, done, _ = self.env.step(action)
@@ -405,18 +388,7 @@ class PILCO(object):
 
         logging.info(f"reward={rewards}, episode_len={t}")
 
-        if not self.test:  # don't save the models when only testing
-            try:
-                # create a directory where all models and data will be saved
-                timestamp = datetime.datetime.now().strftime('%Y%m%d')  # -%H%M%S')
-                save_dir = "./Experiments/checkpoints/{}-reward-{:.5f}-{}/".format(timestamp, rewards, self.env_name)
-                os.mkdir(save_dir)
-            except OSError:
-                print("Creation of the directory %s failed" % save_dir)
-
-            self.policy.save(save_dir)
-            self.dynamics_model.save(save_dir)
-            self.save_data(save_dir)
+        self.save(rewards)
 
         if len(X) < self.max_samples_test_run:
             X = np.array(X)
@@ -485,9 +457,9 @@ class PILCO(object):
             # plt.fill_between(x, m - s, m + s)
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
 
-            if self.export_plots:
+            if self.args.export_plots:
                 from matplotlib2tikz import save as tikz_save
-                tikz_save("./Experiments/plots/state_trajectory" + str(self.plot_id) + str(i) + ".tex")
+                tikz_save("./plots/state_trajectory" + str(self.plot_id) + str(i) + ".tex")
 
             plt.show()
 
@@ -497,30 +469,40 @@ class PILCO(object):
         plt.xlabel("rollout steps")
         # plt.fill_between(x, mu_actions - sigma_actions, mu_actions + sigma_actions)
         plt.title("Trajectory prediction for actions")
-        if self.export_plots:
+        if self.args.export_plots:
             from matplotlib2tikz import save as tikz_save
-            tikz_save("./Experiments/plots/action_trajectory" + str(self.plot_id) + ".tex")
+            tikz_save("./plots/action_trajectory" + str(self.plot_id) + ".tex")
 
         plt.show()
 
         self.plot_id += 1
 
-    def load_policy(self, path):
-        self.policy = pickle.load(open(path, "rb"))
+    def _load_policy(self, path):
+        """
+        load existing policy
+        :param path: path to file
+        :return: None
+        """
+        self.policy = load_model(path)
 
-    def load_dynamics(self, path):
-        self.dynamics_model = pickle.load(open(path, "rb"))
+    def _load_dynamics(self, path):
+        """
+        load existing dynamics model
+        :param path: path to file
+        :return: None
+        """
+        self.dynamics_model = load_model(path)
 
-    def save_data(self, save_dir):
+    def _save_data(self, directory):
         """
         Saves the the stat-action pairs and targets
-        :param save_dir: Directory where the state-actions and targets will be saved
+        :param directory: Directory where the state-actions and targets will be saved
         :return:
         """
-        np.save(open(f"{save_dir}state-delta.npy", "wb"), self.state_delta)
-        np.save(open(f"{save_dir}state-action.npy", "wb"), self.state_action_pairs)
+        np.save(open(f"{directory}state-delta.npy", "wb"), self.state_delta)
+        np.save(open(f"{directory}state-action.npy", "wb"), self.state_action_pairs)
 
-    def load_data(self, path_state_action, path_delta):
+    def _load_data(self, path_state_action, path_delta):
         """
         Loads the state-action and delta values
         :param path_state_action: Path where the state-actions are stored
@@ -530,3 +512,34 @@ class PILCO(object):
         self.state_action_pairs = np.load(open(f"{path_state_action}", "rb"))
         self.state_delta = np.load(open(f"{path_delta}", "rb"))
         self.data_loaded = True
+
+    def save(self, rewards):
+        """
+        save policy, dynamics and data points to ./Experiments/checkpoints
+        :param rewards: rewards for naming purpose
+        :return: None
+        """
+        # don't save the models when only testing
+        if not self.test:
+            timestamp = datetime.datetime.now().strftime('%Y%m%d')
+            save_dir = f"./checkpoints/{timestamp}-reward-{rewards:.5f}-{self.args.env_name}/"
+            try:
+                # create a directory where all models and data will be saved
+                os.mkdir(save_dir)
+            except OSError:
+                print(f"Creation of the directory {save_dir} failed")
+
+            self.policy.save(save_dir)
+            self.dynamics_model.save(save_dir)
+            self._save_data(save_dir)
+
+    def load(self, directory):
+        """
+        load existing policy, dynamics and data points to continue training
+        :param directory: directory containing the four files:
+        "policy.p", "dynamics.p", "state-action.npy", "state-delta.npy"
+        :return: None
+        """
+        self._load_policy(f"{directory}policy.p")
+        self._load_dynamics(f"{directory}dynamics.p")
+        self._load_data(f"{directory}state-action.npy", f"{directory}state-delta.npy")

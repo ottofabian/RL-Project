@@ -1,14 +1,13 @@
 from functools import partial
 
 from autograd import grad, jacobian
+from autograd import numpy as np
 from autograd.test_util import check_grads
 
-from autograd import numpy as np
-
-from PILCO.util.util import squash_action_dist, parse_args
 from PILCO.Controller.RBFController import RBFController
 from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
+from PILCO.util.util import squash_action_dist, parse_args
 
 check_grads = partial(check_grads, modes=['rev'])
 
@@ -80,17 +79,6 @@ def test_grad_mgpr():
 
     params = np.array([gp.wrap_policy_hyperparams() for gp in rbf.gp_container]).flatten()
     np.allclose(grad(pilco._optimize_hyperparams)(params), jacobian(pilco._optimize_hyperparams)(params))
-
-    # def check_it(x):
-    #     x1 = x[:state_dim]
-    #     x2 = x[state_dim:].reshape(state_dim, state_dim)
-    #     return rbf._optimize_hyperparams()
-
-    # grad_error = check_grad(func=rbf._optimize_hyperparams, grad=grad(rbf._optimize_hyperparams), x0=params)
-    # print(grad_error)
-    # np.testing.assert_almost_equal(grad_error, 0, decimal=7)
-
-    print(pilco._optimize_hyperparams(params))
 
     check_grads(pilco._optimize_hyperparams)(params)
 

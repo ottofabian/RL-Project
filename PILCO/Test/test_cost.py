@@ -1,4 +1,3 @@
-import argparse
 import os
 
 import numpy as np
@@ -113,7 +112,7 @@ def test_trajectory_cost():
 
     # generate dynmodel for matlab
     length_scales_dyn = pilco.dynamics_model.length_scales()
-    sigma_f_dyn = pilco.dynamics_model.sigma_fs()
+    sigma_f_dyn = pilco.dynamics_model.sigma_f()
     sigma_eps_dyn = pilco.dynamics_model.sigma_eps()
 
     hyp_dyn = np.hstack(
@@ -131,7 +130,7 @@ def test_trajectory_cost():
 
     # generate rbf policy for matlab
     length_scales_rbf = rbf.length_scales()
-    sigma_f_rbf = rbf.sigma_fs()
+    sigma_f_rbf = rbf.sigma_f()
     sigma_eps_rbf = rbf.sigma_eps()
 
     hyp_rbf = np.hstack(

@@ -10,15 +10,12 @@ from PILCO.util.util import squash_action_dist
 
 class RBFController(MultivariateGP, Controller):
 
-    def __init__(self, X, y, n_actions, length_scales):
+    def __init__(self, X: np.ndarray, y: np.ndarray, n_actions: int, length_scales: np.ndarray) -> None:
         """
         Deisenroth (2010), Nonlinear Model: RBF Network
-        :param X: pseudo inputs
-        :param y: pseudo targets
         :param n_actions: number of actions/GP models
-        :param n_features: number of
-        :param length_scales:
         """
+
         # sigma_f is fixed for the RBF Controller, if it is seen as deterministic GP
         # sigma_eps is .01 to ensure a numerical stable computation
         sigma_f = np.log(np.ones((n_actions,)))
@@ -45,13 +42,20 @@ class RBFController(MultivariateGP, Controller):
 
     def set_params(self, params):
         # reset cached matrices when new params are added
-        self.K_inv = None
-        self.beta = None
+        # self.K_inv = None
+        # self.beta = None
 
         for i, gp in enumerate(self.gp_container):
             gp.unwrap_params(params[gp.length * i: gp.length * (i + 1)])
             # computes beta and K_inv for updated hyperparams
             gp.compute_matrices()
+
+    def get_params(self) -> np.ndarray:
+        """
+        returns parameters to optimize of policy
+        :return:
+        """
+        return np.array([gp.wrap_policy_hyperparams() for gp in self.gp_container]).flatten()
 
     def optimize(self) -> None:
         """

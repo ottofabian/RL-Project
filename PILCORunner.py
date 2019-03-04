@@ -9,7 +9,7 @@ from PILCO.CostFunctions.SaturatedLoss import SaturatedLoss
 from PILCO.PILCO import PILCO
 import time
 
-from PILCO.util.util import parse_args, evaluate_policy
+from PILCO.util.util import parse_args, evaluate_policy, load_model
 
 
 def main():
@@ -24,30 +24,27 @@ def main():
 
     # show given cmd-parameters
     show_cmd_args(args)
-
     env = gym.make(args.env_name)
-    state_dim = env.observation_space.shape[0]
-
-    loss = SaturatedLoss(state_dim=state_dim, target_state=args.target_state, W=args.weights)
-    pilco = PILCO(args, loss=loss)
-
-    # load the models if "args.weight_dir" is given
-    if args.weight_dir:
-        # make sure that the dir ends with an "/"
-        if args.weight_dir[-1] != '/':
-            args.weight_dir += '/'
-
-        # load the policy
-        pilco.load_policy(f"{args.weight_dir}policy.p")
-        if not args.test:
-            # load the remaining models and stats to continue training
-            pilco.load_dynamics(f"{args.weight_dir}dynamics.p")
-            pilco.load_data(f"{args.weight_dir}state-action.npy", f"{args.weight_dir}state-delta.npy")
 
     if args.test:
-        evaluate_policy(pilco.policy, pilco.env, max_action=args.max_action, no_render=args.no_render)
+        policy = load_model(f"{args.weight_dir}policy.p")
+        evaluate_policy(policy, env, max_action=args.max_action, no_render=args.no_render)
 
-    pilco.run()
+    else:
+        state_dim = env.observation_space.shape[0]
+        loss = SaturatedLoss(state_dim=state_dim, target_state=args.target_state, W=args.weights)
+        pilco = PILCO(args, loss=loss)
+
+        # load the models if "args.weight_dir" is given
+        if args.weight_dir:
+            # make sure that the dir ends with an "/"
+            if args.weight_dir[-1] != '/':
+                args.weight_dir += '/'
+
+            # load the policy, dynamics models and stats to continue training
+            pilco.load(args.weight_dir)
+
+        pilco.run()
 
 
 if __name__ == '__main__':

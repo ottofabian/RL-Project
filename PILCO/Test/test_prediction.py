@@ -48,7 +48,7 @@ def test_mgpr():
 
     # convert data to the struct expected by the MATLAB implementation
     length_scales = mgpr.length_scales()
-    sigma_f = mgpr.sigma_fs()
+    sigma_f = mgpr.sigma_f()
     sigma_eps = mgpr.sigma_eps()
 
     hyp = np.hstack(
@@ -113,7 +113,7 @@ def test_smgpr():
 
     # convert data to the struct expected by the MATLAB implementation
     length_scales = smgpr.length_scales()
-    sigma_f = smgpr.sigma_fs()
+    sigma_f = smgpr.sigma_f()
     sigma_eps = smgpr.sigma_eps()
 
     hyp = np.hstack(
