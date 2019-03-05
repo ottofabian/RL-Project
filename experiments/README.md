@@ -12,11 +12,11 @@ With the Swing-up we fine-tuned our final policy with 5,000 episode length using
 environment boundaries.
 
 ## CartpoleStabShort-v0
-![a2c_cartpolestab_short](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Stabilization/A2C/max_action_5/100_test_runs/a2c_cartpolestabshort.gif)
+![a2c_cartpolestab_short](../resources/a3c/media/stabilization/a2c_cartpolestabshort.gif)
 
-19999.95442 +/- 0.03550 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Stabilization/A2C/max_action_5/100_test_runs/openaigym.episode_batch.0.15325.stats.json))
+19999.95442 +/- 0.03550 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](../resources/a3c/media/stabilization/openaigym.episode_batch.0.15325.stats.json))
 
-![a2c_cartpolestabshort_real_world](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Stabilization/Reduced%20action%20range/a2c_cartpolestabshort_real_world.gif)
+![a2c_cartpolestabshort_real_world](../resources/a3c/media/stabilization/a2c_cartpolestabshort_real_world.gif)
 
 | done | contributor | comment                                     | solved env | type |lr-actor|lr-critic|shared-model|value-loss-weight|discount| tau | entropy-loss-weight | max-grad-norm | seed | worker | rollout steps|max-episode-length|shared-optimizer|optimizer|lr-scheduler|max-action|normalizer|n-envs| test reward (10 episodes) | steps                | training time             |
 | ---- | ----------- | ------------------------------------------- | ---------- | ---  |------- | ------- | -----------| ----------------|------- | --- | --------------------| ------------- | -----| ------ | ------------ | ---------------- | -------------- | ------- | ---------- | -------- | -------- | ---- | ------------------------- | -------------------- | ------------------------- |
@@ -53,9 +53,9 @@ environment boundaries.
 
 ## CartpoleSwingShort-v0
 
-![a2c_cartpoleswingshort](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/SwingUp/a2c/100_test_runs/a2c_cartpoleswingshort.gif)
+![a2c_cartpoleswingshort](../resources/a3c/media/swing_up/a2c_cartpoleswingshort.gif)
 
-19521.84018  +/- 3.81556 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/SwingUp/a2c/100_test_runs/openaigym.episode_batch.0.6170.stats.json))
+19521.84018  +/- 3.81556 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](../resources/a3c/media/swing_up/openaigym.episode_batch.0.6170.stats.json))
 
 | done | contributor | comment                                                           | solved env | type |lr-actor|lr-critic|shared-model|value-loss-weight|discount| tau | entropy-loss-weight | max-grad-norm | seed | worker | rollout steps|max-episode-length|shared-optimizer|optimizer|lr-scheduler|max-action|normalizer|n-envs| test reward (10 episodes) | steps                    | training time              |
 | ---- | ----------- | ----------------------------------------------------------------- | ---------- | ---  |------- | ------- | -----------| ----------------|------- | --- | --------------------| ------------- | -----| ------ | ------------ | ---------------- | -------------- | ------- | ---------- | -------- | -------- | ---- | ------------------------- | ------------------------ | ----------------------     |
@@ -88,9 +88,9 @@ environment boundaries.
 
 ## Qube-v0 / a.k.a Furuta-Pendulum
 
-![a2c_qube](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Qube/high_score/100_test_runs/a2c_qube.gif)
+![a2c_qube](../resources/a3c/media/qube/a2c_qube.gif)
 
-5.51419 +/- 0.00966 total reward with episode length of 3000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](https://github.com/BoboDance/RL-Project/blob/master/Experiments/best_models/Qube/high_score/100_test_runs/openaigym.episode_batch.0.18809.stats.json))
+5.51419 +/- 0.00966 total reward with episode length of 3000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](../resources/a3c/media/qube/openaigym.episode_batch.0.18809.stats.json))
 
 | done | contributor | comment                                            | solved env | type |lr-actor|lr-critic|shared-model|value-loss-weight|discount| tau | entropy-loss-weight | max-grad-norm | seed | worker | rollout steps|max-episode-length|shared-optimizer|optimizer|lr-scheduler|max-action|normalizer|n-envs| test reward (10 episodes) | steps                    | training time              |
 | ---- | ------------| -------------------------------------------------- | ---------- | ---- |------- | ------- | -----------| ----------------|------- | --- | --------------------| ------------- | -----| ------ | ------------ | ---------------- | -------------- | ------- | ---------- | -------- | -------- | ---- | ------------------------- | ------------------------ | -------------------------- |
@@ -127,9 +127,9 @@ Starting the pendulum always on top with slight random variance to avoid solving
 
 All experiments are conducted with frequency 50Hz, if not stated otherwise.
 
-![PILCO_CartpoleStabShort](https://github.com/BoboDance/RL-Project/blob/master/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/100_test_runs/PILCO_cartpolestabshort.gif)
+![PILCO_CartpoleStabShort](../resources/pilco/media/stabilization/PILCO_cartpolestabshort.gif)
 
-19999.87513 +/- 0.10077 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](https://github.com/BoboDance/RL-Project/blob/master/Experiments/PILCO/CartpoleStabShort/SparseGP_50HZ/100_test_runs/openaigym.episode_batch.0.13206.stats.json))
+19999.87513 +/- 0.10077 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](../resources/pilco/media/stabilization/openaigym.episode_batch.0.13206.stats.json))
 
 | done | contributor | comment                                               | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights | start_mu    | start_cov | seed | max_samples_per_test_run | test reward | episodes | total steps before solved (w/o inital samples) | training time              |
 | ---- | ------------| ----------------------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | ------------| --------- | -----| ------------------------ | ----------- | -------- | ---------------------------------------------- | -------------------------- |
