@@ -4,8 +4,8 @@ This is our implementation of A3C and the corresponding synchronous version A2C 
 We also combined this with [General Advantage Estimation](https://arxiv.org/abs/1506.02438) as it has shown improved performance for policy gradient methods.   
 
 Our code structure is defined the following:
-- [Models](models): Neural Network models for actor and critic.  
-- [Optimizers](optimizers): Optimizers with shared statistics for A3C.  
+- [models](models): Neural Network models for actor and critic.  
+- [optimizers](optimizers): Optimizers with shared statistics for A3C.  
 - [util](./util): Helper methods to make main code more readable.
 
 
@@ -18,17 +18,17 @@ source activate my_env
 
 Training run from scratch:
 ```bash
-python3 my/path/to/A3CRunner.py
+python3 my/path/to/a3c_runner.py
 ```
 
 Training run from an existing policy:
 ```bash
-python3 my/path/to/A3CRunner.py --path my_model_path
+python3 my/path/to/a3c_runner.py --path my_model_path
 ```
 
 More console arguments (e.g. hyperparameter changes) can be added to the run, for details see
 ```bash
-python3 my/path/to/A3CRunner.py --help
+python3 my/path/to/a3c_runner.py --help
 ```
 
 3) (Optional) Start tensorboard to monitor training progress
@@ -44,5 +44,5 @@ source activate my_env
 
 2) Execute the [A3CRunner](../a3c_runner.py) script
 ```bash
-python3 my/path/to/A3CRunner.py --path my_model_path --test
+python3 my/path/to/a3c_runner.py --path my_model_path --test
 ``
