@@ -171,7 +171,7 @@ def enable_color_logging(logging_lvl=logging.DEBUG, save_log=False, logfile_pref
             print(os.getcwd())
             os.mkdir("./logs/")
 
-        file_handler = logging.FileHandler("logs/" + logfile_prefix + timestmp + ".log", mode='w')
+        file_handler = logging.FileHandler("logs/" + logfile_prefix + timestmp + ".log", mode='a')
         file_handler.setFormatter(formatter)
         # avoid spamming the log file, only log INFO , WARNING, ERROR events
         file_handler.setLevel(logging.INFO)
