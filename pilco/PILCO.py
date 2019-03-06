@@ -459,7 +459,7 @@ class PILCO(object):
 
             if self.args.export_plots:
                 from matplotlib2tikz import save as tikz_save
-                tikz_save("./plots/state_trajectory" + str(self.plot_id) + str(i) + ".tex")
+                tikz_save("./experiments/plots/state_trajectory" + str(self.plot_id) + str(i) + ".tex")
 
             plt.show()
 
@@ -471,7 +471,7 @@ class PILCO(object):
         plt.title("Trajectory prediction for actions")
         if self.args.export_plots:
             from matplotlib2tikz import save as tikz_save
-            tikz_save("./plots/action_trajectory" + str(self.plot_id) + ".tex")
+            tikz_save("./experiments/plots/action_trajectory" + str(self.plot_id) + ".tex")
 
         plt.show()
 
@@ -522,7 +522,7 @@ class PILCO(object):
         # don't save the models when only testing
         if not self.test:
             timestamp = datetime.datetime.now().strftime('%Y%m%d')
-            save_dir = f"./checkpoints/{timestamp}-reward-{rewards:.5f}-{self.args.env_name}/"
+            save_dir = f"./experiments/checkpoints/{timestamp}-reward-{rewards:.5f}-{self.args.env_name}/"
             try:
                 # create a directory where all models and data will be saved
                 os.mkdir(save_dir)

@@ -36,7 +36,7 @@ def sync_grads(model: ActorCriticNetwork, global_model: ActorCriticNetwork) -> N
         global_param._grad = param.grad  #
 
 
-def save_checkpoint(state: dict, path='./checkpoint.pth.tar') -> None:
+def save_checkpoint(state: dict, path='./experiments/checkpoint.pth.tar') -> None:
     """
     save model checkpoint.
     Example of checkpoint dict:
