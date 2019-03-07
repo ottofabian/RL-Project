@@ -33,7 +33,7 @@ class PILCO(object):
         """
 
         # -----------------------------------------------------
-        # general
+        # cmd line parameters for later access
         self.args = args
 
         # -----------------------------------------------------
@@ -77,6 +77,7 @@ class PILCO(object):
         # -----------------------------------------------------
         # Run parameters
         # defines if the state state-action- and state-deltas-values have been loaded
+        # training is consequently continued
         self.data_loaded = False
 
         # -----------------------------------------------------
@@ -97,20 +98,20 @@ class PILCO(object):
         if not self.data_loaded:
             self.sample_inital_data_set(n_init=self.args.initial_samples)
         elif "RR" in self.args.env_name and self.policy:
-            X_test, y_test = self.execute_test_run()
+            x_test, y_test = self.execute_test_run()
 
             # add test history to training data set
-            self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
+            self.state_action_pairs = np.append(self.state_action_pairs, x_test, axis=0)
             self.state_delta = np.append(self.state_delta, y_test, axis=0)
 
         for _ in range(self.args.steps):
             self.learn_dynamics_model()
             self.learn_policy()
 
-            X_test, y_test = self.execute_test_run()
+            x_test, y_test = self.execute_test_run()
 
             # add test history to training data set
-            self.state_action_pairs = np.append(self.state_action_pairs, X_test, axis=0)
+            self.state_action_pairs = np.append(self.state_action_pairs, x_test, axis=0)
             self.state_delta = np.append(self.state_delta, y_test, axis=0)
 
     def sample_inital_data_set(self, n_init: int) -> None:
@@ -175,13 +176,13 @@ class PILCO(object):
         if self.dynamics_model is None:
             length_scales, sigma_f, sigma_eps = self.get_init_hyperparams()
             if self.args.inducing_points:
-                self.dynamics_model = SparseMultivariateGP(X=self.state_action_pairs, y=self.state_delta,
+                self.dynamics_model = SparseMultivariateGP(x=self.state_action_pairs, y=self.state_delta,
                                                            n_targets=self.state_dim, container=GaussianProcess,
                                                            length_scales=length_scales, sigma_f=sigma_f,
                                                            sigma_eps=sigma_eps,
                                                            n_inducing_points=self.args.inducing_points)
             else:
-                self.dynamics_model = MultivariateGP(X=self.state_action_pairs, y=self.state_delta,
+                self.dynamics_model = MultivariateGP(x=self.state_action_pairs, y=self.state_delta,
                                                      n_targets=self.state_dim, container=GaussianProcess,
                                                      length_scales=length_scales, sigma_f=sigma_f, sigma_eps=sigma_eps)
 
@@ -203,13 +204,13 @@ class PILCO(object):
             # rbf policy
             if self.args.policy == "rbf":
                 # init model params
-                X = np.random.multivariate_normal(self.start_mu, self.start_cov, size=(self.args.features,))
+                x = np.random.multivariate_normal(self.start_mu, self.start_cov, size=(self.args.features,))
                 y = target_noise * np.random.randn(self.args.features, self.n_actions)
 
                 # augmented states would be initialized with .7, but we already have sin and cos given
                 # and do not need to compute this with gaussian_trig
                 length_scales = np.repeat(np.ones(self.state_dim).reshape(1, -1), self.n_actions, axis=0)
-                self.policy = RBFController(X, y, n_actions=self.n_actions, length_scales=length_scales)
+                self.policy = RBFController(x, y, n_actions=self.n_actions, length_scales=length_scales)
 
             # linear policy
             elif self.args.policy == "linear":
@@ -312,8 +313,8 @@ class PILCO(object):
 
         try:
             logging.info("Starting to optimize policy with L-BFGS-B.")
-            res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B',
-                           jac=True, options=options)
+            res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='L-BFGS-B', jac=True,
+                           options=options)
         except Exception:
             logging.info("Starting to optimize policy with CG.")
             res = minimize(fun=value_and_grad(self._optimize_hyperparams), x0=params, method='CG', jac=True,
@@ -349,7 +350,7 @@ class PILCO(object):
 
         logging.info("Starting test run.")
 
-        X = []
+        x = []
         y = []
         rewards = 0
 
@@ -378,7 +379,7 @@ class PILCO(object):
             state = state.flatten()
 
             # create history and new training instance
-            X.append(np.append(state_prev, action))
+            x.append(np.append(state_prev, action))
 
             noise = np.random.multivariate_normal(np.zeros(state.shape), 1e-6 * np.identity(state.shape[0]))
             y.append(state - state_prev + noise)
@@ -390,16 +391,16 @@ class PILCO(object):
 
         self.save(rewards)
 
-        if len(X) < self.max_samples_test_run:
-            X = np.array(X)
+        if len(x) < self.max_samples_test_run:
+            x = np.array(x)
             y = np.array(y)
         else:
-            idx = np.random.choice(range(0, len(X)), self.max_samples_test_run, replace=False)
+            idx = np.random.choice(range(0, len(x)), self.max_samples_test_run, replace=False)
 
-            X = np.array(X)[idx]
+            x = np.array(x)[idx]
             y = np.array(y)[idx]
 
-        return X, y
+        return x, y
 
     def get_joint_dist(self, state_mu, state_cov, action_mu, action_cov, input_output_cov) -> tuple:
         """
@@ -429,11 +430,12 @@ class PILCO(object):
         Compute initial hyperparameters for dynamics GP
         :return: [length scales, signal variance, noise variance]
         """
-        l = np.repeat(np.log(np.std(self.state_action_pairs, axis=0)).reshape(1, -1), self.state_dim, axis=0)
+        length_scales = np.repeat(np.log(np.std(self.state_action_pairs, axis=0)).reshape(1, -1), self.state_dim,
+                                  axis=0)
         sigma_f = np.log(np.std(self.state_delta, axis=0))
         sigma_eps = np.log(np.std(self.state_delta, axis=0) / 10)
 
-        return l, sigma_f, sigma_eps
+        return length_scales, sigma_f, sigma_eps
 
     def print_trajectory(self, mu_states, sigma_states, mu_actions, sigma_actions) -> None:
 

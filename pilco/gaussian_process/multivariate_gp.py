@@ -10,7 +10,7 @@ from pilco.gaussian_process.rbf_network import RBFNetwork
 
 class MultivariateGP(object):
 
-    def __init__(self, X: np.ndarray, y: np.ndarray, n_targets: int,
+    def __init__(self, x: np.ndarray, y: np.ndarray, n_targets: int,
                  container: Union[Type[GaussianProcess], Type[RBFNetwork]], length_scales: np.ndarray,
                  sigma_f: np.ndarray, sigma_eps: np.ndarray, is_policy: bool = False):
         """
@@ -24,7 +24,7 @@ class MultivariateGP(object):
                           the moment matching is computed slightly different based on that.
         """
 
-        self.X = X
+        self.x = x
         self.y = y
         self.n_targets = n_targets
         self.is_policy = is_policy
@@ -38,16 +38,16 @@ class MultivariateGP(object):
             range(self.n_targets)]
 
         for i in range(self.n_targets):
-            self.gp_container[i].set_XY(X, y[:, i:i + 1])
+            self.gp_container[i].set_XY(x, y[:, i:i + 1])
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+    def fit(self, x: np.ndarray, y: np.ndarray) -> None:
         """
         set x and y
-        :param X: input variables [n_samples, sample dim]
+        :param x: input variables [n_samples, sample dim]
         :param y: target variables [n_samples, n_targets]
         :return: None
         """
-        self.X = X
+        self.x = x
         self.y = y
 
         # reset cached matrices when new data is added
@@ -55,12 +55,12 @@ class MultivariateGP(object):
         # self.beta = None
 
         for i in range(self.n_targets):
-            self.gp_container[i].set_XY(X, y[:, i:i + 1])
+            self.gp_container[i].set_XY(x, y[:, i:i + 1])
 
     def cache(self):
         """
         Precomputes the inverse gram matrix and betas for gp
-        :return:
+        :return: None
         """
         [gp.compute_matrices() for gp in self.gp_container]
         self.beta = np.vstack(np.array([gp.betas for gp in self.gp_container])).T
@@ -69,16 +69,16 @@ class MultivariateGP(object):
     def predict_from_dist(self, mu: np.ndarray, sigma: np.ndarray) -> tuple:
 
         """
-        Use moment mathcing to predict dist given an uncertain input x~N(mu,sigma) from gaussian process
-        Based on the idea of: https://github.com/cryscan/pilco-learner
+        Use moment matching to predict dist given an uncertain input x~N(mu,sigma) from gaussian process
         :param mu: n_targets x n_state + n_actions
         :param sigma: n_targets x (n_state + n_actions) x (n_state + n_actions)
         :return: mu, sigma and inv(sigma) @ input_output_cov
         """
+        # Adapted from: https://github.com/cryscan/pilco-learner
 
         mu = np.atleast_2d(mu)
 
-        state_dim = self.X.shape[1]
+        state_dim = self.x.shape[1]
         target_dim = self.y.shape[1]
 
         # ----------------------------------------------------------------------------------------------------
@@ -105,12 +105,13 @@ class MultivariateGP(object):
 
         B = precision_inv @ sigma @ precision_inv + np.identity(state_dim)
 
-        # t = zeta_a / B
         # B[i] is symmetric, so B[i].T=B[i]
         t = np.stack(np.array([np.linalg.solve(B[i], zeta_a[i].T).T for i in range(target_dim)]))
 
         scaled_beta = np.exp(-.5 * np.sum(zeta_a * t, axis=2)) * self.beta.T
 
+        # If something is nan, then this line is the problem.
+        # Or more precisely, the lengthscale parameters are choosen poorly and cause the determinant to be negative.
         coefficient = np.exp(2 * sigma_f) / np.sqrt(np.linalg.det(B))
 
         mean = np.sum(scaled_beta, axis=1) * coefficient
@@ -148,7 +149,8 @@ class MultivariateGP(object):
         Q = np.exp(k[:, np.newaxis, :, np.newaxis] + k[np.newaxis, :, np.newaxis, :] + mahalanobis_dist)
 
         if self.is_policy:
-            # noise for numerical reasons/ridge term
+            # simplified computation for policy as K_inv = 0 anyway
+            # only adding of ridge term
             cov = scaling_factor * np.einsum('ji,iljk,kl->il', self.beta, Q, self.beta) + 1e-6 * np.identity(target_dim)
         else:
             cov = np.einsum('ji,iljk,kl->il', self.beta, Q, self.beta)
@@ -174,16 +176,6 @@ class MultivariateGP(object):
         for i, gp in enumerate(self.gp_container):
             logging.info("Optimization for GP (output={}) started.".format(i))
             gp.optimize()
-
-    def predict(self, X: np.ndarray):
-        """
-        Computes point predictions from GPs
-        :param X: points to predict th man for
-        :return:
-        """
-        # compute K_inv and betas
-        [gp.compute_matrices() for gp in self.gp_container]
-        return np.array([gp.predict(X) for gp in self.gp_container])
 
     def save(self, save_dir) -> None:
         """
@@ -215,4 +207,4 @@ class MultivariateGP(object):
         return np.array([c.length_scales for c in self.gp_container])
 
     def center_inputs(self, mu):
-        return np.expand_dims(self.X - mu, axis=0)
+        return np.expand_dims(self.x - mu, axis=0)

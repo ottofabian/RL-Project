@@ -5,13 +5,13 @@ from pilco.cost_function.loss import Loss
 
 class SaturatedLoss(Loss):
 
-    def __init__(self, state_dim: np.ndarray, target_state: np.ndarray = None, W: np.ndarray = None,
+    def __init__(self, state_dim: np.ndarray, target_state: np.ndarray = None, weights: np.ndarray = None,
                  cost_width: np.ndarray = None):
         """
         Initialize saturated loss function
         :param state_dim: state dimensionality
         :param target_state: target state which should be reached
-        :param W: weight matrix
+        :param weights: weight matrix
         :param cost_width: TODO what is this
         """
 
@@ -22,7 +22,7 @@ class SaturatedLoss(Loss):
         self.target_state = np.atleast_2d(self.target_state)
 
         # weight matrix
-        self.W = np.identity(self.state_dim) if W is None else W
+        self.weights = np.identity(self.state_dim) if weights is None else weights
 
         # -----------------------------------------------------
         # This is only useful if we have any penalties etc.
@@ -33,24 +33,24 @@ class SaturatedLoss(Loss):
         Compute cost of current state distribution
         :param mu: mean of state
         :param sigma: covariance of state
-        :return: cost of given state distribution
+        :return: cost distribution of given state distribution
         """
         mu = np.atleast_2d(mu)
 
-        sigma_T_inv = np.dot(sigma, self.W)
-        S1 = np.linalg.solve((np.identity(self.state_dim) + sigma_T_inv).T, self.W.T).T
+        sigma_T_inv = np.dot(sigma, self.weights)
+        S1 = np.linalg.solve((np.identity(self.state_dim) + sigma_T_inv).T, self.weights.T).T
         diff = mu - self.target_state
 
         # compute expected cost
         mean = -np.exp(-diff @ S1 @ diff.T / 2) / np.sqrt(np.linalg.det(np.identity(self.state_dim) + sigma_T_inv))
 
         # compute variance of cost
-        S2 = np.linalg.solve((np.identity(self.state_dim) + 2 * sigma_T_inv).T, self.W.T).T
+        S2 = np.linalg.solve((np.identity(self.state_dim) + 2 * sigma_T_inv).T, self.weights.T).T
         r2 = np.exp(-diff @ S2 @ diff.T) * ((np.linalg.det(np.identity(self.state_dim) + 2 * sigma_T_inv)) ** -.5)
         variance = r2 - mean ** 2
 
         # compute cross covariance
-        t = np.dot(self.W, self.target_state.T) - S1 @ (np.dot(sigma_T_inv, self.target_state.T) + mu.T)
+        t = np.dot(self.weights, self.target_state.T) - S1 @ (np.dot(sigma_T_inv, self.target_state.T) + mu.T)
 
         cross_cov = sigma @ (mean * t)
 
@@ -64,8 +64,7 @@ class SaturatedLoss(Loss):
         :param sigma: covariance of state distribution
         :return: loss
         """
-        # TODO: Ask supervisors if we need to do this.
-        # We do not have information about the env for penalties or the like.
+        # We do not have information about the env for reasonable penalties or the like.
 
         cost = 0
         for w in self.cost_width:

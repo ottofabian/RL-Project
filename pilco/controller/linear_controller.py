@@ -28,9 +28,20 @@ class LinearController(Controller):
         self.b = params[idx:].reshape(self.b.shape)
 
     def get_params(self):
+        """
+        get parameters of linear policy as flattened array
+        :return: ndarray of flat [W,b]
+        """
         return np.concatenate([self.W.flatten(), self.b.flatten()])
 
-    def choose_action(self, mu, sigma, bound):
+    def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: np.ndarray = None) -> tuple:
+        """
+        chooses action based on linear policy from given state distribution
+        :param mu: mean of state distribution
+        :param sigma: covariance of state distribution
+        :param bound: max action if required
+        :return: action_mu, action_cov, input_output_cov
+        """
         action_mu = mu @ self.W + self.b
         action_sigma = self.W.T @ sigma @ self.W
         action_input_output_cov = self.W

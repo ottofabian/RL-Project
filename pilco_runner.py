@@ -6,7 +6,7 @@ import gym
 from experiments.util.ColorLogger import enable_color_logging
 from experiments.util.logger_util import show_cmd_args
 from pilco.cost_function.saturated_loss import SaturatedLoss
-from pilco.PILCO import PILCO
+from pilco.pilco import PILCO
 import time
 
 from pilco.util.util import parse_args, evaluate_policy, load_model
@@ -32,7 +32,7 @@ def main():
 
     else:
         state_dim = env.observation_space.shape[0]
-        loss = SaturatedLoss(state_dim=state_dim, target_state=args.target_state, W=args.weights)
+        loss = SaturatedLoss(state_dim=state_dim, target_state=args.target_state, weights=args.weights)
         pilco = PILCO(args, loss=loss)
 
         # load the models if "args.weight_dir" is given

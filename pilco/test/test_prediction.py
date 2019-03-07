@@ -93,7 +93,7 @@ def test_smgpr():
     sigma_eps = np.ones(state_dim)
     sigma_f = np.ones(state_dim)
 
-    smgpr = SparseMultivariateGP(length_scales=length_scales, n_targets=n_targets, X=X0, y=Y0,
+    smgpr = SparseMultivariateGP(length_scales=length_scales, n_targets=n_targets, x=X0, y=Y0,
                                  n_inducing_points=n_inducing_points, container=GaussianProcess, sigma_eps=sigma_eps,
                                  sigma_f=sigma_f)
     smgpr.optimize()

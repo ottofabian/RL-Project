@@ -6,7 +6,7 @@ from autograd.test_util import check_grads
 
 from pilco.controller.rbf_controller import RBFController
 from pilco.cost_function.saturated_loss import SaturatedLoss
-from pilco.PILCO import PILCO
+from pilco.pilco import PILCO
 from pilco.util.util import squash_action_dist, parse_args
 
 check_grads = partial(check_grads, modes=['rev'])
@@ -37,7 +37,7 @@ def test_grad_mgpr():
 
     # setup loss
     T_inv = np.diag(np.random.rand(state_dim))
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, weights=T_inv)
 
     # take any env, to avoid issues with gym.make
     args = parse_args([])
@@ -110,7 +110,7 @@ def test_grad_smgpr():
 
     # setup loss
     T_inv = np.diag(np.random.rand(state_dim))
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, weights=T_inv)
 
     # take any env, to avoid issues with gym.make
     args = parse_args([])
@@ -167,7 +167,7 @@ def test_grad_loss():
     target_state = np.random.rand(state_dim)
     T_inv = np.diag(np.random.rand(state_dim))
 
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, weights=T_inv)
 
     # grad_error = check_grad(func=loss.compute_loss, grad=grad(loss.compute_loss), x0=params)
     check_grads(loss.compute_loss)(mu, sigma)
@@ -268,7 +268,7 @@ def test_grad_rollout():
     target_state = np.random.rand(state_dim)
     T_inv = np.diag(np.random.rand(state_dim))
 
-    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, W=T_inv)
+    loss = SaturatedLoss(state_dim=state_dim, target_state=target_state, weights=T_inv)
 
     def helper1(x):
         m = x[0:state_dim]

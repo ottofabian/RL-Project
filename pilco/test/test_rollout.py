@@ -5,7 +5,7 @@ import numpy as np
 import oct2py
 
 from pilco.controller.rbf_controller import RBFController
-from pilco.PILCO import PILCO
+from pilco.pilco import PILCO
 from pilco.util.util import parse_args
 
 octave = oct2py.Oct2Py(logger=oct2py.get_log())

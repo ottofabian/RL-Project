@@ -85,7 +85,7 @@ def test_set_params_rbf():
     sigma_f = rbf.sigma_f()
 
     rbf.set_params(rbf.get_params())
-    assert np.all(X0 == rbf.X)
+    assert np.all(X0 == rbf.x)
     assert np.all(Y0 == rbf.y)
     assert np.all(length_scales == rbf.length_scales())
     assert np.all(sigma_eps == rbf.sigma_eps())

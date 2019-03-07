@@ -10,11 +10,11 @@ class Kernel(object):
         self.sub = None
 
     def __add__(self, other):
-        sum = Kernel()
-        sum.sub = self, other
-        sum.n_hyperparams = lambda x: self.n_hyperparams(x) + other.n_hyperparams(x)
+        kernel = Kernel()
+        kernel.sub = self, other
+        kernel.n_hyperparams = lambda x: self.n_hyperparams(x) + other.n_hyperparams(x)
 
-        return sum
+        return kernel
 
     def __call__(self, log_hyperparams, x, z=None):
         log_hyperparams = np.atleast_2d(log_hyperparams)

@@ -9,18 +9,12 @@ from pilco.gaussian_process.multivariate_gp import MultivariateGP
 
 class SparseMultivariateGP(MultivariateGP):
 
-    def __init__(self, X, y,
-                 n_targets: int,
-                 n_inducing_points: int,
-                 container,
-                 length_scales: np.ndarray,
-                 sigma_f: np.ndarray,
-                 sigma_eps: np.ndarray,
-                 is_policy: bool = False):
+    def __init__(self, x, y, n_targets: int, n_inducing_points: int, container, length_scales: np.ndarray,
+                 sigma_f: np.ndarray, sigma_eps: np.ndarray, is_policy: bool = False):
 
         """
         Multivariate Gaussian Process Regression
-        :param X: inputs [n_samples, state_dim]
+        :param x: inputs [n_samples, state_dim]
         :param y: targets
         :param n_targets: amount of target, each dimension of data inputs requires one target
         :param container: submodel type for each target, this depends on whether this should model dynamics of RBF policy
@@ -31,29 +25,36 @@ class SparseMultivariateGP(MultivariateGP):
                           the moment matching is consequently computed differently
         """
 
-        super(SparseMultivariateGP, self).__init__(X, y, n_targets, container, length_scales, sigma_f, sigma_eps,
+        super(SparseMultivariateGP, self).__init__(x, y, n_targets, container, length_scales, sigma_f, sigma_eps,
                                                    is_policy)
 
-        self.X = X
+        self.x = x
         self.y = y
         self.n_inducing_points = n_inducing_points
 
         self.gp_container = []
-        idx = np.random.permutation(X.shape[0])[:min(n_inducing_points, X.shape[0])]
-        Z = X.view(np.ndarray)[idx].copy()
+
+        # generate same initial inducing points for all GPs as subset of all given points
+        idx = np.random.permutation(x.shape[0])[:min(n_inducing_points, x.shape[0])]
+        z = x.view(np.ndarray)[idx].copy()
 
         for i in range(self.n_targets):
-            input_dim = length_scales.shape[1]
-            kernel = GPy.kern.RBF(input_dim=input_dim, lengthscale=np.exp(length_scales[i]), ARD=True,
+            kernel = GPy.kern.RBF(input_dim=length_scales.shape[1], lengthscale=np.exp(length_scales[i]), ARD=True,
                                   variance=np.exp(sigma_f[i]))
 
-            # kernel = kernel + GPy.kern.White(input_dim=input_dim, variance=np.exp(sigma_eps[i]))
-            model = GPy.models.SparseGPRegression(X=X, Y=y[:, i:i + 1], kernel=kernel, Z=Z)
+            model = GPy.models.SparseGPRegression(X=x, Y=y[:, i:i + 1], kernel=kernel, Z=z)
+
+            # set noise variance
             model.likelihood.noise = np.exp(sigma_eps[i])
+
+            # set constraints for length scales and signal noise
+            # as we cannot optimize the penalized likelihood with GPy.
             model.kern.lengthscale.constrain_bounded(0, 300)
             model.likelihood.variance.constrain_bounded(1e-15, 1e-3)
             # prior = GPy.priors.gamma_from_EV(0.5, 1)
             # gp.kern.lengthscale.set_prior(prior, warning=False)
+
+            # set the approximate inference method to FITC as used by Deisenroth(2010)
             model.inference_method = GPy.inference.latent_function_inference.FITC()
             self.gp_container.append(model)
 
@@ -88,7 +89,7 @@ class SparseMultivariateGP(MultivariateGP):
              range(target_dim)]))
 
         Kmm_sqrt_inv_Kmn_scaled = Kmm_sqrt_inv_Kmn_scaled / G[:, None]
-        # one big ugly loopy, because numpy cannot do it differently, at least I did not find a way for hours
+
         self.beta = np.stack(
             np.array(
                 [(np.linalg.solve(Am[i], Kmm_sqrt_inv_Kmn_scaled[i]).T @ sig_B_cho_inv[i]).T @ gp.Y.flatten() for i, gp
