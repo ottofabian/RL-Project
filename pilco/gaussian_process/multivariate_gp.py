@@ -11,7 +11,7 @@ from pilco.gaussian_process.rbf_network import RBFNetwork
 class MultivariateGP(object):
 
     def __init__(self, x: np.ndarray, y: np.ndarray, n_targets: int,
-                 container: Union[Type[GaussianProcess], Type[RBFNetwork]], length_scales: np.ndarray,
+                 container: Union[Type[GaussianProcess], Type[RBFNetwork], None], length_scales: np.ndarray,
                  sigma_f: np.ndarray, sigma_eps: np.ndarray, is_policy: bool = False):
         """
         Multivariate Gaussian Process Regression
@@ -32,13 +32,25 @@ class MultivariateGP(object):
         self.beta = None
         self.K_inv = None
 
-        # For a D-dimensional state space, we use D separate GPs, one for each state dimension. Deisenroth (2010)
-        self.gp_container = [
-            container(length_scales=length_scales[i], sigma_eps=sigma_eps[i], sigma_f=sigma_f[i]) for i in
-            range(self.n_targets)]
+        self.models = []
 
+        self.make_models(length_scales, sigma_f, sigma_eps, container)
+
+    def make_models(self, length_scales: np.ndarray, sigma_f: np.ndarray, sigma_eps: np.ndarray,
+                    container: Union[Type[GaussianProcess], Type[RBFNetwork]]):
+        """
+        generate models for GP
+        :param length_scales: length scale init for models
+        :param sigma_f: signal variance init for models
+        :param sigma_eps: noise variance init for models
+        :param container: container type, depending if this is a rbf policy or a dynamics model
+        :return:
+        """
+        # For a D-dimensional state space, we use D separate GPs, one for each state dimension. Deisenroth (2010)
         for i in range(self.n_targets):
-            self.gp_container[i].set_XY(x, y[:, i:i + 1])
+            self.models.append(
+                container(length_scales=length_scales[i], sigma_eps=sigma_eps[i], sigma_f=sigma_f[i]))
+            self.models[i].set_XY(self.x, self.y[:, i:i + 1])
 
     def fit(self, x: np.ndarray, y: np.ndarray) -> None:
         """
@@ -51,20 +63,20 @@ class MultivariateGP(object):
         self.y = y
 
         # reset cached matrices when new data is added
-        # self.K_inv = None
-        # self.beta = None
+        self.K_inv = None
+        self.beta = None
 
         for i in range(self.n_targets):
-            self.gp_container[i].set_XY(x, y[:, i:i + 1])
+            self.models[i].set_XY(x, y[:, i:i + 1])
 
     def cache(self):
         """
         Precomputes the inverse gram matrix and betas for gp
         :return: None
         """
-        [gp.compute_matrices() for gp in self.gp_container]
-        self.beta = np.vstack(np.array([gp.betas for gp in self.gp_container])).T
-        self.K_inv = np.array([gp.K_inv for gp in self.gp_container])
+        [gp.compute_matrices() for gp in self.models]
+        self.beta = np.vstack(np.array([gp.betas for gp in self.models])).T
+        self.K_inv = np.array([gp.K_inv for gp in self.models])
 
     def predict_from_dist(self, mu: np.ndarray, sigma: np.ndarray) -> tuple:
 
@@ -84,8 +96,9 @@ class MultivariateGP(object):
         # ----------------------------------------------------------------------------------------------------
         # Helper
 
-        # if self.K_inv is None or self.beta is None:
-        self.cache()
+        # matrices are not cached already
+        if self.K_inv is None or self.beta is None:
+            self.cache()
 
         length_scales = self.length_scales()
         sigma_f = self.sigma_f().reshape(self.n_targets)
@@ -170,10 +183,10 @@ class MultivariateGP(object):
         """
 
         # reset parameters of gps are changing
-        # self.K_inv = None
-        # self.beta = None
+        self.K_inv = None
+        self.beta = None
 
-        for i, gp in enumerate(self.gp_container):
+        for i, gp in enumerate(self.models):
             logging.info("Optimization for GP (output={}) started.".format(i))
             gp.optimize()
 
@@ -190,21 +203,21 @@ class MultivariateGP(object):
         returns signal variance of gp
         :return: ndarray of [n_targets, 1]
         """
-        return np.array([c.sigma_f for c in self.gp_container])
+        return np.array([c.sigma_f for c in self.models])
 
     def sigma_eps(self) -> np.ndarray:
         """
         returns noise variance of gp
         :return: ndarray of [n_targets, 1]
         """
-        return np.array([c.sigma_eps for c in self.gp_container])
+        return np.array([c.sigma_eps for c in self.models])
 
     def length_scales(self) -> np.ndarray:
         """
         returns length scales of gp
         :return: ndarray of [n_targets, input_dim]
         """
-        return np.array([c.length_scales for c in self.gp_container])
+        return np.array([c.length_scales for c in self.models])
 
     def center_inputs(self, mu):
         return np.expand_dims(self.x - mu, axis=0)

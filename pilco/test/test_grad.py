@@ -77,7 +77,7 @@ def test_grad_mgpr():
 
     # ---------------------------------------------------------------------------------------
 
-    params = np.array([gp.wrap_policy_hyperparams() for gp in rbf.gp_container]).flatten()
+    params = np.array([gp.wrap_policy_hyperparams() for gp in rbf.models]).flatten()
     np.allclose(grad(pilco._optimize_hyperparams)(params), jacobian(pilco._optimize_hyperparams)(params))
 
     check_grads(pilco._optimize_hyperparams)(params)
@@ -150,7 +150,7 @@ def test_grad_smgpr():
     pilco.policy = rbf
     # ---------------------------------------------------------------------------------------
 
-    params = np.array([gp.wrap_policy_hyperparams() for gp in rbf.gp_container]).flatten()
+    params = np.array([gp.wrap_policy_hyperparams() for gp in rbf.models]).flatten()
     np.allclose(grad(pilco._optimize_hyperparams)(params), jacobian(pilco._optimize_hyperparams)(params))
 
     check_grads(pilco._optimize_hyperparams)(params)

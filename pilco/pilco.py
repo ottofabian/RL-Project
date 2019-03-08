@@ -177,9 +177,8 @@ class PILCO(object):
             length_scales, sigma_f, sigma_eps = self.get_init_hyperparams()
             if self.args.inducing_points:
                 self.dynamics_model = SparseMultivariateGP(x=self.state_action_pairs, y=self.state_delta,
-                                                           n_targets=self.state_dim, container=GaussianProcess,
-                                                           length_scales=length_scales, sigma_f=sigma_f,
-                                                           sigma_eps=sigma_eps,
+                                                           n_targets=self.state_dim, length_scales=length_scales,
+                                                           sigma_f=sigma_f, sigma_eps=sigma_eps,
                                                            n_inducing_points=self.args.inducing_points)
             else:
                 self.dynamics_model = MultivariateGP(x=self.state_action_pairs, y=self.state_delta,

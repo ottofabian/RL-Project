@@ -46,10 +46,10 @@ class RBFController(MultivariateGP, Controller):
 
     def set_params(self, params):
         # reset cached matrices when new params are added
-        # self.K_inv = None
-        # self.beta = None
+        self.K_inv = None
+        self.beta = None
 
-        for i, gp in enumerate(self.gp_container):
+        for i, gp in enumerate(self.models):
             gp.unwrap_params(params[gp.length * i: gp.length * (i + 1)])
             # computes beta and K_inv for updated hyperparams
             gp.compute_matrices()
@@ -59,7 +59,7 @@ class RBFController(MultivariateGP, Controller):
         returns parameters to optimize of policy
         :return: array of flattened rbf parameters
         """
-        return np.array([gp.wrap_policy_hyperparams() for gp in self.gp_container]).flatten()
+        return np.array([gp.wrap_policy_hyperparams() for gp in self.models]).flatten()
 
     def optimize(self) -> None:
         """

@@ -63,6 +63,10 @@ class GaussianProcess(object):
         self.x = x
         self.y = y
 
+        self.K = None
+        self.betas = None
+        self.K_inv = None
+
         self.n_targets = y.shape[1]
         self.state_dim = x.shape[1]
 
