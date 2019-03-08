@@ -261,7 +261,7 @@ def parse_args(args: list) -> argparse.Namespace:
         if not args.target_state:
             args.target_state = np.array([0, 0, -1, 0, 0])
 
-    elif args.env_name == "Qube-v0" or args.env_name == "QubeRR-v0":
+    elif args.env_name == "Qube-v0" or args.env_name == "QubeRR-v0" or args.env_name == "Qube-v1":
         theta = 0
         alpha = 0
         if not args.start_state:

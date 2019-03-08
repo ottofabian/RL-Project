@@ -50,8 +50,8 @@ class PILCO(object):
             self.state_names = ["cos($\\theta$)", "sin($\\theta$)", "$\\dot{\\theta}$"]
         elif "Cartpole" in args.env_name:
             self.state_names = ["x", "sin($\\theta$)", "cos($\\theta$)", "$\\dot{x}$", "$\\dot{\\theta}$"]
-        elif args.env_name == "Qube-v0":
-            self.state_names = ["sin($\\theta$)", "cos($\\theta$)", "sin($\\alpha$)", "cos($\\alpha$)",
+        elif "Qube" in args.env_name:
+            self.state_names = ["cos($\\theta$)", "sin($\\theta$)", "cos($\\alpha$)", "sin($\\alpha$)",
                                 "$\\dot{\\theta}$", "$\\dot{\\alpha}$"]
 
         # get the number of available action from the environment
