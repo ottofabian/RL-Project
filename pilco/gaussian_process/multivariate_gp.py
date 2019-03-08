@@ -82,9 +82,9 @@ class MultivariateGP(object):
 
         """
         Use moment matching to predict dist given an uncertain input x~N(mu,sigma) from gaussian process
-        :param mu: n_targets x n_state + n_actions
-        :param sigma: n_targets x (n_state + n_actions) x (n_state + n_actions)
-        :return: mu, sigma and inv(sigma) @ input_output_cov
+        :param mu: n_targets x input_dim
+        :param sigma: n_targets x input_dim x input_dim
+        :return: mean, cov and inv(cov) @ input_output_cov of approximate new distribution
         """
         # Adapted from: https://github.com/cryscan/pilco-learner
 

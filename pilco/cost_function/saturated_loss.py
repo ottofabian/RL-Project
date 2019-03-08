@@ -18,8 +18,7 @@ class SaturatedLoss(Loss):
         self.state_dim = state_dim
 
         # set target state to all zeros if not other specified
-        self.target_state = np.zeros(self.state_dim) if target_state is None else target_state
-        self.target_state = np.atleast_2d(self.target_state)
+        self.target_state = np.atleast_2d(np.zeros(self.state_dim) if target_state is None else target_state)
 
         # weight matrix
         self.weights = np.identity(self.state_dim) if weights is None else weights
@@ -37,25 +36,28 @@ class SaturatedLoss(Loss):
         """
         mu = np.atleast_2d(mu)
 
-        sigma_T_inv = np.dot(sigma, self.weights)
-        S1 = np.linalg.solve((np.identity(self.state_dim) + sigma_T_inv).T, self.weights.T).T
+        sigma_weighted = np.dot(sigma, self.weights)
+        sigma_weighted_inv = np.linalg.solve((np.identity(self.state_dim) + sigma_weighted).T, self.weights.T).T
         diff = mu - self.target_state
 
         # compute expected cost
-        mean = -np.exp(-diff @ S1 @ diff.T / 2) / np.sqrt(np.linalg.det(np.identity(self.state_dim) + sigma_T_inv))
+        scale = np.sqrt(np.linalg.det(np.identity(self.state_dim) + sigma_weighted))
+        cost_mean = -np.exp(-diff @ sigma_weighted_inv @ diff.T / 2) / scale
 
         # compute variance of cost
-        S2 = np.linalg.solve((np.identity(self.state_dim) + 2 * sigma_T_inv).T, self.weights.T).T
-        r2 = np.exp(-diff @ S2 @ diff.T) * ((np.linalg.det(np.identity(self.state_dim) + 2 * sigma_T_inv)) ** -.5)
-        variance = r2 - mean ** 2
+        sigma_weighted_inv2 = np.linalg.solve((np.identity(self.state_dim) + 2 * sigma_weighted).T, self.weights.T).T
+        scale2 = np.sqrt(np.linalg.det(np.identity(self.state_dim) + 2 * sigma_weighted))
+        r2 = np.exp(-diff @ sigma_weighted_inv2 @ diff.T) / scale2
+        cost_cov = r2 - cost_mean ** 2
 
         # compute cross covariance
-        t = np.dot(self.weights, self.target_state.T) - S1 @ (np.dot(sigma_T_inv, self.target_state.T) + mu.T)
+        t = np.dot(self.weights, self.target_state.T) - sigma_weighted_inv @ (
+                np.dot(sigma_weighted, self.target_state.T) + mu.T)
 
-        cross_cov = sigma @ (mean * t)
+        cost_input_output_cov = sigma @ (cost_mean * t)
 
         # bring cost to the interval [0,1]
-        return 1 + mean, variance, cross_cov
+        return 1 + cost_mean, cost_cov, cost_input_output_cov
 
     def compute_loss(self, mu: np.ndarray, sigma: np.ndarray) -> float:
         """

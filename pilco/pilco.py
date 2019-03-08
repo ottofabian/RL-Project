@@ -15,7 +15,7 @@ from pilco.cost_function.loss import Loss
 from pilco.gaussian_process.gaussian_process import GaussianProcess
 from pilco.gaussian_process.multivariate_gp import MultivariateGP
 from pilco.gaussian_process.sparse_multivariate_gp import SparseMultivariateGP
-from pilco.util.util import load_model, get_env
+from pilco.util.util import load_model, get_env, get_joint_dist
 
 # define the plotting style
 plt.style.use('seaborn-whitegrid')
@@ -66,7 +66,7 @@ class PILCO(object):
         # -----------------------------------------------------
         # rollout variables
         self.loss = loss
-        self.start_mu = args.start_state
+        self.start_mean = args.start_state
         self.start_cov = args.start_cov
 
         # -----------------------------------------------------
@@ -96,8 +96,11 @@ class PILCO(object):
         """
 
         if not self.data_loaded:
+            # if training is not continued get initial data set from random policy
             self.sample_inital_data_set(n_init=self.args.initial_samples)
+
         elif "RR" in self.args.env_name and self.policy:
+            # continue training policy on the real system by creating some samples first
             x_test, y_test = self.execute_test_run()
 
             # add test history to training data set
@@ -129,7 +132,7 @@ class PILCO(object):
         done = False
 
         if self.args.env_name == "Pendulum-v0":
-            theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
+            theta = (np.arctan2(self.start_mean[1], self.start_mean[0]) + np.random.normal(0, .1, 1))[0]
             self.env.env.state = [theta, 0]
             state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
 
@@ -154,7 +157,7 @@ class PILCO(object):
             if done:
                 state = self.env.reset()
                 if self.args.env_name == "Pendulum-v0":
-                    theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
+                    theta = (np.arctan2(self.start_mean[1], self.start_mean[0]) + np.random.normal(0, .1, 1))[0]
                     self.env.env.state = [theta, 0]
                     state = np.array([np.cos(theta), np.sin(theta), 0.])
 
@@ -203,12 +206,13 @@ class PILCO(object):
             # rbf policy
             if self.args.policy == "rbf":
                 # init model params
-                x = np.random.multivariate_normal(self.start_mu, self.start_cov, size=(self.args.features,))
+                x = np.random.multivariate_normal(self.start_mean, self.start_cov, size=(self.args.features,))
                 y = target_noise * np.random.randn(self.args.features, self.n_actions)
 
                 # augmented states would be initialized with .7, but we already have sin and cos given
                 # and do not need to compute this with gaussian_trig
                 length_scales = np.repeat(np.ones(self.state_dim).reshape(1, -1), self.n_actions, axis=0)
+
                 self.policy = RBFController(x, y, n_actions=self.n_actions, length_scales=length_scales)
 
             # linear policy
@@ -216,7 +220,7 @@ class PILCO(object):
                 self.policy = LinearController(self.state_dim, n_actions=self.n_actions)
 
             else:
-                raise ValueError(f"Invalid specified policy {self.args.policy} found.")
+                raise ValueError(f"Unsupported policy {self.args.policy} found.")
 
         self.optimize_policy()
 
@@ -229,78 +233,78 @@ class PILCO(object):
         :return: cost of trajectory
         """
 
-        state_mu = self.start_mu
+        state_mean = self.start_mean
         state_cov = self.start_cov
 
         cost = 0
 
         if print_trajectory:
             # container required plotting later on
-            mu_state_container = []
-            sigma_state_container = []
-            mu_action_container = []
-            sigma_action_container = []
+            state_means_container = []
+            state_covs_container = []
+            action_means_container = []
+            action_covs_container = []
 
-            mu_state_container.append(state_mu)
-            sigma_state_container.append(state_cov)
+            state_means_container.append(state_mean)
+            state_covs_container.append(state_cov)
 
         for t in range(self.args.horizon):
-            state_next_mu, state_next_cov, action_mu, action_cov = self.rollout(policy, state_mu, state_cov)
+            state_next_mean, state_next_cov, action_mean, action_cov = self.rollout(policy, state_mean, state_cov)
 
             # compute value of current state prediction
-            l = self.loss.compute_loss(state_next_mu, state_next_cov)
+            l = self.loss.compute_loss(state_next_mean, state_next_cov)
             cost = cost + self.args.discount ** t * l.flatten()
 
             if print_trajectory:
-                mu_state_container.append(state_next_mu)
-                sigma_state_container.append(state_next_cov)
-                mu_action_container.append(action_mu)
-                sigma_action_container.append(action_cov)
+                state_means_container.append(state_next_mean)
+                state_covs_container.append(state_next_cov)
+                action_means_container.append(action_mean)
+                action_covs_container.append(action_cov)
 
-            state_mu = state_next_mu
+            state_mean = state_next_mean
             state_cov = state_next_cov
 
         if print_trajectory:
-            self.print_trajectory(np.array(mu_state_container), np.array(sigma_state_container),
-                                  np.array(mu_action_container), np.array(sigma_action_container))
+            self.print_trajectory(np.array(state_means_container), np.array(state_covs_container),
+                                  np.array(action_means_container), np.array(action_covs_container))
 
         return cost
 
-    def rollout(self, policy, state_mu, state_cov) -> tuple:
+    def rollout(self, policy, state_mean, state_cov) -> tuple:
         """
         compute a single rollout given a state mean and covariance
         :param policy: policy object which decides on action
-        :param state_mu: current mean to start rollout from
+        :param state_mean: current mean to start rollout from
         :param state_cov: current covariance to start rollout from
-        :return: state_next_mu, state_next_cov, action_mu, action_cov
+        :return: state_next_mean, state_next_cov, action_mean, action_cov
         """
 
         # ------------------------------------------------
         # get mean and covar of next action, optionally with squashing and scaling towards an action bound
-        action_mu, action_cov, action_input_output_cov = policy.choose_action(state_mu, state_cov,
-                                                                              bound=self.args.max_action)
+        action_mean, action_cov, action_input_output_cov = policy.choose_action(state_mean, state_cov,
+                                                                                bound=self.args.max_action)
 
         # ------------------------------------------------
         # get joint dist p(x,u)
-        state_action_mu, state_action_cov, state_action_input_output_cov = self.get_joint_dist(state_mu, state_cov,
-                                                                                               action_mu.flatten(),
-                                                                                               action_cov,
-                                                                                               action_input_output_cov)
+        state_action_mean, state_action_cov, state_action_input_output_cov = get_joint_dist(state_mean, state_cov,
+                                                                                            action_mean,
+                                                                                            action_cov,
+                                                                                            action_input_output_cov)
 
         # ------------------------------------------------
         # compute delta and build next state dist
-        delta_mu, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mu,
-                                                                                            state_action_cov)
+        delta_mean, delta_cov, delta_input_output_cov = self.dynamics_model.predict_from_dist(state_action_mean,
+                                                                                              state_action_cov)
 
         # cross cov is times inv(s), see matlab code
         delta_input_output_cov = state_action_input_output_cov @ delta_input_output_cov
 
         # ------------------------------------------------
         # compute distribution over next state
-        state_next_mu = delta_mu + state_mu
+        state_next_mean = delta_mean + state_mean
         state_next_cov = delta_cov + state_cov + delta_input_output_cov + delta_input_output_cov.T
 
-        return state_next_mu, state_next_cov, action_mu, action_cov
+        return state_next_mean, state_next_cov, action_mean, action_cov
 
     def optimize_policy(self) -> None:
         """
@@ -358,7 +362,7 @@ class PILCO(object):
         state_prev = state_prev.flatten()
 
         if self.args.env_name == "Pendulum-v0":
-            theta = (np.arctan2(self.start_mu[1], self.start_mu[0]) + np.random.normal(0, .1, 1))[0]
+            theta = (np.arctan2(self.start_mean[1], self.start_mean[0]) + np.random.normal(0, .1, 1))[0]
             state_prev = np.array([np.cos(theta), np.sin(theta), 0])
             self.env.env.state = [theta, 0]
 
@@ -401,29 +405,6 @@ class PILCO(object):
 
         return x, y
 
-    def get_joint_dist(self, state_mu, state_cov, action_mu, action_cov, input_output_cov) -> tuple:
-        """
-        returns the joint gaussian distributions of state and action distributions
-        :param state_mu: mean of state distribution
-        :param state_cov: covariance of state distribution
-        :param action_mu: mean of action distribution
-        :param action_cov: covariance of action distribution
-        :param input_output_cov: input output covariance of state-action
-        :return: joint_mu, joint_cov, joint_input_output_cov
-        """
-
-        # compute joint Gaussian
-        joint_mu = np.concatenate([state_mu, action_mu])
-
-        # covariance has shape
-        # [[state mean, input_output_cov]
-        # [input_output_cov.T, action_cov]]
-        top = np.hstack((state_cov, input_output_cov))
-        bottom = np.hstack((input_output_cov.T, action_cov))
-        joint_cov = np.vstack((top, bottom))
-
-        return joint_mu, joint_cov, top
-
     def get_init_hyperparams(self) -> tuple:
         """
         Compute initial hyperparameters for dynamics GP
@@ -436,26 +417,25 @@ class PILCO(object):
 
         return length_scales, sigma_f, sigma_eps
 
-    def print_trajectory(self, mu_states, sigma_states, mu_actions, sigma_actions) -> None:
+    def print_trajectory(self, state_means, state_covs, action_means, action_covs) -> None:
 
         """
         Create plot for a given trajectory
-        :param mu_states: means of state trajectory
-        :param sigma_states: covariance of state trajectory
-        :param mu_actions: means of action trajectory
-        :param sigma_actions: covariance of action trajectory
+        :param state_means: means of state trajectory
+        :param state_covs: covariance of state trajectory
+        :param action_means: means of action trajectory
+        :param action_covs: covariance of action trajectory
         :return: None
         """
 
         # plot state trajectory
         for i in range(self.state_dim):
-            m = mu_states[:, i]
-            s = sigma_states[:, i, i]
+            m = state_means[:, i]
+            s = state_covs[:, i, i]
 
             x = np.arange(0, len(m))
             plt.errorbar(x, m, yerr=s, fmt='-o')
             plt.xlabel("rollout steps")
-            # plt.fill_between(x, m - s, m + s)
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
 
             if self.args.export_plots:
@@ -465,10 +445,9 @@ class PILCO(object):
             plt.show()
 
         # plot action trajectory
-        x = np.arange(0, len(mu_actions))
-        plt.errorbar(x, mu_actions, yerr=sigma_actions, fmt='-o')
+        x = np.arange(0, len(action_means))
+        plt.errorbar(x, action_means, yerr=action_covs, fmt='-o')
         plt.xlabel("rollout steps")
-        # plt.fill_between(x, mu_actions - sigma_actions, mu_actions + sigma_actions)
         plt.title("Trajectory prediction for actions")
         if self.args.export_plots:
             from matplotlib2tikz import save as tikz_save

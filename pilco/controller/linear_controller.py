@@ -6,16 +6,16 @@ from pilco.util.util import squash_action_dist
 
 class LinearController(Controller):
 
-    def __init__(self, state_dim: int, n_actions: int, W: np.ndarray = None, b: np.ndarray = None):
+    def __init__(self, state_dim: int, n_actions: int, weights: np.ndarray = None, bias: np.ndarray = None):
         """
         Linear controller
         :param state_dim: state dim of env
         :param n_actions: amount of actions required
-        :param W: Weight parameters
-        :param b: bias parameters
+        :param weights: Weight parameters
+        :param bias: bias parameters
         """
-        self.W = W if W else np.random.rand(state_dim, n_actions)
-        self.b = b if b else np.random.rand(1, n_actions)
+        self.weights = weights if weights else np.random.rand(state_dim, n_actions)
+        self.bias = bias if bias else np.random.rand(1, n_actions)
 
     def set_params(self, params: np.ndarray):
         """
@@ -23,31 +23,31 @@ class LinearController(Controller):
         :param params: flat ndarray of params
         :return: None
         """
-        idx = len(self.W.flatten())
-        self.W = params[:idx].reshape(self.W.shape)
-        self.b = params[idx:].reshape(self.b.shape)
+        idx = len(self.weights.flatten())
+        self.weights = params[:idx].reshape(self.weights.shape)
+        self.bias = params[idx:].reshape(self.bias.shape)
 
     def get_params(self):
         """
         get parameters of linear policy as flattened array
         :return: ndarray of flat [W,b]
         """
-        return np.concatenate([self.W.flatten(), self.b.flatten()])
+        return np.concatenate([self.weights.flatten(), self.bias.flatten()])
 
-    def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: np.ndarray = None) -> tuple:
+    def choose_action(self, mean: np.ndarray, cov: np.ndarray, bound: np.ndarray = None) -> tuple:
         """
         chooses action based on linear policy from given state distribution
-        :param mu: mean of state distribution
-        :param sigma: covariance of state distribution
+        :param mean: mean of state distribution
+        :param cov: covariance of state distribution
         :param bound: max action if required
-        :return: action_mu, action_cov, input_output_cov
+        :return: action_mean, action_cov, input_output_cov
         """
-        action_mu = mu @ self.W + self.b
-        action_sigma = self.W.T @ sigma @ self.W
-        action_input_output_cov = self.W
+        action_mean = mean @ self.weights + self.bias
+        action_cov = self.weights.T @ cov @ self.weights
+        action_input_output_cov = self.weights
 
         if bound is not None:
-            action_mu, action_sigma, action_input_output_cov = squash_action_dist(action_mu, action_sigma,
+            action_mean, action_cov, action_input_output_cov = squash_action_dist(action_mean, action_cov,
                                                                                   action_input_output_cov, bound)
 
-        return action_mu, action_sigma, action_input_output_cov
+        return action_mean, action_cov, action_input_output_cov

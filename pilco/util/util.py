@@ -76,36 +76,65 @@ def evaluate_policy(policy: Controller, env: gym.Env, n_runs: int = 100, max_act
                  f" +/- {lengths.std()}")
 
 
-def squash_action_dist(mu: np.ndarray, sigma: np.ndarray, input_output_cov: np.ndarray, bound: np.ndarray) \
+def squash_action_dist(mean: np.ndarray, cov: np.ndarray, input_output_cov: np.ndarray, bound: np.ndarray) \
         -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Rescales and squashes the distribution x with sin(x)
     See Deisenroth(2010) Appendix A.1 for mu of sin(x), where x~N(mu, sigma)
     :param bound: max action to take
-    :param mu: mean of action distribution
-    :param sigma: covariance of actions distribution
+    :param mean: mean of action distribution
+    :param cov: covariance of actions distribution
     :param input_output_cov: state action input out covariance
-    :return: mu_squashed, sigma_squashed, input_output_cov_squashed
+    :return: mean_squashed, cov_squashed, input_output_cov_squashed
     """
 
     # p(u)' is squashed distribution over p(u) scaled by action space values,
     # see Deisenroth (2010), page 46, 2a)+b) and Section 2.3.2
 
+    mean = np.atleast_2d(mean)
+    cov_diag = np.atleast_2d(np.diag(cov))
+    bound = np.atleast_2d(bound)
+
     # compute mean of squashed dist
-    mu_squashed = bound * np.exp(-sigma / 2) * np.sin(mu)
+    mean_squashed = bound * np.exp(-cov_diag / 2) * np.sin(mean)
+    mean_squashed = mean_squashed.flatten()
 
     # covar: E[sin(x)^2] - E[sin(x)]^2
-    sigma2 = -(sigma.T + sigma) / 2
+    sigma2 = -(cov_diag.T + cov_diag) / 2
     sigma2_exp = np.exp(sigma2)
-    sigma_squashed = ((np.exp(sigma2 + sigma) - sigma2_exp) * np.cos(mu.T - mu) -
-                      (np.exp(sigma2 - sigma) - sigma2_exp) * np.cos(mu.T + mu))
-    sigma_squashed = np.dot(bound.T, bound) * sigma_squashed / 2
+    cov_squashed = ((np.exp(sigma2 + cov) - sigma2_exp) * np.cos(mean.T - mean) -
+                    (np.exp(sigma2 - cov) - sigma2_exp) * np.cos(mean.T + mean))
+    cov_squashed = np.dot(bound.T, bound) * cov_squashed / 2
 
     # compute input-output-covariance and squash through sin(x)
-    input_output_cov_squashed = np.diag((bound * np.exp(-sigma / 2) * np.cos(mu)).flatten())
+    input_output_cov_squashed = np.diag((bound * np.exp(-cov_diag / 2) * np.cos(mean)).flatten())
     input_output_cov_squashed = input_output_cov @ input_output_cov_squashed
 
-    return mu_squashed, sigma_squashed, input_output_cov_squashed
+    return mean_squashed, cov_squashed, input_output_cov_squashed
+
+
+def get_joint_dist(state_mean, state_cov, action_mean, action_cov, input_output_cov) -> tuple:
+    """
+    returns the joint gaussian distributions of state and action distributions
+    :param state_mean: mean of state distribution
+    :param state_cov: covariance of state distribution
+    :param action_mean: mean of action distribution
+    :param action_cov: covariance of action distribution
+    :param input_output_cov: input output covariance of state-action
+    :return: joint_mean, joint_cov, joint_input_output_cov
+    """
+
+    # compute joint Gaussian
+    joint_mean = np.concatenate([state_mean, action_mean])
+
+    # covariance has shape
+    # [[state mean, input_output_cov]
+    # [input_output_cov.T, action_cov]]
+    top = np.hstack((state_cov, input_output_cov))
+    bottom = np.hstack((input_output_cov.T, action_cov))
+    joint_cov = np.vstack((top, bottom))
+
+    return joint_mean, joint_cov, top
 
 
 def parse_args(args: list) -> argparse.Namespace:

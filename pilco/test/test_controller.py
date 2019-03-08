@@ -99,12 +99,12 @@ def test_set_params_linear():
     n_actions = 2
 
     linear = LinearController(n_actions=n_actions, state_dim=state_dim)
-    W = linear.W
-    b = linear.b
+    W = linear.weights
+    b = linear.bias
 
     linear.set_params(linear.get_params())
-    assert np.all(W == linear.W)
-    assert np.all(b == linear.b)
+    assert np.all(W == linear.weights)
+    assert np.all(b == linear.bias)
 
 
 def test_linear():
@@ -122,8 +122,8 @@ def test_linear():
     b = np.random.rand(1, n_actions)
 
     linear = LinearController(state_dim=state_dim, n_actions=n_actions)
-    linear.W = W
-    linear.b = b
+    linear.weights = W
+    linear.bias = b
 
     M, S, V = linear.choose_action(m, s, bound=bound)
 
@@ -147,20 +147,23 @@ def test_linear():
 
 def test_squash():
     np.random.seed(0)
-    n_actions = 1
+    n_actions = 2
 
-    mu = np.random.rand(1, n_actions)
+    mu = np.random.rand(n_actions)
     sigma = np.random.rand(n_actions, n_actions)
     sigma = sigma.dot(sigma.T)
     i_o_cov = np.ones(mu.T.shape)
-    e = np.array([7.0])
+    bound = np.array([7.])
 
-    M, S, V = squash_action_dist(mu, sigma, i_o_cov, e)
+    M, S, V = squash_action_dist(mu, sigma, i_o_cov, bound)
 
-    M_mat, S_mat, V_mat = octave.gSin(mu.T, sigma, e, nout=3)
-    M_mat = np.atleast_2d([M_mat])
-    S_mat = np.atleast_2d(S_mat)
-    V_mat = np.atleast_2d(V_mat)
+    bound = bound.reshape(1, -1)
+    M_mat, S_mat, V_mat = octave.gSin(mu, sigma, bound, nout=3)
+    M_mat = np.asarray(M_mat)[:, 0]
+    # S_mat = np.atleast_2d(S_mat)
+    # V_mat = np.atleast_2d(V_mat)
+
+    V_mat = V_mat @ i_o_cov
 
     assert M.shape == M_mat.T.shape
     assert S.shape == S_mat.shape

@@ -28,21 +28,21 @@ class RBFController(MultivariateGP, Controller):
         MultivariateGP.__init__(self, x=x, y=y, length_scales=length_scales, n_targets=n_actions, sigma_f=sigma_f,
                                 sigma_eps=sigma_eps, container=RBFNetwork, is_policy=True)
 
-    def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: np.ndarray = None) -> tuple:
+    def choose_action(self, mean: np.ndarray, cov: np.ndarray, bound: np.ndarray = None) -> tuple:
         """
         choose an action based on the current RBF functions
-        :param mu: mean of state
-        :param sigma: covariance of state
+        :param mean: mean of state
+        :param cov: covariance of state
         :param bound: float for squashing action in [-bound, bound] or None when no squashing is needed
-        :return: action_mu, action_cov, input_output_cov
+        :return: action_mean, action_cov, input_output_cov
         """
-        action_mu, action_cov, input_output_cov = self.predict_from_dist(mu, sigma)
-
-        if bound is not None:
-            action_mu, action_cov, input_output_cov = squash_action_dist(action_mu, action_cov, input_output_cov, bound)
+        action_mean, action_cov, input_output_cov = self.predict_from_dist(mean, cov)
+        if bound:
+            action_mean, action_cov, input_output_cov = squash_action_dist(action_mean, action_cov, input_output_cov,
+                                                                           bound)
 
         # prediction of cross_cov from GP is cross_cov @ inv(sigma)
-        return action_mu, action_cov, sigma @ input_output_cov
+        return action_mean, action_cov, cov @ input_output_cov
 
     def set_params(self, params):
         # reset cached matrices when new params are added
@@ -51,7 +51,7 @@ class RBFController(MultivariateGP, Controller):
 
         for i, gp in enumerate(self.models):
             gp.unwrap_params(params[gp.length * i: gp.length * (i + 1)])
-            # computes beta and K_inv for updated hyperparams
+            # computes beta and K_inv for updated hyperparams of each GP model
             gp.compute_matrices()
 
     def get_params(self) -> np.ndarray:

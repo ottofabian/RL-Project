@@ -5,7 +5,7 @@ import autograd.numpy as np
 class Controller(ABC):
 
     @abstractmethod
-    def choose_action(self, mu: np.ndarray, sigma: np.ndarray, bound: np.ndarray = None) -> tuple:
+    def choose_action(self, mean: np.ndarray, cov: np.ndarray, bound: np.ndarray = None) -> tuple:
         pass
 
     @abstractmethod
