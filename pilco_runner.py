@@ -13,7 +13,6 @@ from pilco.util.util import parse_args, evaluate_policy, load_model
 
 
 def main():
-
     args = parse_args(sys.argv[1:])
 
     enable_color_logging(logging_lvl=logging.DEBUG, save_log=not args.no_log,
@@ -26,6 +25,11 @@ def main():
     show_cmd_args(args)
     env = gym.make(args.env_name)
 
+    # make sure that the dir ends with an "/"
+    if args.weight_dir:
+        if args.weight_dir[-1] != '/':
+            args.weight_dir += '/'
+
     if args.test:
         policy = load_model(f"{args.weight_dir}policy.p")
         evaluate_policy(policy, env, max_action=args.max_action, no_render=args.no_render)
@@ -37,11 +41,6 @@ def main():
 
         # load the models if "args.weight_dir" is given
         if args.weight_dir:
-            # make sure that the dir ends with an "/"
-            if args.weight_dir[-1] != '/':
-                args.weight_dir += '/'
-
-            # load the policy, dynamics models and stats to continue training
             pilco.load(args.weight_dir)
 
         pilco.run()
