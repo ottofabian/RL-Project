@@ -1,9 +1,8 @@
+import logging
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
-# code from https://github.com/ikostrikov/pytorch-a3c/blob/master/model.py
 
 
 def init_weights(m):
@@ -13,50 +12,6 @@ def init_weights(m):
         nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
         # nn.init.orthogonal_(m.weight.data, gain=1)
         # m.bias.data.fill_(0)
-
-
-# for loading stab policy:
-
-# init:
-#         n_hidden = 200
-#
-#         self.n_inputs = self.n_inputs
-#         self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
-#         self.mu = nn.Linear(n_hidden, self.n_outputs)
-#         self.sigma = nn.Linear(n_hidden, self.n_outputs)
-#
-#         self.apply(init_weights)
-#         self.train()
-
-# forward:
-# action_hidden = F.relu(self.hidden_action1(inputs))
-# mu = 5 * torch.tanh(self.mu(action_hidden))
-# sigma = F.softplus(self.sigma(action_hidden)) + 1e-5
-
-
-# swing up:
-
-# __init__
-# n_hidden = 64
-#
-# self.n_inputs = self.n_inputs
-# self.inputs = nn.Linear(self.n_inputs, n_hidden)
-# self.hidden_action1 = nn.Linear(n_hidden, n_hidden)
-# self.hidden_action2 = nn.Linear(n_hidden, n_hidden)
-# self.hidden_action3 = nn.Linear(n_hidden, n_hidden)
-# self.mu = nn.Linear(n_hidden, self.n_outputs)
-# self.sigma = nn.Linear(n_hidden, self.n_outputs)
-
-# forward:
-
-# x = x.float()
-#         x = F.relu(self.inputs(x))
-#         x = F.relu(self.hidden_action1(x))
-#         x = F.relu(self.hidden_action2(x))
-#         x = F.relu(self.hidden_action3(x))
-#         # mu = torch.from_numpy(self.action_space.high) * torch.tanh(self.mu(x))
-#         mu = 10 * torch.tanh(self.mu(x))
-#         sigma = F.softplus(self.sigma(x)) + 1e-5  # avoid 0
 
 
 class ActorNetwork(torch.nn.Module):
@@ -84,9 +39,9 @@ class ActorNetwork(torch.nn.Module):
 
         self.sigma = nn.Parameter(torch.zeros(self.n_outputs))
 
-        print(self.body)
-        print(self.mu)
-        print(self.sigma)
+        logging.info(self.body)
+        logging.info(self.mu)
+        logging.info(self.sigma)
 
         self.apply(init_weights)
         self.train()

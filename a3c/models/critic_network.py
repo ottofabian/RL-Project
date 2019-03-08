@@ -1,9 +1,7 @@
+import logging
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
-
-# code from https://github.com/ikostrikov/pytorch-a3c/blob/master/model.py
 
 
 def init_weights(m):
@@ -13,27 +11,6 @@ def init_weights(m):
         nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
         # nn.init.orthogonal_(m.weight.data, gain=1)
         # m.bias.data.fill_(0)
-
-
-# for loading stab policy:
-
-# init:
-#         n_hidden = 200
-#
-#         self.n_inputs = self.n_inputs
-#         self.hidden_action1 = nn.Linear(self.n_inputs, n_hidden)
-#         self.hidden_action2 = nn.Linear(n_hidden, n_hidden)
-#         self.mu = nn.Linear(n_hidden, self.n_outputs)
-#         self.sigma = nn.Linear(n_hidden, self.n_outputs)
-#
-#         self.apply(init_weights)
-#         self.train()
-
-# forward:
-# action_hidden = F.relu(self.hidden_action1(inputs))
-# action_hidden = F.relu(self.hidden_action2(action_hidden))
-# mu = 5 * torch.tanh(self.mu(action_hidden))
-# sigma = F.softplus(self.sigma(action_hidden)) + 1e-5
 
 
 class CriticNetwork(torch.nn.Module):
@@ -55,7 +32,7 @@ class CriticNetwork(torch.nn.Module):
             nn.Linear(self.n_hidden, 1)
         )
 
-        print(self.model)
+        logging.info(self.model)
 
         self.apply(init_weights)
         self.train()
@@ -71,4 +48,3 @@ class CriticNetwork(torch.nn.Module):
         x = x.float()
 
         return self.model(x)
-
