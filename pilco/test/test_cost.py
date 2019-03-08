@@ -48,7 +48,7 @@ def test_trajectory_cost():
     n_targets = 2
 
     n_features_rbf = 100
-    e = np.array([10.0])
+    bound = np.array([10.0])
 
     horizon = 10
 
@@ -83,7 +83,7 @@ def test_trajectory_cost():
     args = parse_args([])
     args.start_cov = sigma
     args.start_state = mu.flatten()
-    args.max_action = e
+    args.max_action = bound
     args.env_name = "MountainCarContinuous-v0"
     args.features = n_features_rbf
     args.inducing_points = None
@@ -96,7 +96,7 @@ def test_trajectory_cost():
     A_dyn = np.random.rand(state_dim + n_actions, n_targets)
     Y0_dyn = np.sin(X0_dyn).dot(A_dyn) + 1e-3 * (np.random.rand(100, n_targets) - 0.5)
 
-    # set observed data set manually
+    # set "observed" data set manually
     pilco.state_action_pairs = X0_dyn
     pilco.state_delta = Y0_dyn
     pilco.state_dim = state_dim
@@ -144,7 +144,7 @@ def test_trajectory_cost():
     policy.p.hyp = hyp_rbf
     policy.p.inputs = X0_rbf
     policy.p.targets = Y0_rbf
-    policy.maxU = e
+    policy.maxU = bound
 
     # ---------------------------------------------------------------------------------------
 

@@ -89,7 +89,6 @@ def test_rollout():
     ss = sigma
 
     for i in range(horizon):
-        print(i)
         mm, ss, _, _ = pilco.rollout(policy=rbf, state_mean=mm.flatten(), state_cov=ss)
         M.append(mm)
         S.append(ss)

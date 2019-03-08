@@ -359,7 +359,7 @@ class PILCO(object):
 
         state_prev = self.env.reset()
         # [1,3] is returned and is reduced to 1D
-        state_prev = state_prev.flatten()
+        state_prev = state_prev
 
         if self.args.env_name == "Pendulum-v0":
             theta = (np.arctan2(self.start_mean[1], self.start_mean[0]) + np.random.normal(0, .1, 1))[0]
@@ -379,7 +379,7 @@ class PILCO(object):
             action = action.flatten()
 
             state, reward, done, _ = self.env.step(action)
-            state = state.flatten()
+            state = state
 
             # create history and new training instance
             x.append(np.append(state_prev, action))
