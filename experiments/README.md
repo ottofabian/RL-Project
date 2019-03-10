@@ -165,8 +165,8 @@ All experiments are with frequency 100Hz, if not stated otherwise.
 | [ ]  | BD          | baseline, n_features=25                                   | [ ]        | SparseGP  | 300               | 300              | 50      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,-1,0,0] | 1e-2 * I  |  1   | 300                      |    57.50    | 20       |             32.0h          |
 
 
-* [ ] solved in simulation
-* [ ] solved in Q-Lab (real world)
+* [-] solved in simulation
+* [-] solved in Q-Lab (real world)
 
 ## Qube-v0
 
@@ -183,7 +183,6 @@ All experiments are with frequency 100Hz, if not stated otherwise.
 | [x]  | QG          | baseline, weight=[1,1,0,0,0,0], n_features=100, n_inducing_points=500                                     | [-]        | SparseGP  | 500               | 500              | 50      | 0                | -np.inf        | 100        | 1        | Exponential  | [1,1,0,0,0,0] | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      |  0.00471    | 2        |  2.5h (run for 17h) |
 | [x]  | BD          | baseline, weight=[0,0,1,1,0,0], n_features=100, horizon=60                                                | [-]        | SparseGP  | 300               | 300              | 60      | 0                | -np.inf        | 100        | 1        | Exponential  | [0,0,1,1,0,0] | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      |    0.011    | 20       |  2.0h               |
 | [x]  | BD          | baseline, weight=[0,0,1,1,0,0], n_features=100                                                            | [-]        | SparseGP  | 300               | 300              | 50      | 0                | -np.inf        | 100        | 1        | Exponential  | [0,0,1,1,0,0] | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      |    0.011    | 20       | 12.0h               |
-| [ ]  | BD          | baseline, weight=[0,0,1,1,1,1], n_features=100                                                            | [ ]        | SparseGP  | 300               | 300              | 50      | 0                | -np.inf        | 100        | 1        | Exponential  | [0,0,1,1,1,1] | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      |    57.50    | 20       |    3d               |
 | [x]  | QG          | baseline, weight=[0,0,1,1,0,0], n_features=100, n_inducing_points=500, Qube-v1 with 100Hz                 | [-]        | SparseGP  | 500               | 500              | 50      | 0                | -np.inf        | 100        | 1        | Exponential  | [0,0,1,1,0,0] | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      |  0.06546    | 19       |  11h                |
 | [x]  | BD          | baseline, weight=[0,0,1,1,0,0], n_features=100, horizon=100                                               | [-]        | SparseGP  | 500               | 300              | 100     | 0                | -np.inf        | 100        | 1        | Exponential  | [0,0,1,1,0,0] | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      |    0.011    | 2        |    2d               |
 | [x]  | QG          | baseline, weight=[1,1,1,1,0,0], n_features=100, horizon=100, Qube-v1 with 100Hz                           | [-]        | SparseGP  | 300               | 300              | 100     | 0                | -np.inf        | 100        | 1        | Exponential  | [1,1,1,1,0,0] | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      |  0.01632    | 16       |  6h   (run for 8h)  |
@@ -196,7 +195,7 @@ All experiments are with frequency 100Hz, if not stated otherwise.
 
 
 
-* [ ] solved in simulation
-* [ ] solved in Q-Lab (real world)
+* [-] solved in simulation
+* [-] solved in Q-Lab (real world)
 
   
