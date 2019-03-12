@@ -407,15 +407,6 @@ class PILCO(object):
 
         self.save(rewards)
 
-        if len(x) < self.max_samples_test_run:
-            x = np.array(x)
-            y = np.array(y)
-        else:
-            idx = np.random.choice(range(0, len(x)), self.max_samples_test_run, replace=False)
-
-            x = np.array(x)[idx]
-            y = np.array(y)[idx]
-
         # define parameters for plotting
         estimated_state_means, estimated_state_covs, estimated_action_means, estimated_action_covs =\
             self.get_trajectory_estimates(self.policy)
@@ -425,6 +416,15 @@ class PILCO(object):
         # create plots for the rollouts
         self.print_trajectory(estimated_state_means, estimated_state_covs, estimated_action_means, estimated_action_covs,
                               actual_states, actual_actions)
+
+        if len(x) < self.max_samples_test_run:
+            x = np.array(x)
+            y = np.array(y)
+        else:
+            idx = np.random.choice(range(0, len(x)), self.max_samples_test_run, replace=False)
+
+            x = np.array(x)[idx]
+            y = np.array(y)[idx]
 
         return x, y
 
