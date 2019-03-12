@@ -1,5 +1,6 @@
 from abc import abstractmethod, ABC
 import autograd.numpy as np
+import pickle
 
 
 class Controller(ABC):
@@ -15,3 +16,11 @@ class Controller(ABC):
     @abstractmethod
     def get_params(self):
         pass
+
+    def save(self, save_dir) -> None:
+        """
+        pickle dumps the policy to hard drive
+        :param save_dir: directory where the policy will be saved
+        :return: None
+        """
+        pickle.dump(self, open(f"{save_dir}policy.p", "wb"))

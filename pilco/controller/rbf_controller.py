@@ -68,11 +68,3 @@ class RBFController(MultivariateGP, Controller):
         """
         raise ValueError("RBF policies cannot be optimized individually."
                          "Please use the optimization in the pilco class.")
-
-    def save(self, save_dir) -> None:
-        """
-        pickle dumps the policy to hard drive
-        :param save_dir: directory where the policy will be saved
-        :return: None
-        """
-        pickle.dump(self, open(f"{save_dir}policy.p", "wb"))
