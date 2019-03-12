@@ -19,6 +19,7 @@ from pilco.util.util import load_model, get_env, get_joint_dist
 
 # define the plotting style
 plt.style.use('seaborn-whitegrid')
+
 # avoid import optim issues
 quanser_robots
 
@@ -224,12 +225,44 @@ class PILCO(object):
 
         self.optimize_policy()
 
-    def compute_trajectory_cost(self, policy: Controller, print_trajectory: bool = False) -> float:
+    def get_trajectory_estimates(self, policy: Controller):
+        """
+        Returns the trajectory estimates using a rollout over the length of the horizon.
+        :param policy: policy, which decides on actions
+        :return: state_means_container, state_covs_container, action_means_container, action_covs_container
+        """
+
+        state_mean = self.start_mean
+        state_cov = self.start_cov
+
+        # container required plotting later on
+        state_means_container = []
+        state_covs_container = []
+        action_means_container = []
+        action_covs_container = []
+
+        state_means_container.append(state_mean)
+        state_covs_container.append(state_cov)
+
+        for t in range(self.args.horizon):
+            state_next_mean, state_next_cov, action_mean, action_cov = self.rollout(policy, state_mean, state_cov)
+
+            state_means_container.append(state_next_mean)
+            state_covs_container.append(state_next_cov)
+            action_means_container.append(action_mean)
+            action_covs_container.append(action_cov)
+
+            state_mean = state_next_mean
+            state_cov = state_next_cov
+
+        return np.array(state_means_container), np.array(state_covs_container), np.array(action_means_container),\
+               np.array(action_covs_container)
+
+    def compute_trajectory_cost(self, policy: Controller) -> float:
         """
         Compute predicted cost of on trajectory rollout using current policy and dynamics.
         This is used to optimize the policy
         :param policy: policy, which decides on actions
-        :param print_trajectory: print the resulting trajectory
         :return: cost of trajectory
         """
 
@@ -238,16 +271,6 @@ class PILCO(object):
 
         cost = 0
 
-        if print_trajectory:
-            # container required plotting later on
-            state_means_container = []
-            state_covs_container = []
-            action_means_container = []
-            action_covs_container = []
-
-            state_means_container.append(state_mean)
-            state_covs_container.append(state_cov)
-
         for t in range(self.args.horizon):
             state_next_mean, state_next_cov, action_mean, action_cov = self.rollout(policy, state_mean, state_cov)
 
@@ -255,18 +278,8 @@ class PILCO(object):
             l = self.loss.compute_loss(state_next_mean, state_next_cov)
             cost = cost + self.args.discount ** t * l.flatten()
 
-            if print_trajectory:
-                state_means_container.append(state_next_mean)
-                state_covs_container.append(state_next_cov)
-                action_means_container.append(action_mean)
-                action_covs_container.append(action_cov)
-
             state_mean = state_next_mean
             state_cov = state_next_cov
-
-        if print_trajectory:
-            self.print_trajectory(np.array(state_means_container), np.array(state_covs_container),
-                                  np.array(action_means_container), np.array(action_covs_container))
 
         return cost
 
@@ -326,7 +339,7 @@ class PILCO(object):
         self.policy.set_params(res.x)
 
         # Make one more run for plots
-        cost = self.compute_trajectory_cost(policy=self.policy, print_trajectory=True)
+        cost = self.compute_trajectory_cost(policy=self.policy)
 
         # increase trajectory length if below threshold cost
         if cost < self.args.cost_threshold:
@@ -343,7 +356,7 @@ class PILCO(object):
         self.policy.set_params(params)
 
         # cost of trajectory
-        return self.compute_trajectory_cost(self.policy, print_trajectory=False)
+        return self.compute_trajectory_cost(self.policy)
 
     def execute_test_run(self) -> tuple:
         """
@@ -403,6 +416,16 @@ class PILCO(object):
             x = np.array(x)[idx]
             y = np.array(y)[idx]
 
+        # define parameters for plotting
+        estimated_state_means, estimated_state_covs, estimated_action_means, estimated_action_covs =\
+            self.get_trajectory_estimates(self.policy)
+        actual_states = np.array(x[:self.args.horizon, :-1])
+        actual_actions = np.array(x[:self.args.horizon, -self.n_actions:])
+
+        # create plots for the rollouts
+        self.print_trajectory(estimated_state_means, estimated_state_covs, estimated_action_means, estimated_action_covs,
+                              actual_states, actual_actions)
+
         return x, y
 
     def get_init_hyperparams(self) -> tuple:
@@ -417,7 +440,8 @@ class PILCO(object):
 
         return length_scales, sigma_f, sigma_eps
 
-    def print_trajectory(self, state_means, state_covs, action_means, action_covs) -> None:
+    def print_trajectory(self, state_means, state_covs, action_means, action_covs,
+                         actual_states, actual_actions) -> None:
 
         """
         Create plot for a given trajectory
@@ -425,6 +449,8 @@ class PILCO(object):
         :param state_covs: covariance of state trajectory
         :param action_means: means of action trajectory
         :param action_covs: covariance of action trajectory
+        :param actual_states: actual states of the test run
+        :param actual_actions: actual action executed in the test run
         :return: None
         """
 
@@ -434,9 +460,11 @@ class PILCO(object):
             s = state_covs[:, i, i]
 
             x = np.arange(0, len(m))
-            plt.errorbar(x, m, yerr=s, fmt='-o')
+            plt.errorbar(x, m, yerr=s, fmt='-o', label='predicted rollout')
             plt.xlabel("rollout steps")
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
+            plt.plot(actual_states[:, i], label='actual rollout')
+            plt.legend()
 
             if self.args.export_plots:
                 from matplotlib2tikz import save as tikz_save
@@ -446,9 +474,12 @@ class PILCO(object):
 
         # plot action trajectory
         x = np.arange(0, len(action_means))
-        plt.errorbar(x, action_means, yerr=action_covs, fmt='-o')
+        plt.errorbar(x, action_means, yerr=action_covs, fmt='-o', label='predicted actions')
         plt.xlabel("rollout steps")
         plt.title("Trajectory prediction for actions")
+        plt.plot(actual_actions, label='actual actions')
+        plt.legend()
+
         if self.args.export_plots:
             from matplotlib2tikz import save as tikz_save
             tikz_save("./experiments/plots/action_trajectory" + str(self.plot_id) + ".tex")
