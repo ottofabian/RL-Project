@@ -407,6 +407,10 @@ class PILCO(object):
 
         self.save(rewards)
 
+        # convert x & y from lists into numpy arrays
+        x = np.array(x)
+        y = np.array(y)
+
         # define parameters for plotting
         estimated_state_means, estimated_state_covs, estimated_action_means, estimated_action_covs =\
             self.get_trajectory_estimates(self.policy)
@@ -417,10 +421,7 @@ class PILCO(object):
         self.print_trajectory(estimated_state_means, estimated_state_covs, estimated_action_means, estimated_action_covs,
                               actual_states, actual_actions)
 
-        if len(x) < self.max_samples_test_run:
-            x = np.array(x)
-            y = np.array(y)
-        else:
+        if len(x) > self.max_samples_test_run:
             idx = np.random.choice(range(0, len(x)), self.max_samples_test_run, replace=False)
 
             x = np.array(x)[idx]
