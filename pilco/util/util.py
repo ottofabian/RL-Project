@@ -215,14 +215,31 @@ def parse_args(args: list) -> argparse.Namespace:
 
     args = parser.parse_args(args)
 
+    # create dummy_env for parameter check
+    dummy_env = gym.make(args.env_name)
+
     # convert to numpy array if not "None" was given
     if args.max_action:
         args.max_action = np.array([args.max_action])
+    else:
+        # define default values for missing parameters
+        args.max_action = dummy_env.action_space.high
+
     if args.start_state:
+        if len(args.start_state) != len(dummy_env.observation_space.high):
+            raise Exception(f"Your defined start_state vector of length {len(args.start_state)} is inconsistent "
+                            f"with the environment state shape {len(dummy_env.observation_space.high)}")
         args.start_state = np.array(args.start_state)
     if args.target_state:
+        if len(args.target_state) != len(dummy_env.observation_space.high):
+            raise Exception(f"Your defined target_state vector of length {len(args.target_state)} is inconsistent "
+                            f"with the environment state shape {len(dummy_env.observation_space.high)}")
         args.target_state = np.array(args.target_state)
     if args.weights:
+        # check for env weight vector consistency
+        if len(args.weights) != len(dummy_env.observation_space.high):
+            raise Exception(f"Your defined weights vector of length {len(args.weights)} is inconsistent "
+                            f"with the environment state shape {len(dummy_env.observation_space.high)}")
         args.weights = np.diag(args.weights)
 
     # set default value for cost threshold
@@ -291,5 +308,8 @@ def parse_args(args: list) -> argparse.Namespace:
 
     if "RR" in args.env_name:
         args.no_render = True
+
+    # always close gym environments if they aren't used anymore
+    dummy_env.close()
 
     return args
