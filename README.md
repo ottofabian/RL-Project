@@ -1,13 +1,13 @@
 # Reinforcement Learning Project
 
-Technische Universität Darmstadt winter semester 2018/2019  <img align="right" src="resources/general/TU_logo.png" width="128">
+Technische Universität Darmstadt, Winter Semester 2018/2019  <img align="right" src="resources/general/TU_logo.png" width="128">
 
-Supervision: Jan Peters, Samuele Tosatto
+Supervision: [Jan Peters](https://www.ias.informatik.tu-darmstadt.de/Member/JanPeters), [Samuele Tosatto](https://www.ias.informatik.tu-darmstadt.de/Team/SamueleTosatto)
 
 
 ## Authors
-- Johannes Czech
-- Fabian Otto
+- [Johannes Czech](https://github.com/QueensGambit)
+- [Fabian Otto](https://github.com/BoboDance)
 
 ## Algorithms
 - [A3C](a3c/README.md)
