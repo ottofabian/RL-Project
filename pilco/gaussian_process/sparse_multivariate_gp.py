@@ -15,7 +15,7 @@ class SparseMultivariateGP(MultivariateGP):
     def __init__(self, x, y, n_targets, length_scales, sigma_f, sigma_eps, n_inducing_points: int, is_policy=False):
 
         """
-        Multivariate Gaussian Process Regression
+        Sparse Multivariate Gaussian Process Regression
         :param x: inputs [n_samples, state_dim]
         :param y: targets
         :param n_targets: amount of target, each dimension of data inputs requires one target
@@ -34,7 +34,12 @@ class SparseMultivariateGP(MultivariateGP):
     def make_models(self, length_scales: np.ndarray, sigma_f: np.ndarray, sigma_eps: np.ndarray,
                     container: Union[Type[GaussianProcess], Type[RBFNetwork]]):
         """
-        Generate models for Sparse GP
+        generate models for Sparse GP
+        :param length_scales: length scale init for models
+        :param sigma_f: signal variance init for models
+        :param sigma_eps: noise variance init for models
+        :param container: container type, depending if this is a rbf policy or a dynamics model
+        :return: None
         """
 
         # generate same initial inducing points for all GPs as subset of all given points
@@ -77,10 +82,13 @@ class SparseMultivariateGP(MultivariateGP):
 
         Kmm_cho = np.linalg.cholesky(Kmm)
 
+        # inv(sqrt(Kmm)) * Kmn
         Kmm_sqrt_inv_Kmn = np.stack(np.array([scipy.linalg.solve_triangular(Kmm_cho[i], Kmn[i], lower=True) for i in
-                                              range(target_dim)]))  # inv(sqrt(Kmm)) * Kmn
+                                              range(target_dim)]))
         G = np.exp(2 * self.sigma_f()) - np.sum(Kmm_sqrt_inv_Kmn ** 2, axis=1)
-        G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))  # this can be nan when no contraints are used for optimizing
+
+        # this can be nan when no contraints are used for optimizing
+        G = np.sqrt(1. + G / np.exp(2 * self.sigma_eps()))
         Kmm_sqrt_inv_Kmn_scaled = Kmm_sqrt_inv_Kmn / G[:, None]
 
         Am = np.linalg.cholesky(np.stack(np.array(
@@ -88,7 +96,8 @@ class SparseMultivariateGP(MultivariateGP):
                 2 * self.sigma_eps()[i]) for i
              in range(target_dim)])))
 
-        sig_B_cho = Kmm_cho @ Am  # chol(sig*B) Deisenroth(2010)
+        # chol(sig*B) Deisenroth(2010)
+        sig_B_cho = Kmm_cho @ Am
         sig_B_cho_inv = np.stack(np.array(
             [scipy.linalg.solve_triangular(sig_B_cho[i], np.identity(induced_dim), lower=True) for i in
              range(target_dim)]))
@@ -108,7 +117,7 @@ class SparseMultivariateGP(MultivariateGP):
         self.K_inv = np.stack(
             np.array([np.linalg.solve(Kmm[i], np.identity(induced_dim)) for i in range(target_dim)])) - B_inv
 
-    def optimize(self):
+    def optimize(self) -> None:
         """
         optimizes the hyperparameters for all sparse gaussian process models
         :return: None
