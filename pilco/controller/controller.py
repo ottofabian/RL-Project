@@ -17,7 +17,7 @@ class Controller(ABC):
     def get_params(self):
         pass
 
-    def save(self, save_dir) -> None:
+    def save_policy(self, save_dir) -> None:
         """
         pickle dumps the policy to hard drive
         :param save_dir: directory where the policy will be saved

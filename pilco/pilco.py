@@ -541,7 +541,7 @@ class PILCO(object):
             except OSError:
                 print(f"Creation of the directory {save_dir} failed")
 
-            self.policy.save(save_dir)
+            self.policy.save_policy(save_dir)
             self.dynamics_model.save(save_dir)
             self._save_data(save_dir)
 
