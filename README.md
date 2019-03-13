@@ -46,10 +46,16 @@ The following is required for PILCO Test cases:
 
 We also offer to install all required packages directly through our [anaconda environment export](./conda_env.yaml).
 
+For creating a new [anaconda](https://anaconda.org/anaconda/python) environment based on a YML-file use:
+```
+conda env create --name NAME --file FILE
+```
+
 ## Experiments
 We added a small subset of experiment runs, which we found useful in order to get a better feeling for hyper-parameters and the algorithm in general. 
 This allows to compare different hyper-parameter settings, performance and samples efficiency.
-More details [here](./experiments/README.md).  
+
+More details can be found [here](./experiments/README.md).  
 In order to run experiments with [A3C](a3c/README.md) or [PILCO](pilco/README.md), please check the corresponding README.
 
 
