@@ -1,8 +1,9 @@
 # Reinforcement Learning Project
-Technische Universität Darmstadt winter semester 2018/2019  
+
+Technische Universität Darmstadt winter semester 2018/2019  <img align="right" src="resources/general/TU_logo.png" width="128">
+
 Supervision: Jan Peters, Samuele Tosatto
 
-<img align="right" src="./resources/general/TU_logo.png">
 
 ## Authors
 - Johannes Czech
