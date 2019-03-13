@@ -1,5 +1,8 @@
 # A3C - Asynchronous Advantage Actor-Critic 
 
+![PILCO_overview](../resources/a3c/general/a3c_schema.png)
+Image source: https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-8-asynchronous-actor-critic-agents-a3c-c88f72a5e9f2
+
 This is our implementation of A3C and the corresponding synchronous version A2C based on the paper [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783) from Mnih, et al.
 We also combined this with [General Advantage Estimation](https://arxiv.org/abs/1506.02438) as it has shown improved performance for policy gradient methods.   
 
@@ -33,7 +36,7 @@ python3 my/path/to/a3c_runner.py --help
 
 3) (Optional) Start tensorboard to monitor training progress
 ```bash
-tensorboard --logdir=./Experiments/runs 
+tensorboard --logdir=./experiments/runs 
 ```
 
 ## Executing evaluation run for existing policy

@@ -1,5 +1,7 @@
 # PILCO — Probabilistic Inference for Learning COntrol
 
+![PILCO_overview](../resources/pilco/media/general/pilco_schema.png)
+
 This is our implementation of [PILCO](http://mlg.eng.cam.ac.uk/pilco/) from Deisenroth, et al.  
 The implementation is largely based on the [matlab code](https://github.com/ICL-SML/pilco-matlab) and the [PhD thesis](https://www.google.de/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=2ahUKEwiR4sHA6ejgAhVSzaQKHaPRAt4QFjAAegQIChAB&url=https%3A%2F%2Fwww.ksp.kit.edu%2Fdownload%2F1000019799&usg=AOvVaw1zhWQ8A31UbT_oR7E2kP07) of Deisenroth. 
 
@@ -21,17 +23,17 @@ source activate my_env
 
 Training run from scratch:
 ```bash
-python3 my/path/to/PILCORunner.py
+python3 my/path/to/pilco_runner.py
 ```
 
 Training run from an existing policy:
 ```bash
-python3 my/path/to/PILCORunner.py --weight-dir my_model_directory
+python3 my/path/to/pilco_runner.py --weight-dir my_model_directory
 ```
 
 More console arguments (e.g. hyperparameter changes) can be added to the run, for details see
 ```bash
-python3 my/path/to/PILCORunner.py --help
+python3 my/path/to/pilco_runner.py --help
 ```
 
 ## Executing evaluation run for existing policy
@@ -42,5 +44,5 @@ source activate my_env
 
 2) Execute the [PILCORunner](../pilco_runner.py) script
 ```bash
-python3 my/path/to/PILCORunner.py --weight-dir my_model_directory --test
+python3 my/path/to/pilco_runner.py --weight-dir my_model_directory --test
 ```
