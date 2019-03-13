@@ -90,6 +90,20 @@ class PILCO(object):
         # test rendering
         self.test = args.test
 
+        # -----------------------------------------------------
+        # create plotting directory
+        if self.args.export_plots:
+            timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+            self.plot_dir = f"./experiments/plots/{timestamp}-{self.args.env_name}/"
+            logging.info(f"created directory for plots at: {self.plot_dir}")
+            try:
+                # create a directory where all models and data will be saved
+                os.mkdir(self.plot_dir)
+            except OSError:
+                print(f"Creation of the directory {self.plot_dir} failed")
+        else:
+            self.plot_dir = None
+
     def run(self) -> None:
         """
         start pilco training run
@@ -463,29 +477,29 @@ class PILCO(object):
             s = state_covs[:, i, i]
 
             x = np.arange(0, len(m))
-            plt.errorbar(x, m, yerr=s, fmt='-o', label='predicted rollout')
+            plt.errorbar(x, m, yerr=s, fmt='-o', label='predicted rollout', zorder=0)
             plt.xlabel("rollout steps")
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
-            plt.plot(actual_states[:, i], label='actual rollout')
+            plt.plot(actual_states[:, i], label='actual rollout', zorder=1)
             plt.legend()
 
             if self.args.export_plots:
                 from matplotlib2tikz import save as tikz_save
-                tikz_save("./experiments/plots/state_trajectory" + str(self.plot_id) + str(i) + ".tex")
+                tikz_save(self.plot_dir + "state_trajectory_" + str(self.plot_id) + str(i) + ".tex")
 
             plt.show()
 
         # plot action trajectory
         x = np.arange(0, len(action_means))
-        plt.errorbar(x, action_means, yerr=action_covs, fmt='-o', label='predicted actions')
+        plt.errorbar(x, action_means, yerr=action_covs, fmt='-o', label='predicted actions', zorder=0)
         plt.xlabel("rollout steps")
         plt.title("Trajectory prediction for actions")
-        plt.plot(actual_actions, label='actual actions')
+        plt.plot(actual_actions, label='actual actions', zorder=1)
         plt.legend()
 
         if self.args.export_plots:
             from matplotlib2tikz import save as tikz_save
-            tikz_save("./experiments/plots/action_trajectory" + str(self.plot_id) + ".tex")
+            tikz_save(self.plot_dir + "action_trajectory_" + str(self.plot_id) + ".tex")
 
         plt.show()
 

@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABC
 import autograd.numpy as np
-import pickle
+import dill as pickle
 
 
 class Controller(ABC):
