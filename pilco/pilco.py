@@ -478,11 +478,11 @@ class PILCO(object):
 
             x = np.arange(0, len(m))
             plt.fill_between(x, m-s, m+s, alpha=.3, zorder=0)
-            plt.plot(x, m, '-o', label='predicted rollout', zorder=1)
+            plt.plot(x, m, '-', label='predicted rollout', zorder=1)
 
             plt.xlabel("rollout steps")
             plt.title("Trajectory prediction for {}".format(self.state_names[i]))
-            plt.plot(actual_states[:, i], '-o', label='actual rollout', zorder=2)
+            plt.plot(actual_states[:, i], '-', label='actual rollout', zorder=2)
             plt.legend()
 
             if self.args.export_plots:
@@ -495,11 +495,11 @@ class PILCO(object):
         x = np.arange(0, len(action_means))
         plt.fill_between(x, action_means.flatten()-action_covs.flatten(), action_means.flatten()+action_covs.flatten(),
                          alpha=.3, zorder=0)
-        plt.plot(x, action_means, '-o', label='predicted actions', zorder=1)
+        plt.plot(x, action_means, '-', label='predicted actions', zorder=1)
 
         plt.xlabel("rollout steps")
         plt.title("Trajectory prediction for actions")
-        plt.plot(actual_actions, '-o', label='actual actions', zorder=2)
+        plt.plot(actual_actions, '-', label='actual actions', zorder=2)
         plt.legend()
 
         if self.args.export_plots:
