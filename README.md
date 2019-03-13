@@ -2,6 +2,8 @@
 Technische Universität Darmstadt winter semester 2018/2019  
 Supervision: Jan Peters, Samuele Tosatto
 
+<img align="right" src="./resources/general/TU_logo.png">
+
 ## Authors
 - Johannes Czech
 - Fabian Otto
