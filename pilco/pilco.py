@@ -118,6 +118,8 @@ class PILCO(object):
             self.state_action_pairs = np.append(self.state_action_pairs, x_test, axis=0)
             self.state_delta = np.append(self.state_delta, y_test, axis=0)
 
+        self.env.close()
+
     def sample_inital_data_set(self, n_init: int) -> None:
         """
         sample dataset with random actions
