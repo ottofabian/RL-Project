@@ -423,17 +423,16 @@ def parse_args(args: list) -> argparse.Namespace:
     parser.add_argument('--monitor', default=False, action='store_true',
                         help='Enables monitoring with video capturing of the test worker. (default: False)')
 
+    args = parser.parse_args(args)
+
     # create dummy_env for parameter check
     dummy_env = gym.make(args.env_name)
 
-    # convert to numpy array if not "None" was given
-    if args.max_action:
-        args.max_action = np.array([args.max_action])
-    else:
+    if not args.max_action:
         # define default values for missing parameters
-        args.max_action = dummy_env.action_space.high
+        args.max_action = dummy_env.action_space.high[0]
 
     # always close gym environments if they aren't used anymore
     dummy_env.close()
 
-    return parser.parse_args(args)
+    return args
