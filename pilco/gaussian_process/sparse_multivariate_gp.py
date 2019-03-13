@@ -52,10 +52,10 @@ class SparseMultivariateGP(MultivariateGP):
 
             # set constraints for length scales and signal noise
             # as we cannot optimize the penalized likelihood with GPy.
-            # model.kern.lengthscale.constrain_bounded(0, 300)
-            # model.likelihood.variance.constrain_bounded(1e-15, 1e-3)
-            model.likelihood.variance = 1e-3
-            model.likelihood.variance.fix()
+            model.kern.lengthscale.constrain_bounded(0, 300)
+            model.likelihood.variance.constrain_bounded(1e-15, 1e-3)
+            # model.likelihood.variance = 1e-3
+            # model.likelihood.variance.fix()
             # prior = GPy.priors.gamma_from_EV(0.5, 1)
             # gp.kern.lengthscale.set_prior(prior, warning=False)
 
