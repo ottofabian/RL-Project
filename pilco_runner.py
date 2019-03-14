@@ -9,7 +9,7 @@ from pilco.cost_function.saturated_loss import SaturatedLoss
 from pilco.pilco import PILCO
 import time
 
-from pilco.util.util import parse_args, evaluate_policy, load_model
+from pilco.util.util import parse_args, evaluate_policy, load_model, get_env
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
 
     # show given cmd-parameters
     show_cmd_args(args)
-    env = gym.make(args.env_name)
+    env = get_env(args.env_name, args.monitor)
 
     # make sure that the dir ends with an "/"
     if args.weight_dir:
@@ -33,9 +33,10 @@ def main():
     if args.test:
         policy = load_model(f"{args.weight_dir}policy.p")
         evaluate_policy(policy, env, max_action=args.max_action, no_render=args.no_render)
-
+        env.close()
     else:
         state_dim = env.observation_space.shape[0]
+        env.close()
         loss = SaturatedLoss(state_dim=state_dim, target_state=args.target_state, weights=args.weights)
         pilco = PILCO(args, loss=loss)
 

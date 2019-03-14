@@ -21,8 +21,8 @@ def get_env(env_name, monitor=False):
         env = quanser_robots.GentlyTerminating(gym.make(env_name))
     else:
         if monitor:
-            env = Monitor(gym.make(env_name), '100_test_runs', video_callable=lambda count: count % 100 == 0,
-                          force=True)
+            env = Monitor(gym.make(env_name), 'experiments/100_test_runs',
+                          video_callable=lambda count: count % 100 == 0, force=True)
         else:
             # use the official gym env as default
             env = gym.make(env_name)
