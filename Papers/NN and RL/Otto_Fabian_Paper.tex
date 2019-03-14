@@ -143,22 +143,20 @@
     \section{Neural Networks and their history}
     \label{sec:def}
     (see Sect.~\ref{sec:1}).
-    \cite{RefB} and \cite{RefJ}.
     Describe formally how NN are working, how can they be trained, what other methods do we have, etc.
     What did lead to the rise and fall of NNs throughout time.
     Create good transition to recent approaches.
 
 %    \section{Recent Approaches in Reinforcement Learning}
 %    \label{sec:recent}
-    \section{Algorithms}
-	    \label{sec:algo}
+    \section{Algorithms \label{sec:algo}}
+	    
 	    This section provides an overview of the current deep RL landscape including improvements and current state-of-the-art. 
 	    Most algorithms can be either classified as on-policy or off-policy algorithms.
 		On-policy algorithms estimate the value of policy while using it for control whereas off-policy algorithms, the generating policy, called \textit{behavior policy}, is not necessarily related to the \textit{target policy}, which is improved and evaluated.
 		This allows to use a deterministic target policy, while still sampling all actions through the behavior policy. \cite[chapter 5]{Sutton2018}
 		
- 	\subsection{Off-Policy}
-	\label{sec:off-policy}
+ 	\subsection{Off-Policy \label{sec:off-policy}}
 	One of the earlier off-policy algorithms, named \textit{neural fitted Q-iteration} (NFQ), was published by Riedmiller \cite{Riedmiller2005} in 2005. 
 	NFQ works model-free based on vanilla Q-Learning \cite{Watkins1989} and approximates the action-value function with a multilayer-perceptron.
 	Compared to other approaches at the time, NFQ allows to learn with a relatively good data efficiency.
@@ -178,7 +176,7 @@
 	In order to reduce the computational cost, DDQN utilizes the already existing online Q-network for determining the greedy policy and the target Q-network for estimating its value. 
 	Further, this allows to achieve better performance on most of the Atari games. 
 	Decoupling is also done in a more extreme form with \textit{Dueling Double DQNs} (DDDQN) \cite{Wang2016}. 
-	They introduce two separate function approximations, one for the state-value function and one for the state-dependent action-advantage function, in order to represent the action-value\footnote{Both estimators share parameters in the networks's convolutional part and are trained together end-to-end.}.
+	They introduce two separate function approximations, one for the state-value function and one for the state-dependent action-advantage function, in order to represent the action-value\footnote{Both estimators share parameters in the network's convolutional part and are trained together end-to-end.}.
 	These estimators allow the dueling architecture to learn about the value of a state regardless of the action taken. 
 	This is especially important when the action has no repercussions about the near future. 
 	Combining DDQN with gradient clipping and \textit{prioritized experience replay} (PER) \cite{Schaul2015} shows that sampling rare experiences with a higher probability makes learning with replay memories more efficient \cite{Lin1992}. 
@@ -208,7 +206,7 @@
 	Albeit, this stability is, according to Haaranoja, et al. \cite{Haarnoja2018}, extremely difficult to achieve and further, DDPG is brittle to hyperparameter choices. 
 	As consequence, Haaranoja, et al. present soft actor critic (SAC) \cite{Haarnoja2018}.
 	They combine the AC approach from DDPG \cite{Lillicrap2016} with maximum entropy reinforcement learning, which enables exploration and stability. 
-	Similarly to NAF \cite{Gu2016}, they also approach the problem of sample efficiency and gain significant improvements compared DDPG and other on-policy methods.
+	Similarly to NAF \cite{Gu2016}, they also approach the problem of sample efficiency and gain significant improvements compared DDPG and several on-policy methods.
 	In general they also found modeling the state-value function and the action-value function with two separate NNs improved the stability of SAC. 
 	\textit{Twin delayed DDPG} (TD3) \cite{Fujimoto2018} was developed in parallel to SAC and continues to addresses the hyperparameter sensitivity, but further shows that overestimation of the action-value function is also a pressing issue for AC methods. 
 	However, for the continuous actions space the approach of DDQN \cite{VanHasselt2016} is not easily applicable.
@@ -217,7 +215,7 @@
 	Policy smoothing, similar to expected SARSA \cite{VanSeijen2009}, adds noise to the target action, which avoids exploiting Q-function errors and brings action-values of similar actions closer together.
 	The most important improvement, however, are delayed updates, i.e. the policy network as well as the target networks are updated less frequently than the Q-network.
 	This reduces the risk of optimizing the policy based on incorrect value estimates and hence the policy is less likely to diverge.	
-	Building upon the idea of entropy reinforcement learning from SAC, Maximum a-posteriori policy optimization (MPO) \cite{Abdolmaleki2018} transforms the RL problem in an inference problem, which allows them to utilize expectation maximization (EM) for training, while optimizing a relative-entropy objective.
+	Building upon the idea of entropy reinforcement learning from SAC, Maximum a-Posteriori policy optimization (MPO) \cite{Abdolmaleki2018} transforms the RL problem in an inference problem, which allows them to utilize expectation maximization (EM) for training, while optimizing a relative-entropy objective.
 	Combining DDPG with distributed actors, such as the on-policy \textit{asynchronous advantage actor critic} (A3C) \cite{Mnih2016}, and a distributional value estimate \cite{Bellemare2017} results in \textit{Distributional Distributed DDPG} (D4PG) \cite{Barth-Maron2018}.
 	A3C also has an off-policy counterpart \textit{actor-critic with experience replay} (ACER) \cite{Wang2017}, which outperforms A3C by significant margin regarding performance and sample efficiency. 
 	This is achieved by Retrace \cite{Munos2016} Q-value estimation, which reduces the bias of policy gradient estimates, whereas truncated importance weights help to reduce variance.
