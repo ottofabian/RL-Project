@@ -2,7 +2,9 @@ This is BibTeX, Version 0.99d (TeX Live 2017/Debian)
 Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
 The top-level auxiliary file: Otto_Fabian_Paper.aux
 The style file: spmpsci.bst
-Database file #1: library.bib.bib
+get.bbl.editor is an unknown function---line 497 of file spmpsci.bst
+get.bbl.editor is an unknown function---line 820 of file spmpsci.bst
+Database file #1: library2.bib.bib
 Warning--I didn't find a database entry for "RefB"
 Warning--I didn't find a database entry for "RefJ"
 Warning--I didn't find a database entry for "Pollack1997"
@@ -14,44 +16,44 @@ Warning--empty journal in Martens2015
 Warning--empty journal in Schulman2017
 Warning--empty journal in Silver2017
 You've used 45 entries,
-            2968 wiz_defined-function locations,
-            958 strings with 18863 characters,
-and the built_in function-call counts, 31179 in all, are:
-= -- 2634
-> -- 1523
+            2966 wiz_defined-function locations,
+            951 strings with 18402 characters,
+and the built_in function-call counts, 28807 in all, are:
+= -- 2570
+> -- 1209
 < -- 23
-+ -- 716
-- -- 531
-* -- 2096
-:= -- 4074
++ -- 582
+- -- 445
+* -- 1892
+:= -- 3808
 add.period$ -- 103
 call.type$ -- 45
 change.case$ -- 495
 chr.to.int$ -- 0
 cite$ -- 52
-duplicate$ -- 2367
-empty$ -- 2315
-format.name$ -- 576
-if$ -- 6598
+duplicate$ -- 2187
+empty$ -- 2229
+format.name$ -- 482
+if$ -- 6142
 int.to.chr$ -- 0
 int.to.str$ -- 45
-missing$ -- 557
+missing$ -- 471
 newline$ -- 229
-num.names$ -- 106
-pop$ -- 1232
+num.names$ -- 90
+pop$ -- 1080
 preamble$ -- 1
 purify$ -- 398
 quote$ -- 0
-skip$ -- 878
+skip$ -- 840
 stack$ -- 0
 substring$ -- 1225
-swap$ -- 1375
+swap$ -- 1187
 text.length$ -- 23
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 178
 warning$ -- 7
-while$ -- 181
+while$ -- 173
 width$ -- 47
 write$ -- 549
-(There were 10 warnings)
+(There were 2 error messages)

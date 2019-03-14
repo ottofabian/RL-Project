@@ -53,14 +53,19 @@ class SparseMultivariateGP(MultivariateGP):
             model = GPy.models.SparseGPRegression(X=self.x, Y=self.y[:, i:i + 1], kernel=kernel, Z=z)
 
             # set noise variance
-            model.likelihood.noise = np.exp(sigma_eps[i])
+            model.likelihood.variance = np.exp(sigma_eps[i])
 
             # set constraints for length scales and signal noise
             # as we cannot optimize the penalized likelihood with GPy.
+            # model.kern.lengthscale.constrain_bounded(0, 10000)
             model.kern.lengthscale.constrain_bounded(0, 300)
             model.likelihood.variance.constrain_bounded(1e-15, 1e-3)
-            # model.likelihood.variance = 1e-3
+
+            # make signal variance untrainable
+            # model.likelihood.variance = 1e-4
             # model.likelihood.variance.fix()
+
+            # Optionally set priors
             # prior = GPy.priors.gamma_from_EV(0.5, 1)
             # gp.kern.lengthscale.set_prior(prior, warning=False)
 

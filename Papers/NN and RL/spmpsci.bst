@@ -407,9 +407,9 @@ FUNCTION {format.names}
       't :=
 	nameptr #1 >
 		 {
-		  nameptr #6
+		  nameptr #3
 		  #1 + =
-		  numnames #7
+		  numnames #3
 		  > and
 		    { "others" 't :=
 		      #1 'namesleft := }
@@ -486,7 +486,8 @@ FUNCTION {format.names.ed}
 FUNCTION {format.authors}
 { author "author" format.names
 }
-FUNCTION {get.bbl.editor}
+FUNCTION {get.bbl.
+}
 { editor num.names$ #1 > 'bbl.editors 'bbl.editor if$ }
 
 FUNCTION {format.editors}
