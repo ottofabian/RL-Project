@@ -4,7 +4,7 @@
 This Readme contains systematic experiments for both algorithms and all three platforms. 
 It allows to show the effect of hyperparameters and other choice
 
-# A3C (Asynchronous Advantage Actor-Critic) / A2C 
+# Asynchronous Advantage Actor-Critic (A3C) / Advantage Actor-Critic (A2C)
 
 We changed the default environment episode length from 10,000 to 5,000 in order to avoid computational overhead.
 For stabilization there was no advantage of training with longer episode length in the final policy.
@@ -114,7 +114,7 @@ environment boundaries.
 * [-] solved in Q-Lab (real world)
 
 
-# PILCO
+# Probabilistic Inference for Learning COntrol(PILCO)
 
 ## Pendulum-v0 Stabilization
 
