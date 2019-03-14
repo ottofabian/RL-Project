@@ -7,8 +7,7 @@ This is our implementation of [PILCO](http://mlg.eng.cam.ac.uk/pilco/) from Deis
 The implementation is largely based on the [matlab code](https://github.com/ICL-SML/pilco-matlab) and the [PhD thesis](https://www.google.de/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=2ahUKEwiR4sHA6ejgAhVSzaQKHaPRAt4QFjAAegQIChAB&url=https%3A%2F%2Fwww.ksp.kit.edu%2Fdownload%2F1000019799&usg=AOvVaw1zhWQ8A31UbT_oR7E2kP07) of Deisenroth. 
 Other cool implementations can be found [here](https://github.com/nrontsis/PILCO) and [here](https://github.com/cryscan/pilco-learner).  
 
-
-Our code structure is defined as follows:
+## Code structure
 - [controller](./controller): Controller/policy models.
 - [cost_functions](./cost_function): Cost functions for computing a trajectory's performance.
 - [gaussian_process](./gaussian_process): (Sparse) Gaussian Process models for learning dynamics and RBF policy. 
