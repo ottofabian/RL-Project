@@ -43,8 +43,8 @@ environment boundaries.
 | [ ]  | QG,L        | baseline, lr-scheduler=Step                 | [ ]        | A2C  | 1e-4   | 1e-3    | FALSE      | 0.5             | 0.99   |0.99 | 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | XXXXXXX - XXXXXXX         | XXXXXXX - XXXXXXXXXX | XXXXXXX - XXXXXXXXXX      |
 | [x]  | QG,L        | baseline, normalizer=MeanStd                | [-]        | A2C  | 1e-4   | 1e-3    | FALSE      | 0.5             | 0.99   |0.99 | 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    |           8718.84         |           41,237,800 |          04h 31m 44s      |
 
-* [x] solved in simulation 
-* [x] solved in Q-Lab (real world) [2018.12.20]
+[x] solved in simulation  
+[x] solved in Q-Lab (real world)  
 
  _Our learnt policy was able to stabilize the pole on the first trial.
  We set our maximum action to +/- 10. This resulted in a rather rough policy where the cartpole robot needed to correct
@@ -83,8 +83,8 @@ environment boundaries.
 | [x]  | QG          | baseline, discount=0.95                                           | [-]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.95   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-10    | None     | 5    | 6577.96                   | 68,255,750               | 07h 41m 06s (run for >8h)  |
 | [x]  | QG          | baseline, n_envs=10                                               | [x]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-10    | None     | 10   | 9520.90                   | 51,354,390               | 04h 24m 43s                |
 
-* [x] solved in simulation
-* [-] solved for Q-Lab
+[x] solved in simulation  
+[-] solved for Q-Lab  
 
 ## Qube-v0 / a.k.a Furuta-Pendulum
 
@@ -107,21 +107,11 @@ environment boundaries.
 | [x]  | QG          | baseline, lr_critic=0.01                           | [-]        | A2C  | 0.0001 | 0.001   | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | 1.08                      | 49,770,560               | 06h 44m 04s (run for >22h) |
 | [x]  | QG          | baseline, lr_actor=0.001, lr_critic=0.01           | [-]        | A2C  | 0.001  | 0.01    | FALSE      | 0.5             | 0.99   | 0.99| 0.0001              | 1.0           | 1    |  1     | 50           | 5000             | TRUE           | adam    | None       | +/-5     | None     | 5    | 0.97                      | 99,799,195               | 13h 37m 25s (run for >17h) |
 
-
-* change rewards definition in clients.py
-
-* [x] solved in simulation 
-* [-] solved in Q-Lab (real world)
+[x] solved in simulation  
+[-] solved in Q-Lab (real world)  
 
 
-# Probabilistic Inference for Learning COntrol(PILCO)
-
-## Pendulum-v0 Stabilization
-
-Starting the pendulum always on top with slight random variance to avoid solving the environment without action. 
-
-* [ ] solved in simulation
-
+# Probabilistic Inference for Learning COntrol (PILCO)
 
 ## CartpoleStabShort-v0
 
@@ -145,8 +135,8 @@ All experiments are conducted with frequency 50Hz, if not stated otherwise.
 | [x]  | QG          | baseline, n_features=10                               | [-]        | SparseGP  | 300               | 300              | 40      | 0                | -np.inf        | 25         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,1,0,0] | 1e-2 * I  |  1   | 200                      | +/-5       | 4037.60     | 13       |             12h            |
 
 
-* [x] solved in simulation
-* [ ] solved in Q-Lab (real world)
+[x] solved in simulation  
+[ ] solved in Q-Lab (real world)  
 
 
 ## CartpoleSwingShort-v0
@@ -171,8 +161,8 @@ All experiments are with frequency 100Hz, if not stated otherwise.
 | [x]  | BD          | baseline, horizon=100, weight=[0,1,1,0,0], max-action=24                      | [-]        | SparseGP  | 300               | 300              | 100     | 0                | -np.inf        | 50         | 1        | Exponential  | [1,1,1,1,1]  | [0,0,-1,0,0] | 1e-2 * I  |  1   | 300                      |  +/-24     |   6.587     | 20       |             12.0h          |
 | [x]  | QG          | baseline, horizon=200, weight=[0,1,1,0,0], features=100                       | [-]        | SparseGP  | 300               | 300              | 200     | 0                | -np.inf        | 100        | 1        | Exponential  | [1,1,1,1,1]  | [0,0,-1,0,0] | 1e-2 * I  |  1   | 300                      |  +/-10     |   54.92     | 1        |   1.5d/6 episodes          |
 
-* [-] solved in simulation
-* [-] solved in Q-Lab (real world)
+[-] solved in simulation  
+[-] solved in Q-Lab (real world)  
 
 ## Qube-v0
 
@@ -222,7 +212,7 @@ These experiments where conducted with 100Hz.
 
 
 
-* [-] solved in simulation
-* [-] solved in Q-Lab (real world)
+[-] solved in simulation  
+[-] solved in Q-Lab (real world)  
 
   
