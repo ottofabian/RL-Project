@@ -178,6 +178,15 @@ All experiments are with frequency 100Hz, if not stated otherwise.
 
 These experiments where conducted with 50Hz.
 
+![PILCO_Qube](../resources/pilco/media/qube/pilco_qube.gif)
+
+0.34837 +/- 0.16579 total reward with episode length of 184.32 +/- 49.35340 for 100 consecutive test runs ([Monitor files](../resources/pilco/media/qube/openaigym.episode_batch.0.15256.stats.json))
+
+Command for reproducing: 
+```console
+python pilco_runner.py --env-name Qube-v0 --test --weight-dir experiments/best_models/pilco/qube/sparse_gp_100hz/
+```
+
 | done | contributor | comment                                                                                                   | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights  | start_mu      | start_cov | seed | max_samples_per_test_run | max-action | test reward | episodes | training time       |
 | ---- | ------------| --------------------------------------------------------------------------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------- | --------------| --------- | -----| ------------------------ | ---------- | ----------- | -------- | ------------------- |
 | [x]  | BD          | baseline, seed=1                                                                                          | [-]        | SparseGP  | 300               | 300              | 50      | 0                | -np.inf        | 50         | 1        | Exponential  | [1,1,1,1,1,1] | [1,0,1,0,0,0] | 1e-2 * I  |  1   | 300                      | +/-5       |   0.007    | 20       | 22.0h               |
