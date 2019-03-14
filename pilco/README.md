@@ -48,3 +48,20 @@ source activate my_env
 ```bash
 python3 my/path/to/pilco_runner.py --weight-dir my_model_directory --test
 ```
+
+e.g. load pretrained models in test mode:
+
+### CartpoleStabShort-v0 (500Hz)
+```bash
+python3 pilco_runner.py --env-name CartpoleStabShort-v0 --test --max-action 5 --weight-dir experiments/best_models/pilco/stabilization/sparse_gp_50hz/
+```
+
+### CartpoleSwingShort-v0 (500Hz)
+```bash
+python3 pilco_runner.py --env-name CartpoleSwingShort-v0 --test --max-action 10 --weight-dir experiments/best_models/pilco/swing_up/sparse_gp_100hz/
+```
+
+### Qube-v0 (50Hz)
+```bash
+python3 pilco_runner.py --env-name Qube-v0 --test --weight-dir experiments/best_models/pilco/qube/sparse_gp_100hz/
+```
