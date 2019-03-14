@@ -74,6 +74,8 @@ def evaluate_policy(policy: Controller, env: gym.Env, n_runs: int = 100, max_act
         logging.info(f"episode reward={rewards[i]}, episode length={lengths[i]}")
     logging.info(f"mean over {n_runs} runs: reward={rewards.mean()} +/- {rewards.std()}, length={lengths.mean()}"
                  f" +/- {lengths.std()}")
+    logging.info(f"best run: reward={rewards.max()}, length={lengths[rewards.argmax()]}")
+    logging.info(f"worst run: reward={rewards.min()}, length={lengths[rewards.argmin()]}")
 
 
 def squash_action_dist(mean: np.ndarray, cov: np.ndarray, input_output_cov: np.ndarray, bound: np.ndarray) \
