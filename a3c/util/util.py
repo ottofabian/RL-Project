@@ -342,6 +342,8 @@ def shape_reward(args, reward: np.ndarray, state):
     if args.scale_reward:
         reward *= args.scale_reward
 
+    return reward
+
 
 def parse_args(args: list) -> argparse.Namespace:
     """
@@ -351,72 +353,74 @@ def parse_args(args: list) -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(description='a3c')
     parser.add_argument('--env-name', default='CartpoleStabShort-v0',
-                        help='Name of the gym environment to use.'
-                             'All environments based on OpenAI\'s gym are supported.'
+                        help='Name of the gym environment to use. '
+                             'All environments based on OpenAI\'s gym are supported. '
                              '(default: CartpoleStabShort-v0)')
     parser.add_argument('--rollout-steps', type=int, default=50,
-                        help='Number of forward steps for n-step return (default: 50)')
+                        help='Number of forward steps for n-step return. (default: 50)')
     parser.add_argument('--max-action', type=float, default=None,
                         help='Maximum allowed action to use,'
-                             'if None the full available action range is used (default: None)')
+                             'if None the full available action range is used. (default: None)')
     parser.add_argument('--shared-model', default=False, action='store_true',
-                        help='Use shared network for actor and critic (default: False)')
+                        help='Use shared network for actor and critic. (default: False)')
     parser.add_argument('--lr', type=float, default=1e-4,
-                        help='learning rate for shared model or actor network (default: 1e-4)')
+                        help='learning rate for shared model or actor network. (default: 1e-4)')
     parser.add_argument('--lr-critic', type=float, default=1e-3,
-                        help='Separate critic learning rate, if no shared network is used (default: 1e-3)')
+                        help='Separate critic learning rate, if no shared network is used. (default: 1e-3)')
     parser.add_argument('--value-loss-weight', type=float, default=0.5,
                         help='Value loss coefficient, which defines the weighting between value and policy loss '
-                             'for shared model (default: 0.5)')
+                             'for shared model. (default: 0.5)')
     parser.add_argument('--discount', type=float, default=0.99,
-                        help='Discount factor for rewards (default: 0.99)')
+                        help='Discount factor for rewards. (default: 0.99)')
     parser.add_argument('--gae', default=True, action='store_true',
-                        help='Enable general advantage estimation (default: True)')
+                        help='Enable general advantage estimation. (default: True)')
     parser.add_argument('--tau', type=float, default=0.99,
-                        help='Adjusts the bias-variance tradeoff for GAE (default: 0.99)')
+                        help='Adjusts the bias-variance tradeoff for GAE. (default: 0.99)')
     parser.add_argument('--entropy-loss-weight', type=float, default=1e-4,
-                        help='Entropy term coefficient (default: 1e-4)')
+                        help='Entropy term coefficient. (default: 1e-4)')
     parser.add_argument('--max-grad-norm', type=float, default=1,
-                        help='Maximum gradient norm (default: 1)')
+                        help='Maximum gradient norm. (default: 1)')
     parser.add_argument('--seed', type=int, default=1,
-                        help='Random seed (default: 1)')
+                        help='Random seed. (default: 1)')
     parser.add_argument('--worker', type=int, default=1,
-                        help='Number of training workers/threads to use. If set to 1, A2C .'
-                             'For >1 a3c is used with the specified number of workers (default: 1)')
+                        help='Number of training workers/threads to use. If set to 1, A2C is used. '
+                             'For >1 A3C is used with the specified number of workers. (default: 1)')
     parser.add_argument('--n-envs', type=int, default=5,
-                        help='Number of environment for A2C (--worker 1) in one batch (default: 5)')
+                        help='Number of environment for A2C (--worker 1) in one batch. (default: 5)')
     parser.add_argument('--max-episode-length', type=int, default=5000,
-                        help='Maximum length of an episode (default: 5000)')
+                        help='Maximum length of an episode. (default: 5000)')
     parser.add_argument('--shared-optimizer', default=True, action='store_true',
-                        help='Use optimizer with shared statistics (default: True)')
+                        help='Use optimizer with shared statistics. (default: True)')
     parser.add_argument('--optimizer', type=str, default="adam",
-                        help='Type of optimizer, supported: [rmsprop, adam] (default: adam)')
+                        help='Type of optimizer, supported: [rmsprop, adam]. (default: adam)')
     parser.add_argument('--lr-scheduler', type=str, default=None,
-                        help='Type of learning rate scheduler to use, supported: [None, ExponentialLR] (default: None)')
+                        help='Type of learning rate scheduler to use, supported: [None, exponential]. (default: None)')
+    parser.add_argument('--lr-scheduler-step', type=int, default=50000,
+                        help='Number of steps before lr decay with gamma .99, (default: 50000)')
     parser.add_argument('--normalizer', type=str, default=None,
-                        help='Type of normalizer, supported: [None, MeanStd, MinMax] (default: None)')
+                        help='Type of normalizer, supported: [None, MeanStd, MinMax]. (default: None)')
     parser.add_argument('--test', default=False, action='store_true',
                         help='Start run without training (default: False)')
     parser.add_argument('--path', type=str, default=None,
-                        help='Weight location for the models to load (default: None)')
+                        help='Weight location for the models to load. (default: None)')
     parser.add_argument('--log-dir', type=str, default=None,
-                        help='Directory for monitor logging of each environment (default: None)')
+                        help='Directory for monitor logging of each environment. (default: None)')
     parser.add_argument('--no_log', default=False, action='store_true',
-                        help='Avoid exporting a log file to the log directory (default: False)')
+                        help='Avoid exporting a log file to the log directory. (default: False)')
     parser.add_argument('--log-frequency', default=100,
-                        help='Defines how often a sample is logged to tensorboard to avoid unnecessary bloating.'
+                        help='Defines how often a sample is logged to tensorboard to avoid unnecessary bloating. '
                              'If set to X every X metric sample will be logged. (default: 100)')
     parser.add_argument('--edge-fear-threshold', type=float, default=None,
-                        help='Threshold when crossed gives negative rewards to avoid suicidal policies.'
-                             'This reward shaping is meant for evaluation and not part of the original environment.'
+                        help='Threshold when crossed gives negative rewards to avoid suicidal policies. '
+                             'This reward shaping is meant for evaluation and not part of the original environment. '
                              '(default: False)')
     parser.add_argument('--squared-reward', default=False, action='store_true',
                         help='Manipulates the reward by squaring it.'
-                             'This reward shaping is meant for evaluation and not part of the original environment.'
+                             'This reward shaping is meant for evaluation and not part of the original environment. '
                              '(default: False)')
     parser.add_argument('--scale_reward', type=float, default=None,
                         help='Multiply reward by specified factor. '
-                             'This reward shaping is meant for evaluation and not part of the original environment.'
+                             'This reward shaping is meant for evaluation and not part of the original environment. '
                              '(default: None)')
     parser.add_argument('--no-render', default=False, action='store_true',
                         help='Disables rendering. (default: False)')

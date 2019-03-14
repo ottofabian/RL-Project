@@ -302,11 +302,11 @@ def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNet
                 # this is one for a3c and n for A2C (actually the lock is not needed for A2C)
                 T.value += args.n_envs
 
-            if lr_scheduler and worker_id == 0 and T.value % args.lr_schedule_step and global_iter != 0:
-                lr_scheduler.step(T.value / args.lr_schedule_step)
+            if lr_scheduler and worker_id == 0 and T.value % args.lr_scheduler_step and global_iter != 0:
+                lr_scheduler.step(T.value / args.lr_scheduler_step)
 
                 if lr_scheduler_critic:
-                    lr_scheduler_critic.step(T.value / args.lr_schedule_step)
+                    lr_scheduler_critic.step(T.value / args.lr_scheduler_step)
 
             state = torch.Tensor(state)
 

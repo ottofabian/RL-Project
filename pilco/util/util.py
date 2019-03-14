@@ -113,7 +113,8 @@ def squash_action_dist(mean: np.ndarray, cov: np.ndarray, input_output_cov: np.n
     return mean_squashed, cov_squashed, input_output_cov_squashed
 
 
-def get_joint_dist(state_mean, state_cov, action_mean, action_cov, input_output_cov) -> tuple:
+def get_joint_dist(state_mean, state_cov, action_mean, action_cov, input_output_cov) \
+        -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     returns the joint gaussian distributions of state and action distributions
     :param state_mean: mean of state distribution
@@ -140,74 +141,74 @@ def get_joint_dist(state_mean, state_cov, action_mean, action_cov, input_output_
 def parse_args(args: list) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='pilco')
     parser.add_argument('--env-name', default='CartpoleStabShort-v0',
-                        help='Name of the gym environment to use.'
-                             'Currently supported gym environments are:'
+                        help='Name of the gym environment to use. '
+                             'Currently supported gym environments are: '
                              '"Pendulum-v0", "CartpoleStabShort-v0", "CartpoleStabRR-v0", "CartpoleSwingShort-v0", '
-                             '"CartpoleSwingRR-v0", "Qube-v0", "QubeRR-v0"'
-                             'details. If you want to use a different gym environment you need to specify '
-                             '"--start-state" as well as "--target-state" (default: CartpoleStabShort-v0)')
+                             '"CartpoleSwingRR-v0", "Qube-v0", "QubeRR-v0". '
+                             'If you want to use a different gym environment you need to specify '
+                             '"--start-state" as well as "--target-state". (default: CartpoleStabShort-v0)')
     parser.add_argument('--seed', type=int, default=1,
-                        help='Random seed (default: 1)')
+                        help='Random seed. (default: 1)')
     parser.add_argument('--horizon', type=int, default=100,
-                        help='Number of steps for trajectory rollout (default: 100)')
+                        help='Number of steps for trajectory rollout. (default: 100)')
     parser.add_argument('--discount', type=float, default=1.0,
-                        help='Discount factor for rewards (default: 1.0)')
+                        help='Discount factor for rewards. (default: 1.0)')
     parser.add_argument('--policy', type=str, default="rbf",
-                        help='Type of policy to use, supported: "rbf", "linear" (default: rbf)')
+                        help='Type of policy to use, supported: ["rbf", "linear"]. (default: rbf)')
     parser.add_argument('--features', type=int, default=50,
-                        help='Number of features for RBF controller (default: 50)')
+                        help='Number of features for RBF controller. (default: 50)')
     parser.add_argument('--inducing-points', type=int, default=300,
-                        help='Number of inducing points to approximate GP,'
-                             'setting this to None results in using the full GP (default: 300)')
+                        help='Number of inducing points to approximate GP, '
+                             'setting this to None results in using the full GP. (default: 300)')
     parser.add_argument('--initial-samples', type=int, default=300,
-                        help='Number of initial samples for learning the dynamics before first policy optimization'
-                             ' (default: 300)')
+                        help='Number of initial samples for learning the dynamics before first policy optimization. '
+                             '(default: 300)')
     parser.add_argument('--max-samples-test-run', type=int, default=300,
-                        help='Maximum samples taken from one test episode. This is required to avoid running out of'
+                        help='Maximum samples taken from one test episode. This is required to avoid running out of '
                              'memory. (default: 300)')
     parser.add_argument('--weights', type=float, nargs="*", default=None,
-                        help='Weighting for each state feature in the saturated loss. If None is given then an identity'
-                             'matrix is used. If you want to disable certain features you can set them to 0, e.g. pass'
-                             '"--weights 0 1 1 0 0" for "CartpoleStabShort-v0" to only specify the loss for using'
-                             'the angle attributes. Make sure to use the same number of entries as there are state'
-                             'dimensions (default: None)')
+                        help='Weighting for each state feature in the saturated loss. If None is given then an '
+                             'identity matrix is used. If you want to disable certain features you can set them to 0, '
+                             'e.g. pass "--weights 0 1 1 0 0" for "CartpoleStabShort-v0" to only specify the loss for '
+                             'using the angle attributes. Make sure to use the same number of entries as there are '
+                             'state dimensions. (default: None)')
     parser.add_argument('--max-action', type=float, default=None,
-                        help='Maximum allowed action to use, if None then a predefined max action value for the'
-                             'environment will be used (default: None)')
+                        help='Maximum allowed action to use, if None then a predefined max action value for the '
+                             'environment will be used. (default: None)')
     parser.add_argument('--steps', type=int, default=20,
-                        help='Maximum number of learning steps until termination (default: 20)')
+                        help='Maximum number of learning steps until termination. (default: 20)')
     parser.add_argument('--cost-threshold', type=float, default=None,
-                        help='Specifies a threshold for the rollout cost. If cost is smaller than this value,'
-                             ' the rollout horizon is increased by "horizon_increase". If "None" is used then'
-                             '"cost-threshold" will be set to "-np.inf" (default: None)')
+                        help='Specifies a threshold for the rollout cost. If cost is smaller than this value, '
+                             'the rollout horizon is increased by "horizon_increase". If "None" is used then '
+                             '"cost-threshold" will be set to "-np.inf". (default: None)')
     parser.add_argument('--horizon-increase', type=float, default=0.25,
                         help='Specifies the rollout horizon\'s increase percentage after cost is smaller than'
-                             'cost-threshold (default: 0.25)')
+                             'cost-threshold. (default: 0.25)')
     parser.add_argument('--start-state', type=float, nargs="*", default=None,
                         help='Starting state which is used at the beginning of a trajectory rollout. If None is given '
-                             'then a predetermined starting state for the supported environment is used.'
+                             'then a predetermined starting state for the supported environment is used. '
                              'Arguments needs to be passed as a list e.g. pass "--start-state 0 0 1 0 0" for the '
                              '"CartpoleStabShort-v0" environment. (default: None)')
     parser.add_argument('--target-state', type=float, nargs="*", default=None,
                         help='Target state which should be reached. If None is given '
-                             'then a predetermined target state for the supported environment is used.'
+                             'then a predetermined target state for the supported environment is used. '
                              'Arguments needs to be passed as a list e.g. pass "--target-state 0 0 -1 0 0" for the '
                              '"CartpoleStabShort-v0" environment. (default: None)')
     parser.add_argument('--start-cov', type=float, default=1e-2,
-                        help='Covariance value of starting state, which is multiplied with the Identity matrix'
-                             'for trajectory rollout (default: 1e-2)')
+                        help='Covariance value of starting state, which is multiplied with the Identity matrix '
+                             'for trajectory rollout. (default: 1e-2)')
     parser.add_argument('--weight-dir', type=str, default=None,
-                        help='Directory for the weights:'
-                             ' "policy.p", "dynamics.p", "state-action.npy", "state-delta.npy"'
-                             ' If only testing is enabled you only need to include "policy.p" in the directory'
-                             ' (default: None)')
+                        help='Directory for the weights: '
+                             '"policy.p", "dynamics.p", "state-action.npy", "state-delta.npy". '
+                             'If only testing is enabled you only need to include "policy.p" in the directory. '
+                             '(default: None)')
     parser.add_argument('--test', default=False, action='store_true',
-                        help='Start run without training (default: False)')
+                        help='Start run without training. (default: False)')
     parser.add_argument('--no-log', default=False, action='store_true',
-                        help='Disables exports to a log file into the log directory if set to True (default: True)')
+                        help='Disables exports to a log file into the log directory if set to True. (default: True)')
     parser.add_argument('--export-plots', default=False, action='store_true',
-                        help='Exports the trajectory plots as latex TikZ figures into "./experiments/plots/".'
-                             ' You need to install "matplotlib2tikz" if set to True. (default: False)')
+                        help='Exports the trajectory plots as latex TikZ figures into "./experiments/plots/". '
+                             'You need to install "matplotlib2tikz" if set to True. (default: False)')
     parser.add_argument('--no-render', default=False, action='store_true',
                         help='Disables rendering. (default: False)')
     parser.add_argument('--monitor', default=False, action='store_true',

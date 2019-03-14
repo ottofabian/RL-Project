@@ -182,7 +182,7 @@ class MultivariateGP(object):
         :return: None
         """
 
-        # reset parameters of gps are changing
+        # reset cached matrices before optimizing
         self.K_inv = None
         self.beta = None
 
