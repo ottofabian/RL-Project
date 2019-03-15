@@ -50,13 +50,13 @@ class A3C(object):
         if self.args.shared_model:
             model = get_model(env=env, shared=self.args.shared_model, path=self.args.path, T=self.T,
                               global_reward=self.global_reward)
-            if self.args.shared_optimizer:
+            if not self.args.no_shared_optimizer:
                 optimizer = get_shared_optimizer(model=model, optimizer_name=self.args.optimizer, lr=self.args.lr,
                                                  path=self.args.path)
         else:
             model, model_critic = get_model(env=env, shared=self.args.shared_model, path=self.args.path, T=self.T,
                                             global_reward=self.global_reward)
-            if self.args.shared_optimizer:
+            if not self.args.no_shared_optimizer:
                 optimizer, critic_optimizer = get_shared_optimizer(model=model, optimizer_name=self.args.optimizer,
                                                                    lr=self.args.lr, path=self.args.path,
                                                                    model_critic=model_critic,
