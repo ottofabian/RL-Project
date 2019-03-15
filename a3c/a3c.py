@@ -66,12 +66,10 @@ class A3C(object):
         lr_scheduler = None
         lr_scheduler_critic = None
 
-        if self.args.lr_scheduler == "exponential":
+        if not self.args.no_shared_optimizer and self.args.lr_scheduler == "exponential":
             lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
             if critic_optimizer:
                 lr_scheduler_critic = torch.optim.lr_scheduler.ExponentialLR(critic_optimizer, gamma=0.99)
-
-            # raise NotImplementedError()
 
         p = Process(target=test, args=(
             self.args, self.args.worker, model, self.T, self.global_reward, optimizer, model_critic, critic_optimizer))

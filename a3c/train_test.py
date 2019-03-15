@@ -223,6 +223,10 @@ def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNet
     if not optimizer:
         optimizer, optimizer_critic = get_optimizer(args.optimizer, global_model, args.lr,
                                                     model_critic=global_model_critic, lr_critic=args.lr_critic)
+        if args.lr_scheduler == "exponential":
+            lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
+            if optimizer_critic:
+                lr_scheduler_critic = torch.optim.lr_scheduler.ExponentialLR(optimizer_critic, gamma=0.99)
 
     state = torch.Tensor(env.reset())
 
@@ -272,7 +276,7 @@ def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNet
             action = np.clip(action.detach().numpy(), -args.max_action, args.max_action)
             state, reward, dones, _ = env.step(action[0] if not args.worker == 1 or "RR" in args.env_name else action)
 
-            reward = shape_reward(args, reward, state)
+            reward = shape_reward(args, reward)
 
             episode_reward += reward
 

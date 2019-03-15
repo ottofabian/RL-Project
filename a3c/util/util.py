@@ -135,7 +135,7 @@ def get_model(env: gym.Env, shared: bool = False, path: str = None, T: Value = N
 
 
 def get_optimizer(optimizer_name: str, model: torch.nn.Module, lr: float, model_critic: torch.nn.Module = None,
-                  lr_critic: float = None):
+                  lr_critic: float = None) -> Tuple[torch.optim.Optimizer, torch.optim.Optimizer]:
     """
     return optimizer for given model and optional second critic model without shared statistics
     :param model: model to create optimizer for
@@ -143,7 +143,7 @@ def get_optimizer(optimizer_name: str, model: torch.nn.Module, lr: float, model_
     :param lr: learning rate for optimizer
     :param model_critic: possible separate critic model to load if non shared network is used
     :param lr_critic: learning rate for separate critic model
-    :return: Optimizer instance or tuple of two optimizers
+    :return: Optimizer instance or tuple of two optimizers, 2nd instance is None or critic_optimizer
     """
     if optimizer_name == "rmsprop":
         optimizer = torch.optim.RMSprop(model.parameters(), lr=lr)
@@ -216,8 +216,7 @@ def get_normalizer(normalizer_type: str) -> BaseNormalizer:
     :return: BaseNormalizer instance
     """
     if normalizer_type == "MinMax":
-        # TODO fix this to api
-        raise NotImplementedError()
+        normalizer = MinMaxNormalizer()
 
     elif normalizer_type == "MeanStd":
         normalizer = MeanStdNormalizer()
@@ -318,20 +317,14 @@ def log_to_tensorboard(writer: SummaryWriter, model: Module, optimizer: torch.op
     writer.add_scalar("loss/entropy", entropy_loss, iteration)
 
 
-def shape_reward(args, reward: np.ndarray, state):
+def shape_reward(args, reward: np.ndarray):
     """
-        # optional reward shaping
+    Optional reward shaping
 
-    :param args:
-    :param reward:
+    :param args: Cmd-line parameter
+    :param reward: Reward vector
     :return:
     """
-    if args.edge_fear_threshold:
-        # sent the current x-position as a negative reward when edge fear is active
-        # edge fear is triggered when the cart is close to the border
-        for idx, cur_state in enumerate(state):
-            if np.abs(cur_state[0]) > args.edge_fear_threshold:
-                reward[idx] = -np.abs(cur_state[0])
 
     if args.squared_reward:
         # use quadratic of reward
@@ -409,13 +402,9 @@ def parse_args(args: list) -> argparse.Namespace:
                         help='Directory for monitor logging of each environment. (default: None)')
     parser.add_argument('--no-log', default=False, action='store_true',
                         help='Avoid exporting a log file to the log directory. (default: False)')
-    parser.add_argument('--log-frequency', default=100,
+    parser.add_argument('--log-frequency', type=int, default=100,
                         help='Defines how often a sample is logged to tensorboard to avoid unnecessary bloating. '
                              'If set to X every X metric sample will be logged. (default: 100)')
-    parser.add_argument('--edge-fear-threshold', type=float, default=None,
-                        help='Threshold when crossed gives negative rewards to avoid suicidal policies. '
-                             'This reward shaping is meant for evaluation and not part of the original environment. '
-                             '(default: None)')
     parser.add_argument('--squared-reward', default=False, action='store_true',
                         help='Manipulates the reward by squaring it.'
                              'This reward shaping is meant for evaluation and not part of the original environment. '
