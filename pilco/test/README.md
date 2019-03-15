@@ -2,7 +2,7 @@
 
 Idea of test is taken from: https://github.com/nrontsis/PILCO/edit/master/tests/
 
-This directory contains test cases for the majority of the codebase:  
+This directory contains test cases for the majority of the PILCO codebase:  
 - [Controller, sin squash and parameter changes](./test_controller.py)
 - [Multivariate (sparse) GP predictions](./test_prediction.py)
 - [Saturating cost function](./test_cost.py)
