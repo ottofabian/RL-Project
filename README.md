@@ -65,6 +65,7 @@ In order to run experiments with [A3C](a3c/README.md) or [PILCO](pilco/README.md
 Log files for all runs will be saved to `./experiments/logs/`.
 
 ## Citation
+Our comprehensive report can be found [here](./Czech_Otto_Lab_Report.pdf)
 ```bibtex
 @software{bobodance_project_2019,  
 	title = {Project Lab Reinforcement Learning, {TU} Darmstadt, {WS}18/19: {BoboDance}/{RL}-Project},  
