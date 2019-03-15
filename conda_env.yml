@@ -122,7 +122,6 @@ dependencies:
     - python-utils==2.3.0
     - pyzmq==17.1.2
     - qtconsole==4.4.3
-    - quanser-robots==0.1.1
     - requests==2.20.1
     - scikit-learn==0.20.1
     - send2trash==1.5.0
@@ -147,4 +146,4 @@ dependencies:
     - werkzeug==0.14.1
     - widgetsnbextension==3.4.2
     - zmq==0.0.0
-    - "--editable=git+https://git.ias.informatik.tu-darmstadt.de/quanser/clients.git"
+    - git+https://git.ias.informatik.tu-darmstadt.de/quanser/clients.git
