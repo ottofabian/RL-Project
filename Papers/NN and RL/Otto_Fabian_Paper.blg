@@ -5,8 +5,6 @@ The style file: spmpsci.bst
 get.bbl.editor is an unknown function---line 497 of file spmpsci.bst
 get.bbl.editor is an unknown function---line 820 of file spmpsci.bst
 Database file #1: library2.bib.bib
-Warning--I didn't find a database entry for "RefB"
-Warning--I didn't find a database entry for "RefJ"
 Warning--I didn't find a database entry for "Pollack1997"
 Warning--empty journal in Abdolmaleki2018
 Warning--empty journal in Babaeizadeh2017
@@ -15,45 +13,45 @@ Warning--empty journal in Heess2017
 Warning--empty journal in Martens2015
 Warning--empty journal in Schulman2017
 Warning--empty journal in Silver2017
-You've used 45 entries,
+You've used 46 entries,
             2966 wiz_defined-function locations,
-            951 strings with 18402 characters,
-and the built_in function-call counts, 28807 in all, are:
-= -- 2570
-> -- 1209
+            952 strings with 18703 characters,
+and the built_in function-call counts, 29399 in all, are:
+= -- 2617
+> -- 1246
 < -- 23
-+ -- 582
-- -- 445
-* -- 1892
-:= -- 3808
-add.period$ -- 103
-call.type$ -- 45
-change.case$ -- 495
++ -- 600
+- -- 459
+* -- 1930
+:= -- 3893
+add.period$ -- 104
+call.type$ -- 46
+change.case$ -- 510
 chr.to.int$ -- 0
-cite$ -- 52
-duplicate$ -- 2187
-empty$ -- 2229
-format.name$ -- 482
-if$ -- 6142
+cite$ -- 53
+duplicate$ -- 2230
+empty$ -- 2271
+format.name$ -- 497
+if$ -- 6262
 int.to.chr$ -- 0
-int.to.str$ -- 45
-missing$ -- 471
-newline$ -- 229
-num.names$ -- 90
-pop$ -- 1080
+int.to.str$ -- 46
+missing$ -- 481
+newline$ -- 233
+num.names$ -- 92
+pop$ -- 1110
 preamble$ -- 1
-purify$ -- 398
+purify$ -- 410
 quote$ -- 0
-skip$ -- 840
+skip$ -- 856
 stack$ -- 0
-substring$ -- 1225
-swap$ -- 1187
+substring$ -- 1230
+swap$ -- 1206
 text.length$ -- 23
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 178
+type$ -- 182
 warning$ -- 7
-while$ -- 173
-width$ -- 47
-write$ -- 549
+while$ -- 175
+width$ -- 48
+write$ -- 558
 (There were 2 error messages)

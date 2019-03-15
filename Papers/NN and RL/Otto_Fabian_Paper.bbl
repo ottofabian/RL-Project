@@ -82,6 +82,11 @@ Heess, N., TB, D., Sriram, S., et~al.: {Emergence of Locomotion Behaviours in
   Rich Environments}  (2017).
 \newblock \urlprefix\url{http://arxiv.org/abs/1707.02286}
 
+\bibitem{Hessel2018}
+Hessel, M., Modayil, J., Van~Hasselt, H., et~al.: Rainbow: Combining
+  improvements in deep reinforcement learning.
+\newblock In: Thirty-Second AAAI Conference on Artificial Intelligence (2018)
+
 \bibitem{Hunter2004}
 Hunter, D.R., Lange, K.: {A tutorial on MM algorithms}.
 \newblock The American Statistician \textbf{58}(1), 30--37 (2004)

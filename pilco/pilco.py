@@ -47,13 +47,16 @@ class PILCO(object):
         self.env.seed(args.seed)
         np.random.seed(args.seed)
 
-        if args.env_name == "Pendulum-v0":
-            self.state_names = ["cos($\\theta$)", "sin($\\theta$)", "$\\dot{\\theta}$"]
-        elif "Cartpole" in args.env_name:
-            self.state_names = ["x", "sin($\\theta$)", "cos($\\theta$)", "$\\dot{x}$", "$\\dot{\\theta}$"]
+        if "Cartpole" in args.env_name:
+            self.state_names = ["x", "$\\sin(\\theta)$", "$\\cos(\\theta)$", "$\\dot{x}$", "$\\dot{\\theta}$"]
         elif "Qube" in args.env_name:
-            self.state_names = ["cos($\\theta$)", "sin($\\theta$)", "cos($\\alpha$)", "sin($\\alpha$)",
+            self.state_names = ["$\\cos(\\theta)$", "$\\sin(\\theta)$", "\\cos(\\alpha)$", "$\\sin(\\alpha)$",
                                 "$\\dot{\\theta}$", "$\\dot{\\alpha}$"]
+        else:
+            try:
+                self.state_names = list(self.env.observation_space.labels)
+            except AttributeError:
+                self.state_names = [f"state {i}" for i in self.env.observation_space.shape[0]]
 
         # get the number of available action from the environment
         self.state_dim = self.env.observation_space.shape[0]
@@ -148,11 +151,6 @@ class PILCO(object):
         state_prev = self.env.reset()
         done = False
 
-        if self.args.env_name == "Pendulum-v0":
-            theta = (np.arctan2(self.start_mean[1], self.start_mean[0]) + np.random.normal(0, .1, 1))[0]
-            self.env.env.state = [theta, 0]
-            state_prev = np.array([np.cos(theta), np.sin(theta), 0.])
-
         # sample more than init until current episode is over, select randomly at the end.
         while not done or i < n_init:
 
@@ -173,10 +171,6 @@ class PILCO(object):
             # reset env if terminal state was reached before max samples were generated
             if done:
                 state = self.env.reset()
-                if self.args.env_name == "Pendulum-v0":
-                    theta = (np.arctan2(self.start_mean[1], self.start_mean[0]) + np.random.normal(0, .1, 1))[0]
-                    self.env.env.state = [theta, 0]
-                    state = np.array([np.cos(theta), np.sin(theta), 0.])
 
             state_prev = state
             i += 1
@@ -389,11 +383,6 @@ class PILCO(object):
         state_prev = self.env.reset()
         # [1,3] is returned and is reduced to 1D
         state_prev = state_prev
-
-        if self.args.env_name == "Pendulum-v0":
-            theta = (np.arctan2(self.start_mean[1], self.start_mean[0]) + np.random.normal(0, .1, 1))[0]
-            state_prev = np.array([np.cos(theta), np.sin(theta), 0])
-            self.env.env.state = [theta, 0]
 
         done = False
         t = 0

@@ -43,12 +43,6 @@ def evaluate_policy(policy: Controller, env: gym.Env, n_runs: int = 100, max_act
     for i in range(n_runs):
         state_prev = env.reset().flatten()
 
-        if env.spec.id == "Pendulum-v0":
-            # some noise to avoid starting upright
-            theta = 0 + np.random.normal(0, .1, 1)[0]
-            state_prev = np.array([np.cos(theta), np.sin(theta), 0])
-            env.env.state = [theta, 0]
-
         done = False
         sleep = True
 
@@ -145,7 +139,7 @@ def parse_args(args: list) -> argparse.Namespace:
     parser.add_argument('--env-name', default='CartpoleStabShort-v0',
                         help='Name of the gym environment to use. '
                              'Currently supported gym environments are: '
-                             '"Pendulum-v0", "CartpoleStabShort-v0", "CartpoleStabRR-v0", "CartpoleSwingShort-v0", '
+                             '"CartpoleStabShort-v0", "CartpoleStabRR-v0", "CartpoleSwingShort-v0", '
                              '"CartpoleSwingRR-v0", "Qube-v0", "QubeRR-v0". '
                              'If you want to use a different gym environment you need to specify '
                              '"--start-state" as well as "--target-state". (default: CartpoleStabShort-v0)')
@@ -161,7 +155,7 @@ def parse_args(args: list) -> argparse.Namespace:
                         help='Number of features for RBF controller. (default: 50)')
     parser.add_argument('--inducing-points', type=int, default=300,
                         help='Number of inducing points to approximate GP, '
-                             'setting this to None results in using the full GP. (default: 300)')
+                             'setting this to 0 results in using the full GP. (default: 300)')
     parser.add_argument('--initial-samples', type=int, default=300,
                         help='Number of initial samples for learning the dynamics before first policy optimization. '
                              '(default: 300)')
@@ -249,17 +243,6 @@ def parse_args(args: list) -> argparse.Namespace:
     if not args.cost_threshold:
         args.cost_threshold = -np.inf
 
-    # get target state as well as initial mu and cov for trajectory rollouts
-    if args.env_name == "Pendulum-v0":
-        # this acts like pendulum stabilization or swing up to work with easier 3D obs space
-        theta = 0
-        if not args.start_state:
-            args.start_state = np.array([np.cos(theta), np.sin(theta), 0])
-        if not args.max_action:
-            args.max_action = np.array([2])
-
-        if not args.target_state:
-            args.target_state = np.array([1, 0, 0])
 
     elif args.env_name == "CartpoleStabShort-v0" or args.env_name == "CartpoleStabRR-v0":
         theta = np.pi

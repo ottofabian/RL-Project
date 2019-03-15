@@ -48,6 +48,7 @@
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage[final]{pdfpages}
 %
 % \usepackage{mathptmx}      % use Times fonts if available on your TeX system
 %
@@ -105,13 +106,8 @@
         % \subclass{MSC code1 \and MSC code2 \and more}
     \end{abstract}
 
-    \section{Introduction}
-    \label{sec:intro}
-    Give introduction with NN hype or similar things. As well as the importance.
-    Define RL and the method in general.
-    Show clear distinction to SL.
-    Maybe include success of recent things in CV and NLP, might also be possible in \ref{sec:history} to transition to more recent approaches in RL. 
-    Introduce RL goal and notation, short intro to MDPs.
+    \section{Introduction \label{sec:intro}}
+    \textit{Neural networks} (NN) have been used 
     
     \section{Background}
 %    \paragraph{Markov Decision Process}
@@ -140,21 +136,21 @@
     By applying the policy gradient theorem, $G_t-b(s_t)$ can be seen as an estimate of the advantage function $A_\pi(s_t,a_t) = Q_\pi(s_t,a_t) - V_\pi(s_t)$.
     Combining parameterized policies and value function estimator results in \textit{actor-critic} (AC) methods. 
     
-    \section{Neural Networks and their history}
-    \label{sec:def}
-    (see Sect.~\ref{sec:1}).
-    Describe formally how NN are working, how can they be trained, what other methods do we have, etc.
-    What did lead to the rise and fall of NNs throughout time.
-    Create good transition to recent approaches.
+
 
 %    \section{Recent Approaches in Reinforcement Learning}
 %    \label{sec:recent}
     \section{Algorithms \label{sec:algo}}
-	    
-	    This section provides an overview of the current deep RL landscape including improvements and current state-of-the-art. 
-	    Most algorithms can be either classified as on-policy or off-policy algorithms.
-		On-policy algorithms estimate the value of policy while using it for control whereas off-policy algorithms, the generating policy, called \textit{behavior policy}, is not necessarily related to the \textit{target policy}, which is improved and evaluated.
-		This allows to use a deterministic target policy, while still sampling all actions through the behavior policy. \cite[chapter 5]{Sutton2018}
+	This section provides an overview of the current deep RL landscape including improvements and current state-of-the-art. 
+	Most algorithms can be either classified as on-policy or off-policy algorithms.
+	On-policy algorithms estimate the value of policy while using it for control whereas off-policy algorithms, the generating policy, called \textit{behavior policy}, is not necessarily related to the \textit{target policy}, which is improved and evaluated.
+	This allows to use a deterministic target policy, while still sampling all actions through the behavior policy. \cite[chapter 5]{Sutton2018}
+	\begin{figure}[!htbp]
+		\centering
+		\includegraphics[angle=90]{images/tree.pdf}
+		\caption{Test}
+	\end{figure}
+
 		
  	\subsection{Off-Policy \label{sec:off-policy}}
 	One of the earlier off-policy algorithms, named \textit{neural fitted Q-iteration} (NFQ), was published by Riedmiller \cite{Riedmiller2005} in 2005. 
@@ -188,7 +184,8 @@
 	This idea is implemented by \textit{hierarchical-DQN} (h-DQN) \cite{Kulkarni2016}, which is based on a hierarchy of two DQNs.
 	A top level meta-controller is selecting a subgoal in order to optimize the extrinsic reward.
 	The lower level controller maximizes an intrinsic reward by solving the subgoal.
-	This allows h-DQN to achieve a significant better performance on the Atari game Montezuma's Revenge.\\
+	This allows h-DQN to achieve a significant better performance on the Atari game Montezuma's Revenge.
+	A general comparison of different DQN version is presented by Hessel, et al. \cite{Hessel2018}\, they also introduce a new \
 	As the above results show, Q-learning variations are successful for discrete action spaces, real world problems however often require continuous action spaces.
 	Further, it is usually hard in real world applications to collect data from e.g. robots, and therefore dealing with high sample complexity.
 	\textit{Normalized advantage functions} (NAF) \cite{Gu2016} approach both problems with a DQN based algorithm.
