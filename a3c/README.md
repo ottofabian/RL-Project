@@ -1,6 +1,6 @@
 # A3C - Asynchronous Advantage Actor-Critic 
 
-![PILCO_overview](../resources/a3c/general/a3c_schema.png)
+![PILCO_overview](../resources/a3c/media/general/a3c_schema.png)
 [Image source](https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-8-asynchronous-actor-critic-agents-a3c-c88f72a5e9f2)
 
 This is our implementation of A3C and the corresponding synchronous version A2C based on the paper [Asynchronous Methods for Deep Reinforcement Learning](https://arxiv.org/abs/1602.01783) from Mnih, et al.
