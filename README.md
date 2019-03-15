@@ -52,8 +52,12 @@ conda env create --name my_env_name --file path/to/conda_env.yml
 ```
 
 ## Experiments
+
+__Please be aware that the Quanser environments are still subject to change and results or policies might not be reproducible or applicable anymore.__
+__The latest Quanser version introduced different constraints for the cartpole environment which can cause issues.__ 
+
 We added a small subset of experiment runs, which we found useful in order to get a better feeling for hyper-parameters and the algorithm in general. 
-This allows to compare different hyper-parameter settings, performance and sample efficiency.
+This allows to compare different hyper-parameter settings, performance and sample efficiency. 
 
 More details can be found [here](./experiments/README.md).  
 In order to run experiments with [A3C](a3c/README.md) or [PILCO](pilco/README.md), please check the corresponding README.
