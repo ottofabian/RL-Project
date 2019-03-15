@@ -11,9 +11,10 @@ This directory contains test cases for the majority of the PILCO codebase:
 
 Running all test is possible by executing:
 ```bash
-pytest path/to/test_runner.py
+pytest pilco/test/test_runner.py
 ``` 
 
+The tests must be run in the `RL-project` directory.
 It is likely that some gradient test will fail.
 PILCO can easily run into numerical issues throughout simple matrix multiplications
 which results in the gradient difference being below the `HIPS/autograd` default precision of 1-e6 
