@@ -64,7 +64,7 @@ def test(args, worker_id: int, global_model: torch.nn.Module, T: Value, global_r
 
     state = torch.from_numpy(env.reset())
 
-    writer = SummaryWriter(comment='_test')
+    writer = SummaryWriter(comment='_test', log_dir='experiments/runs/')
     start_time = time.time()
 
     t = 0
@@ -228,7 +228,7 @@ def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNet
     episode_reward = np.zeros(args.n_envs)
 
     if worker_id == 0:
-        writer = SummaryWriter()
+        writer = SummaryWriter(log_dir='experiments/runs/')
 
     while True:
         # Get state of the global model
