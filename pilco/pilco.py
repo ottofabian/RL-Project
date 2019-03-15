@@ -56,7 +56,7 @@ class PILCO(object):
             try:
                 self.state_names = list(self.env.observation_space.labels)
             except AttributeError:
-                self.state_names = [f"state {i}" for i in self.env.observation_space.shape[0]]
+                self.state_names = [f"state {i}" for i in range(self.env.observation_space.shape[0])]
 
         # get the number of available action from the environment
         self.state_dim = self.env.observation_space.shape[0]
