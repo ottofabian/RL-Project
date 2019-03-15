@@ -64,5 +64,10 @@ python3 a3c_runner.py --env-name CartpoleSwingShort-v0 --max-action 10 --test --
 
 ### Qube-v0 (500Hz)
 ```bash
-python3 a3c_runner.py --env-name Qube-v0 --max-action 5 --test --path experiments/best_models/a3c/qube/model_split_T-164122000_global-3.66047_test-5.51714.pth.tar
+python3 a3c_runner.py --env-name Qube-v0 --max-action 5 --test --path experiments/best_models/a3c/qube/500Hz/model_split_T-164122000_global-3.66047_test-5.51714.pth.tar
+```
+
+### Qube-v0 (50Hz)
+```bash
+python3 a3c_runner.py --env-name Qube-v0 --max-action 5 --test --path experiments/best_models/a3c/qube/50Hz/model_split_T-72839490_global-2.077353393893449_test-3.4406189782812775.pth.tar
 ```
