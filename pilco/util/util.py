@@ -283,11 +283,6 @@ def parse_args(args: list) -> argparse.Namespace:
 
     args.start_cov = args.start_cov * np.identity(env.observation_space.shape[0])
 
-    if not args.start_state:
-        raise Exception("No --start-state defined!")
-    if not args.target_state:
-        raise Exception("No --target-state state defined!")
-
     # parameter check
     if len(args.start_state) != state_dim:
         raise Exception("Your given --start-state {} is incompatible with the current state dimension of {}.".format(
