@@ -44,11 +44,11 @@ The following is required for PILCO Test cases:
 - Octave installation
 - oct2py (python package)
 
-We also offer to install all required packages directly through our [anaconda environment export](./conda_env.yaml).
+We also offer to install all required packages directly through our [anaconda environment export](./conda_env.yml).
 
 For creating a new [anaconda](https://anaconda.org/anaconda/python) environment based on a YML-file use:
 ```bash
-conda env create --name my_env_name --file path/to/conda_env.yaml
+conda env create --name my_env_name --file path/to/conda_env.yml
 ```
 
 ## Experiments
