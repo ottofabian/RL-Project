@@ -32,7 +32,7 @@ def main():
 
     if args.test:
         policy = load_model(f"{args.weight_dir}policy.p")
-        evaluate_policy(policy, env, max_action=args.max_action, no_render=args.no_render)
+        evaluate_policy(policy, env, max_action=args.max_action, no_render=args.no_render, n_runs=args.test_runs)
         env.close()
     else:
         state_dim = env.observation_space.shape[0]

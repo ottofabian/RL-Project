@@ -400,7 +400,9 @@ def parse_args(args: list) -> argparse.Namespace:
     parser.add_argument('--normalizer', type=str, default=None,
                         help='Type of normalizer, supported: [None, MeanStd, MinMax]. (default: None)')
     parser.add_argument('--test', default=False, action='store_true',
-                        help='Start run without training (default: False)')
+                        help='Start run without training and evaluate for number of --test-runs (default: False)')
+    parser.add_argument('--test-runs', type=int, default=10,
+                        help='Number of test evaluation runs during training or in test mode (default: 10)')
     parser.add_argument('--path', type=str, default=None,
                         help='Weight location for the models to load. (default: None)')
     parser.add_argument('--log-dir', type=str, default=None,

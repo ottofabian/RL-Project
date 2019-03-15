@@ -84,12 +84,11 @@ def test(args, worker_id: int, global_model: torch.nn.Module, T: Value, global_r
 
         rewards = []
         eps_len = []
-        n_runs = 10
 
         sleep = True
 
         # make 10 runs to get current avg performance
-        for i in range(n_runs):
+        for i in range(args.test_runs):
             while not done:
                 t += 1
 
@@ -168,6 +167,10 @@ def test(args, worker_id: int, global_model: torch.nn.Module, T: Value, global_r
             logging.debug(log_string)
 
         global_iter += 1
+
+        # run evaluation only once in test mode
+        if args.test:
+            break
 
 
 def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNetwork], T: Value, global_reward: Value,

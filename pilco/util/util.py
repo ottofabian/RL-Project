@@ -199,7 +199,9 @@ def parse_args(args: list) -> argparse.Namespace:
                              'If only testing is enabled you only need to include "policy.p" in the directory. '
                              '(default: None)')
     parser.add_argument('--test', default=False, action='store_true',
-                        help='Start run without training. (default: False)')
+                        help='Start run without training and evaluate for number of --test-runs (default: False)')
+    parser.add_argument('--test-runs', type=int, default=10,
+                        help='Number of test evaluation runs during training or in test mode (default: 10)')
     parser.add_argument('--no-log', default=False, action='store_true',
                         help='Disables exports to a log file into the log directory if set to True. (default: True)')
     parser.add_argument('--export-plots', default=False, action='store_true',
