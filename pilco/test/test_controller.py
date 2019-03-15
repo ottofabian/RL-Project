@@ -8,7 +8,7 @@ from pilco.controller.rbf_controller import RBFController
 from pilco.util.util import squash_action_dist
 
 octave = oct2py.Oct2Py()
-dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"
+dir_path = "pilco/test/matlab_code"
 print(dir_path)
 octave.addpath(dir_path)
 

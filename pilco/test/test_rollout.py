@@ -11,7 +11,7 @@ from pilco.util.util import parse_args
 octave = oct2py.Oct2Py(logger=oct2py.get_log())
 octave.logger = oct2py.get_log('new_log')
 octave.logger.setLevel(logging.INFO)
-dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"
+dir_path = "pilco/test/matlab_code"
 octave.addpath(dir_path)
 
 
