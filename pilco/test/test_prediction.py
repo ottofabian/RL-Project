@@ -8,7 +8,7 @@ from pilco.gaussian_process.multivariate_gp import MultivariateGP
 from pilco.gaussian_process.sparse_multivariate_gp import SparseMultivariateGP
 
 octave = oct2py.Oct2Py()
-dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"
+dir_path = "pilco/test/matlab_code"
 octave.addpath(dir_path)
 
 

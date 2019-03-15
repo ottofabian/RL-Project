@@ -9,7 +9,7 @@ from pilco.pilco import PILCO
 from pilco.util.util import parse_args
 
 octave = oct2py.Oct2Py()
-dir_path = os.path.dirname(os.path.realpath("__file__")) + "/Matlab_Code"
+dir_path = "pilco/test/matlab_code"
 octave.addpath(dir_path)
 
 
