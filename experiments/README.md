@@ -142,6 +142,9 @@ All experiments are conducted with frequency 50Hz, if not stated otherwise.
 ## CartpoleSwingShort-v0
 
 All experiments are with frequency 100Hz, if not stated otherwise.
+![PILCO_CartpoleSwingShort](../resources/pilco/media/swing_up/pilco_cartpoleswingshort.gif)
+
+10548.75793 +/- 52.36394 total reward with episode length of 10000.0 +/- 0.0 for 100 consecutive test runs ([Monitor files](../resources/pilco/media/swing_up/openaigym.episode_batch.0.22325.stats.json))
 
 | done | contributor | comment                                                                       | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights | start_mu     | start_cov | seed | max_samples_per_test_run | max-action | test reward | episodes | training time              |
 | ---- | ------------| ----------------------------------------------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------ | -------------| --------- | -----| ------------------------ | ---------- |------------ | -------- | -------------------------- |
@@ -171,11 +174,6 @@ These experiments where conducted with 50Hz.
 ![PILCO_Qube](../resources/pilco/media/qube/pilco_qube.gif)
 
 0.34837 +/- 0.16579 total reward with episode length of 184.32 +/- 49.35340 for 100 consecutive test runs ([Monitor files](../resources/pilco/media/qube/openaigym.episode_batch.0.15256.stats.json))
-
-Command for reproducing: 
-```console
-python pilco_runner.py --env-name Qube-v0 --test --weight-dir experiments/best_models/pilco/qube/sparse_gp_100hz/
-```
 
 | done | contributor | comment                                                                                                   | solved env | type      | n_inducing_points | n_inital_samples | horizon | horizon increase | cost_threshold | n_features | discount | loss_type    | loss_weights  | start_mu      | start_cov | seed | max_samples_per_test_run | max-action | test reward | episodes | training time       |
 | ---- | ------------| --------------------------------------------------------------------------------------------------------- | ---------- | --------- | ----------------- | ---------------- | ------- | ---------------- | ---------------| -----------|--------- | ------------ | ------------- | --------------| --------- | -----| ------------------------ | ---------- | ----------- | -------- | ------------------- |

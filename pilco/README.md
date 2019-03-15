@@ -7,8 +7,7 @@ This is our implementation of [PILCO](http://mlg.eng.cam.ac.uk/pilco/) from Deis
 The implementation is largely based on the [matlab code](https://github.com/ICL-SML/pilco-matlab) and the [PhD thesis](https://www.google.de/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=2ahUKEwiR4sHA6ejgAhVSzaQKHaPRAt4QFjAAegQIChAB&url=https%3A%2F%2Fwww.ksp.kit.edu%2Fdownload%2F1000019799&usg=AOvVaw1zhWQ8A31UbT_oR7E2kP07) of Deisenroth. 
 Other cool implementations can be found [here](https://github.com/nrontsis/PILCO) and [here](https://github.com/cryscan/pilco-learner).  
 
-
-Our code structure is defined as follows:
+## Code structure
 - [controller](./controller): Controller/policy models.
 - [cost_functions](./cost_function): Cost functions for computing a trajectory's performance.
 - [gaussian_process](./gaussian_process): (Sparse) Gaussian Process models for learning dynamics and RBF policy. 
@@ -48,4 +47,21 @@ source activate my_env
 2) Execute the [pilco_runner](../pilco_runner.py) script
 ```bash
 python3 my/path/to/pilco_runner.py --weight-dir my_model_directory --test
+```
+
+e.g. load pretrained models in test mode:
+
+### CartpoleStabShort-v0 (500Hz)
+```bash
+python3 pilco_runner.py --env-name CartpoleStabShort-v0 --test --max-action 5 --weight-dir experiments/best_models/pilco/stabilization/sparse_gp_50hz/
+```
+
+### CartpoleSwingShort-v0 (500Hz)
+```bash
+python3 pilco_runner.py --env-name CartpoleSwingShort-v0 --test --max-action 10 --weight-dir experiments/best_models/pilco/swing_up/sparse_gp_100hz/
+```
+
+### Qube-v0 (50Hz)
+```bash
+python3 pilco_runner.py --env-name Qube-v0 --test --weight-dir experiments/best_models/pilco/qube/sparse_gp_100hz/
 ```
