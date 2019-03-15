@@ -14,16 +14,8 @@ class A3C(object):
 
     def __init__(self, args) -> None:
         """
-
-        :param n_worker: Number of workers/threads to spawn which conduct the a3c algorithm.
-        :param env_name: Name of the gym environment to use. All available gym environments are supported as well as
-                         additional gym environments: https://git.ias.informatik.tu-darmstadt.de/quanser/clients.
-        :param lr: Constant learning rate for all workers.
-        :param is_discrete: Boolean, indicating if the target variable is discrete or continuous.
-                            This setting has effect on the network architecture as well as the loss function used.
-                            For more detail see: p.12 - Asynchronous Methods for Deep Reinforcement Learning.pdf
-        :param optimizer_name: Optimizer used for shared weight updates. Possible arguments are 'rmsprop', 'adam'.
-        :param is_train: If true enable training, use false if you only deploy the policy for testing
+        Constructor
+        :param args: Cmd-line arguments
         """
         self.args = args
 
@@ -40,7 +32,10 @@ class A3C(object):
                             args.optimizer)
 
     def run(self):
-
+        """
+        Start A3C worker and test thread
+        :return:
+        """
         torch.manual_seed(self.args.seed)
 
         if "RR" in self.args.env_name:
@@ -94,8 +89,3 @@ class A3C(object):
 
             for p in self.worker_pool:
                 p.join()
-
-    def stop(self):
-        self.worker_pool = []
-        self.T = Value('i', 0)
-        self.global_reward = Value('d', 0)
