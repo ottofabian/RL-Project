@@ -48,7 +48,7 @@ We also offer to install all required packages directly through our [anaconda en
 
 For creating a new [anaconda](https://anaconda.org/anaconda/python) environment based on a YML-file use:
 ```bash
-conda env create --name my_env_name --file path/to/conda_env.yml
+conda env create --name my_env_name --file path/to/conda_env.yml python=3.6.5
 ```
 
 ## Experiments
