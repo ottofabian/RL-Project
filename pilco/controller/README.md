@@ -1,10 +1,12 @@
-# Controller
+# Controllers
 
-We only use the RBF controller for our experiments as it is universally applicable for all problems. 
+We mainly use the RBF controller for our experiments as it is universally applicable for all problems. 
 Linear controllers are too limited for most applications, but can be sufficient for stabilization around an equilibrium. [see](https://ieeexplore.ieee.org/document/6654139)
-Consequently, the CartpoleStabShort-v0 task could be solved with this,
-however in our experiments the RBF policy was also able to solve the environment after only 2 episodes and the inital random samples.  
+Consequently, the CartpoleStabShort-v0 task could be solved with this, however in our experiments the RBF policy was also able to solve the environment after only 2 episodes and the inital random samples.  
 New controllers can be implemented by inheriting from the [Controler](controller.py) class.
+
+## Linear Controller
+The linear controller is comuting the action by weighting the state with an NxN matrix.
 
 ## RBF Controller
 We define our RBF controller as deterministic Gaussian Process based on the original implementation from [Deisenroth](https://ieeexplore.ieee.org/document/6654139).
