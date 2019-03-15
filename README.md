@@ -58,6 +58,8 @@ This allows to compare different hyper-parameter settings, performance and sampl
 More details can be found [here](./experiments/README.md).  
 In order to run experiments with [A3C](a3c/README.md) or [PILCO](pilco/README.md), please check the corresponding README.
 
+The log files will saved to `experiments/logs/`.
+
 ## Citation
 ```bibtex
 @software{bobodance_project_2019,  
