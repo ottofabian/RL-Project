@@ -20,6 +20,9 @@ from a3c.optimizers.shared_adam import SharedAdam
 from a3c.optimizers.shared_rmsprop import SharedRMSProp
 from a3c.util.normalizer.base_normalizer import BaseNormalizer
 from a3c.util.normalizer.mean_std_normalizer import MeanStdNormalizer
+from numpy import inf
+
+from a3c.util.normalizer.min_max_normalizer import MinMaxNormalizer
 
 
 def sync_grads(model: ActorCriticNetwork, global_model: ActorCriticNetwork) -> None:
@@ -209,14 +212,22 @@ def get_shared_optimizer(model: Module, optimizer_name: str, lr: float, path=Non
     return optimizer
 
 
-def get_normalizer(normalizer_type: str) -> BaseNormalizer:
+def get_normalizer(normalizer_type: str, env: gym.Env) -> BaseNormalizer:
     """
     returns normalizer instance based on specified type
     :param normalizer_type: string of normalizer instance
     :return: BaseNormalizer instance
     """
     if normalizer_type == "MinMax":
-        normalizer = MinMaxNormalizer()
+        low = env.observation_space.low
+        high = env.observation_space.high
+        # handle possible inf values
+        low[low == -inf] = 0
+        high[high == -inf] = 0
+        low[low == +inf] = 1e4
+        high[high == +inf] = 1e4
+
+        normalizer = MinMaxNormalizer(low, high, False)
 
     elif normalizer_type == "MeanStd":
         normalizer = MeanStdNormalizer()

@@ -51,7 +51,7 @@ def test(args, worker_id: int, global_model: torch.nn.Module, T: Value, global_r
 
     env.seed(args.seed + worker_id)
 
-    normalizer = get_normalizer(args.normalizer)
+    normalizer = get_normalizer(args.normalizer, env)
 
     # get an instance of the current global model state
     model = copy.deepcopy(global_model)
@@ -207,7 +207,7 @@ def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNet
         # avoid any issues if this is not 1
         args.n_envs = 1
 
-    normalizer = get_normalizer(args.normalizer)
+    normalizer = get_normalizer(args.normalizer, env)
 
     # init local NN instance for worker thread
     model = copy.deepcopy(global_model)

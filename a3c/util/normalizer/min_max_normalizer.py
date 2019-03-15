@@ -7,7 +7,7 @@ min_state = None
 max_state = None
 
 
-class MinMaxScaler(BaseNormalizer):
+class MinMaxNormalizer(BaseNormalizer):
 
     def __init__(self, min_state: np.ndarray, max_state: np.ndarray, read_only):
         """
