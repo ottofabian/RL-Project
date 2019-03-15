@@ -14,8 +14,8 @@ class LinearController(Controller):
         :param weights: Weight parameters
         :param bias: bias parameters
         """
-        self.weights = weights if weights else np.random.rand(state_dim, n_actions)
-        self.bias = bias if bias else np.random.rand(1, n_actions)
+        self.weights = weights if weights else 1e-2 * np.random.randn(state_dim, n_actions)
+        self.bias = bias if bias else 1e-2 * np.random.randn(1, n_actions)
 
     def set_params(self, params: np.ndarray):
         """
