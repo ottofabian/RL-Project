@@ -35,7 +35,7 @@ The following Python packages are required:
 - tensorboardX
 - tensorflow
 - torchvision
-- [quanser_robots](https://git.ias.informatik.tu-darmstadt.de)
+- [quanser_robots](https://git.ias.informatik.tu-darmstadt.de/quanser/clients)
 
 The following Linux packages are required:
 - ffmpeg
