@@ -140,7 +140,7 @@ def test(args, worker_id: int, global_model: torch.nn.Module, T: Value, global_r
         writer.add_scalar("reward/test", rewards, int(T.value))
         writer.add_scalar("episode/length", np.mean(eps_len), int(T.value))
 
-        log_string = f"Time: {time_print}, T={T.value} -- n_runs={n_runs} -- mean total reward={rewards:.5f} " \
+        log_string = f"Time: {time_print}, T={T.value} -- n_runs={args.test_runs} -- mean total reward={rewards:.5f} " \
             f" +/- {std_reward:.5f} -- mean episode length={np.mean(eps_len):.5f}" \
             f" +/- {np.std(eps_len):.5f} -- global reward={global_reward.value:.5f}"
 
