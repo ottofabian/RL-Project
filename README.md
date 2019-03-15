@@ -59,11 +59,14 @@ More details can be found [here](./experiments/README.md).
 In order to run experiments with [A3C](a3c/README.md) or [PILCO](pilco/README.md), please check the corresponding README.
 
 ## Citation
+```bibtex
 @software{bobodance_project_2019,  
 	title = {Project Lab Reinforcement Learning, {TU} Darmstadt, {WS}18/19: {BoboDance}/{RL}-Project},  
 	url = {https://github.com/BoboDance/RL-Project},  
 	shorttitle = {Project Lab Reinforcement Learning, {TU} Darmstadt, {WS}18/19},  
-	author = {{BoboDance, QueensGambit}},  
+	author = {{Otto, Fabian and Czech, Johannes}},  
 	urldate = {2019-03-15},  
 	date = {2019-03-15},  
 }
+```
+
