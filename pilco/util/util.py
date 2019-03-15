@@ -245,8 +245,7 @@ def parse_args(args: list) -> argparse.Namespace:
     if not args.cost_threshold:
         args.cost_threshold = -np.inf
 
-
-    elif args.env_name == "CartpoleStabShort-v0" or args.env_name == "CartpoleStabRR-v0":
+    if args.env_name == "CartpoleStabShort-v0" or args.env_name == "CartpoleStabRR-v0":
         theta = np.pi
         if not args.start_state:
             args.start_state = np.array([0., np.sin(theta), np.cos(theta), 0., 0.])
@@ -255,7 +254,6 @@ def parse_args(args: list) -> argparse.Namespace:
 
         if not args.target_state:
             args.target_state = np.array([0, 0, -1, 0, 0])
-
     elif args.env_name == "CartpoleSwingShort-v0" or args.env_name == "CartpoleSwingRR-v0":
         theta = 0
         if not args.start_state:
@@ -265,7 +263,6 @@ def parse_args(args: list) -> argparse.Namespace:
 
         if not args.target_state:
             args.target_state = np.array([0, 0, -1, 0, 0])
-
     elif args.env_name == "Qube-v0" or args.env_name == "QubeRR-v0" or args.env_name == "Qube-v1":
         theta = 0
         alpha = 0
@@ -285,6 +282,11 @@ def parse_args(args: list) -> argparse.Namespace:
     state_dim = env.observation_space.shape[0]
 
     args.start_cov = args.start_cov * np.identity(env.observation_space.shape[0])
+
+    if not args.start_state:
+        raise Exception("No --start-state defined!")
+    if not args.target_state:
+        raise Exception("No --target-state state defined!")
 
     # parameter check
     if len(args.start_state) != state_dim:
