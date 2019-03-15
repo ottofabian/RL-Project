@@ -3,7 +3,7 @@ import sys
 
 import gym
 
-from experiments.util.color_logger import enable_color_logging
+from experiments.util.logger_util import enable_logging
 from experiments.util.logger_util import show_cmd_args
 from pilco.cost_function.saturated_loss import SaturatedLoss
 from pilco.pilco import PILCO
@@ -15,8 +15,8 @@ from pilco.util.util import parse_args, evaluate_policy, load_model, get_env
 def main():
     args = parse_args(sys.argv[1:])
 
-    enable_color_logging(logging_lvl=logging.DEBUG, save_log=not args.no_log,
-                         logfile_prefix="PILCO_" + args.env_name + "_")
+    enable_logging(logging_lvl=logging.DEBUG, save_log=not args.no_log,
+                   logfile_prefix="PILCO_" + args.env_name + "_")
 
     logging.info(
         f'Start experiment for {args.env_name} at {time.strftime("%m/%d/%Y, %Hh:%Mm:%Ss", time.gmtime(time.time()))}')
