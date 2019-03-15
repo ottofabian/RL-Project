@@ -294,6 +294,9 @@ def parse_args(args: list) -> argparse.Namespace:
     if "RR" in args.env_name:
         args.no_render = True
 
+    if args.test and not args.weight_dir:
+        raise Exception("You need to specify a policy to load when being in --test mode.")
+
     # always close gym environments if they aren't used anymore
     dummy_env.close()
 

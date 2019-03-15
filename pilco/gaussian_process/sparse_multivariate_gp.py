@@ -141,7 +141,7 @@ class SparseMultivariateGP(MultivariateGP):
 
             logging.info(msg)
             logging.info(gp)
-            print("Length scales:", gp.kern.lengthscale.values)
+            logging.info(f"Length scales: {gp.kern.lengthscale.values}")
 
     def sigma_f(self):
         return np.log(np.sqrt(np.array([gp.kern.variance.values for gp in self.models])))
