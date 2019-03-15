@@ -1,1 +1,1 @@
-This directory contains thelogs of PILCO and A3C to ensure nothing is lost. :D 
+This directory contains the logs of PILCO and A3C to ensure nothing is lost. :D 
