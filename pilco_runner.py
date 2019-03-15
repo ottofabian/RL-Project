@@ -3,7 +3,7 @@ import sys
 
 import gym
 
-from experiments.util.ColorLogger import enable_color_logging
+from experiments.util.color_logger import enable_color_logging
 from experiments.util.logger_util import show_cmd_args
 from pilco.cost_function.saturated_loss import SaturatedLoss
 from pilco.pilco import PILCO

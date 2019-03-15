@@ -1,0 +1,81 @@
+/home/fabian/anaconda3/envs/RL/bin/python3.6 /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/A3CRunner.py --env-name QubeRR-v0 --seed 1 --discount 0.99 --rollout-steps 50 --value-loss-weight 0.5 --entropy-loss-weight 0.0001 --max-action 5 --max-episode-length 3000 --max-grad-norm 1 --lr 0.001 --lr-critic 0.01 --optimizer adam --worker 1 --n-envs 1 --tau .99 --path ./checkpoints/model_RR_T-164123750_global-3.27740.pth.tar --test
+2019-03-04 09:55:59 root[30222] INFO Start experiment for QubeRR-v0 at 03/04/2019, 08h:55m:59s
+2019-03-04 09:55:59 root[30222] INFO Command line parameters:
+2019-03-04 09:55:59 root[30222] INFO --lr 0.001
+2019-03-04 09:55:59 root[30222] INFO --lr-critic 0.01
+2019-03-04 09:55:59 root[30222] INFO --shared-model False
+2019-03-04 09:55:59 root[30222] INFO --value-loss-weight 0.5
+2019-03-04 09:55:59 root[30222] INFO --discount 0.99
+2019-03-04 09:55:59 root[30222] INFO --gae True
+2019-03-04 09:55:59 root[30222] INFO --tau 0.99
+2019-03-04 09:55:59 root[30222] INFO --entropy-loss-weight 0.0001
+2019-03-04 09:55:59 root[30222] INFO --max-grad-norm 1.0
+2019-03-04 09:55:59 root[30222] INFO --seed 1
+2019-03-04 09:55:59 root[30222] INFO --worker 1
+2019-03-04 09:55:59 root[30222] INFO --rollout-steps 50
+2019-03-04 09:55:59 root[30222] INFO --max-episode-length 3000
+2019-03-04 09:55:59 root[30222] INFO --env-name QubeRR-v0
+2019-03-04 09:55:59 root[30222] INFO --shared-optimizer True
+2019-03-04 09:55:59 root[30222] INFO --optimizer adam
+2019-03-04 09:55:59 root[30222] INFO --lr-scheduler None
+2019-03-04 09:55:59 root[30222] INFO --test True
+2019-03-04 09:55:59 root[30222] INFO --path ./checkpoints/model_RR_T-164123750_global-3.27740.pth.tar
+2019-03-04 09:55:59 root[30222] INFO --log-dir None
+2019-03-04 09:55:59 root[30222] INFO --max-action 5.0
+2019-03-04 09:55:59 root[30222] INFO --normalizer None
+2019-03-04 09:55:59 root[30222] INFO --n-envs 1
+2019-03-04 09:55:59 root[30222] INFO --save-log True
+2019-03-04 09:55:59 root[30222] INFO --log-frequency 100
+2019-03-04 09:55:59 root[30222] INFO --edge-fear False
+2019-03-04 09:55:59 root[30222] INFO --squared-reward False
+2019-03-04 09:55:59 root[30222] INFO --no-render False
+2019-03-04 09:55:59 root[30222] INFO --monitor False
+/home/fabian/anaconda3/envs/RL/lib/python3.6/site-packages/gym/envs/registration.py:14: PkgResourcesDeprecationWarning: Parameters to load are deprecated.  Call .resolve and .require separately.
+  result = entry_point.load(False)
+Sequential(
+  (0): Linear(in_features=6, out_features=100, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=100, out_features=100, bias=True)
+  (3): ReLU()
+  (4): Linear(in_features=100, out_features=1, bias=True)
+)
+Sequential(
+  (0): Linear(in_features=6, out_features=200, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=200, out_features=200, bias=True)
+  (3): ReLU()
+)
+Sequential(
+  (0): Linear(in_features=200, out_features=1, bias=True)
+)
+Parameter containing:
+tensor([0.], requires_grad=True)
+=> loading model checkpoint './checkpoints/model_RR_T-164123750_global-3.27740.pth.tar'
+=> loaded model checkpoint './checkpoints/model_RR_T-164123750_global-3.27740.pth.tar' (T: 164123750 -- global reward: 3.277396417803831)
+=> loading optimizer checkpoint './checkpoints/model_RR_T-164123750_global-3.27740.pth.tar'
+=> loaded optimizer checkpoint './checkpoints/model_RR_T-164123750_global-3.27740.pth.tar' (T: 164123750 -- global reward: 3.277396417803831)
+2019-03-04 09:55:59 root[30230] INFO Test worker started.
+2019-03-04 09:56:08 root[30230] INFO episode reward=0.03579 episode length=727
+2019-03-04 09:56:25 root[30230] INFO episode reward=0.01778 episode length=470
+2019-03-04 09:56:39 root[30230] INFO episode reward=0.07553 episode length=386
+2019-03-04 09:56:54 root[30230] INFO episode reward=0.06554 episode length=398
+2019-03-04 09:57:10 root[30230] INFO episode reward=0.06631 episode length=376
+2019-03-04 09:57:23 root[30230] INFO episode reward=0.09077 episode length=404
+2019-03-04 09:57:39 root[30230] INFO episode reward=0.65747 episode length=790
+2019-03-04 09:57:53 root[30230] INFO episode reward=0.10141 episode length=420
+2019-03-04 09:58:06 root[30230] INFO episode reward=0.09270 episode length=524
+2019-03-04 09:58:19 root[30230] INFO episode reward=0.06765 episode length=356
+2019-03-04 09:58:38 root[30230] INFO episode reward=0.20709 episode length=515
+2019-03-04 09:58:52 root[30230] INFO episode reward=0.06836 episode length=376
+2019-03-04 09:59:06 root[30230] INFO episode reward=0.76460 episode length=897
+2019-03-04 09:59:25 root[30230] INFO episode reward=0.09234 episode length=425
+2019-03-04 09:59:41 root[30230] INFO episode reward=0.45417 episode length=695
+2019-03-04 09:59:58 root[30230] INFO episode reward=0.07778 episode length=389
+2019-03-04 10:00:11 root[30230] INFO episode reward=0.07254 episode length=382
+2019-03-04 10:00:25 root[30230] INFO episode reward=0.00198 episode length=253
+2019-03-04 10:00:45 root[30230] INFO episode reward=0.00017 episode length=126
+2019-03-04 10:01:02 root[30230] INFO episode reward=0.02194 episode length=431
+2019-03-04 10:01:22 root[30230] INFO Time: 00h 05m 15s, T=164123750 -- n_runs=20 -- mean total reward=0.15160  +/- 0.20965 -- mean episode length=467.00000 +/- 178.77416 -- global reward=3.27740
+
+Process finished with exit code 0
+

@@ -5,7 +5,7 @@ import quanser_robots
 
 from a3c.a3c import A3C
 from a3c.util.util import parse_args
-from experiments.util.ColorLogger import enable_color_logging
+from experiments.util.color_logger import enable_color_logging
 
 from experiments.util.logger_util import show_cmd_args
 

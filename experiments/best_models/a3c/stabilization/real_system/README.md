@@ -1,0 +1,1 @@
+This is an early policy from December and was used for the evaluation on the real system, but the final version of A3C, does not support loading this model anymore. 

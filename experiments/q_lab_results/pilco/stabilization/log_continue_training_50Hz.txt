@@ -1,0 +1,434 @@
+/home/queensgambit/anaconda3/bin/python3 /snap/pycharm-professional/121/helpers/pydev/pydevconsole.py --mode=client --port=43985
+import sys; print('Python %s on %s' % (sys.version, sys.platform))
+sys.path.extend(['/home/queensgambit/Studium/Master_Informatik/WiSe_18_19/RL/project/RL-Project'])
+Python 3.6.5 |Anaconda, Inc.| (default, Apr 29 2018, 16:14:56) 
+Type 'copyright', 'credits' or 'license' for more information
+IPython 6.4.0 -- An enhanced Interactive Python. Type '?' for help.
+PyDev console: using IPython 6.4.0
+Python 3.6.5 |Anaconda, Inc.| (default, Apr 29 2018, 16:14:56) 
+[GCC 7.2.0] on linux
+runfile('/home/queensgambit/Studium/Master_Informatik/WiSe_18_19/RL/project/RL-Project/Experiments/PILCORunner.py', args=['--env-name', 'CartpoleStabRR-v0', '--inducing-points', '300', '--initial-samples', '300', '--max-samples-test-run', '10', '--weight-dir', 'PILCO/CartpoleStabShort/SparseGP_50HZ/policy/', '--max-action', '5', '--horizon', '40', '--features', '25', '--discount', '1'], wdir='/home/queensgambit/Studium/Master_Informatik/WiSe_18_19/RL/project/RL-Project/Experiments')
+2019-03-01 20:50:43 root[12825] INFO Start experiment for CartpoleStabRR-v0 at 03/01/2019, 19h:50m:43s
+2019-03-01 20:50:43 root[12825] INFO Command line parameters:
+2019-03-01 20:50:43 root[12825] INFO --env-name CartpoleStabRR-v0
+2019-03-01 20:50:43 root[12825] INFO --seed 1
+2019-03-01 20:50:43 root[12825] INFO --horizon 40
+2019-03-01 20:50:43 root[12825] INFO --discount 1.0
+2019-03-01 20:50:43 root[12825] INFO --features 25
+2019-03-01 20:50:43 root[12825] INFO --inducing-points 300
+2019-03-01 20:50:43 root[12825] INFO --initial-samples 300
+2019-03-01 20:50:43 root[12825] INFO --max-samples-test-run 10
+2019-03-01 20:50:43 root[12825] INFO --weights None
+2019-03-01 20:50:43 root[12825] INFO --max-action [5.]
+2019-03-01 20:50:43 root[12825] INFO --steps 20
+2019-03-01 20:50:43 root[12825] INFO --horizon-increase 0.25
+2019-03-01 20:50:43 root[12825] INFO --cost-threshold -inf
+2019-03-01 20:50:43 root[12825] INFO --start-state [ 0.  0. -1.  0.  0.]
+2019-03-01 20:50:43 root[12825] INFO --target-state [ 0  0 -1  0  0]
+2019-03-01 20:50:43 root[12825] INFO --start-cov [[0.01 0.   0.   0.   0.  ]
+ [0.   0.01 0.   0.   0.  ]
+ [0.   0.   0.01 0.   0.  ]
+ [0.   0.   0.   0.01 0.  ]
+ [0.   0.   0.   0.   0.01]]
+2019-03-01 20:50:43 root[12825] INFO --weight-dir PILCO/CartpoleStabShort/SparseGP_50HZ/policy/
+2019-03-01 20:50:43 root[12825] INFO --test False
+2019-03-01 20:50:43 root[12825] INFO --save-log True
+2019-03-01 20:50:43 root[12825] INFO --export-plots False
+2019-03-01 20:50:43 root[12825] INFO --render False
+2019-03-01 20:50:44 root[12825] INFO Starting test run.
+Calibrate Cartpole:
+	Go to the Left:			✓
+	Go to the Right:		✓
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-01 20:51:00 root[12825] INFO reward=529.5350359082222, episode_len=265
+2019-03-01 20:51:01 root[12825] INFO Optimization for GP (output=0) started.
+2019-03-01 20:51:01 root[12825] INFO Optimization with L-BFGS-B started.
+HBox(children=(VBox(children=(IntProgress(value=0, max=1000), HTML(value=''))), Box(children=(HTML(value=''),))))
+2019-03-01 20:51:35 root[12825] INFO Optimizer: 				 L-BFGS-B (Scipy implementation)
+f(x_opt): 				 -8418.183
+Number of function evaluations: 	 184
+Optimization status: 			 Converged
+Time elapsed: 				 0:00:33.690430
+2019-03-01 20:51:35 root[12825] INFO 
+Name : sparse_gp
+Objective : -8418.183226927027
+Number of Parameters : 1208
+Number of Optimization Parameters : 1208
+Updates : True
+Parameters:
+  sparse_gp.               |                  value  |  constraints  |  priors
+  inducing_inputs          |               (200, 6)  |               |        
+  rbf.variance             |  0.0021020121968681866  |      +ve      |        
+  rbf.lengthscale          |                   (6,)  |   0.0,300.0   |        
+  Gaussian_noise.variance  |  2.073586033602447e-10  |  1e-10,0.001  |        
+Length scales: [293.632493 299.912113 299.71059   16.060789 299.994742  27.064777]
+2019-03-01 20:51:35 root[12825] INFO Optimization for GP (output=1) started.
+2019-03-01 20:51:35 root[12825] INFO Optimization with L-BFGS-B started.
+HBox(children=(VBox(children=(IntProgress(value=0, max=1000), HTML(value=''))), Box(children=(HTML(value=''),))))
+2019-03-01 20:51:55 root[12825] INFO Optimizer: 				 L-BFGS-B (Scipy implementation)
+f(x_opt): 				 -8323.522
+Number of function evaluations: 	 116
+Optimization status: 			 Converged
+Time elapsed: 				 0:00:20.114244
+2019-03-01 20:51:55 root[12825] INFO 
+Name : sparse_gp
+Objective : -8323.521544558142
+Number of Parameters : 1208
+Number of Optimization Parameters : 1208
+Updates : True
+Parameters:
+  sparse_gp.               |                   value  |  constraints  |  priors
+  inducing_inputs          |                (200, 6)  |               |        
+  rbf.variance             |       2.617304310456492  |      +ve      |        
+  rbf.lengthscale          |                    (6,)  |   0.0,300.0   |        
+  Gaussian_noise.variance  |  2.0113889096885715e-07  |  1e-10,0.001  |        
+Length scales: [109.860022  59.799605   0.237871  15.814065 134.067286 163.82005 ]
+2019-03-01 20:51:55 root[12825] INFO Optimization for GP (output=2) started.
+2019-03-01 20:51:55 root[12825] INFO Optimization with L-BFGS-B started.
+HBox(children=(VBox(children=(IntProgress(value=0, max=1000), HTML(value=''))), Box(children=(HTML(value=''),))))
+2019-03-01 20:52:00 root[12825] INFO Optimizer: 				 L-BFGS-B (Scipy implementation)
+f(x_opt): 				 -8372.515
+Number of function evaluations: 	 25
+Optimization status: 			 Converged
+Time elapsed: 				 0:00:04.578831
+2019-03-01 20:52:00 root[12825] INFO 
+Name : sparse_gp
+Objective : -8372.51450630926
+Number of Parameters : 1208
+Number of Optimization Parameters : 1208
+Updates : True
+Parameters:
+  sparse_gp.               |                  value  |  constraints  |  priors
+  inducing_inputs          |               (200, 6)  |               |        
+  rbf.variance             |  0.0005894201193519916  |      +ve      |        
+  rbf.lengthscale          |                   (6,)  |   0.0,300.0   |        
+  Gaussian_noise.variance  |  3.723741682993271e-10  |  1e-10,0.001  |        
+Length scales: [87.10103   0.2969    0.163162  1.846143  9.120824 10.272026]
+2019-03-01 20:52:00 root[12825] INFO Optimization for GP (output=3) started.
+2019-03-01 20:52:00 root[12825] INFO Optimization with L-BFGS-B started.
+HBox(children=(VBox(children=(IntProgress(value=0, max=1000), HTML(value=''))), Box(children=(HTML(value=''),))))
+2019-03-01 20:52:21 root[12825] INFO Optimizer: 				 L-BFGS-B (Scipy implementation)
+f(x_opt): 				 -7907.516
+Number of function evaluations: 	 116
+Optimization status: 			 Converged
+Time elapsed: 				 0:00:20.716911
+2019-03-01 20:52:21 root[12825] INFO 
+Name : sparse_gp
+Objective : -7907.515556891449
+Number of Parameters : 1208
+Number of Optimization Parameters : 1208
+Updates : True
+Parameters:
+  sparse_gp.               |                   value  |  constraints  |  priors
+  inducing_inputs          |                (200, 6)  |               |        
+  rbf.variance             |       4.643899840163777  |      +ve      |        
+  rbf.lengthscale          |                    (6,)  |   0.0,300.0   |        
+  Gaussian_noise.variance  |  2.4160249124347583e-08  |  1e-10,0.001  |        
+Length scales: [122.223761   2.651325   0.396128   1.043381 278.560843   9.20093 ]
+2019-03-01 20:52:21 root[12825] INFO Optimization for GP (output=4) started.
+2019-03-01 20:52:21 root[12825] INFO Optimization with L-BFGS-B started.
+HBox(children=(VBox(children=(IntProgress(value=0, max=1000), HTML(value=''))), Box(children=(HTML(value=''),))))
+2019-03-01 20:55:10 root[12825] INFO Optimizer: 				 L-BFGS-B (Scipy implementation)
+f(x_opt): 				 -7277.327
+Number of function evaluations: 	 975
+Optimization status: 			 Converged
+Time elapsed: 				 0:02:49.503421
+2019-03-01 20:55:10 root[12825] INFO 
+Name : sparse_gp
+Objective : -7277.32689801231
+Number of Parameters : 1208
+Number of Optimization Parameters : 1208
+Updates : True
+Parameters:
+  sparse_gp.               |                   value  |  constraints  |  priors
+  inducing_inputs          |                (200, 6)  |               |        
+  rbf.variance             |      12.853127119586581  |      +ve      |        
+  rbf.lengthscale          |                    (6,)  |   0.0,300.0   |        
+  Gaussian_noise.variance  |  5.5311158433075964e-08  |  1e-10,0.001  |        
+Length scales: [179.898574   0.194971   1.278551   1.964337  58.598046  15.723652]
+2019-03-01 20:55:10 root[12825] INFO Starting to optimize policy with L-BFGS-B.
+RUNNING THE L-BFGS-B CODE
+           * * *
+ This problem is unconstrained.
+Machine precision = 2.220D-16
+ N =          156     M =           10
+At X0         0 variables are exactly at the bounds
+ /home/queensgambit/anaconda3/lib/python3.6/site-packages/autograd/numpy/numpy_vjps.py:444: FutureWarning:Using a non-tuple sequence for multidimensional indexing is deprecated; use `arr[tuple(seq)]` instead of `arr[seq]`. In the future this will be interpreted as an array index, `arr[np.array(seq)]`, which will result either in an error or a different result.
+At iterate    0    f=  3.50592D+01    |proj g|=  1.15549D+02
+At iterate    1    f=  3.48291D+01    |proj g|=  4.99256D+01
+At iterate    2    f=  3.47568D+01    |proj g|=  4.38630D+01
+At iterate    3    f=  3.45606D+01    |proj g|=  3.88656D+01
+At iterate    4    f=  3.45460D+01    |proj g|=  9.44928D+00
+At iterate    5    f=  3.45421D+01    |proj g|=  5.57377D+00
+At iterate    6    f=  3.45411D+01    |proj g|=  4.56417D+00
+At iterate    7    f=  3.45396D+01    |proj g|=  2.01116D+00
+At iterate    8    f=  3.45392D+01    |proj g|=  1.03626D+00
+At iterate    9    f=  3.45390D+01    |proj g|=  8.58818D-01
+At iterate   10    f=  3.45389D+01    |proj g|=  8.29467D-01
+At iterate   11    f=  3.45385D+01    |proj g|=  1.33640D+00
+At iterate   12    f=  3.45377D+01    |proj g|=  2.68860D+00
+At iterate   13    f=  3.45355D+01    |proj g|=  3.82800D+00
+At iterate   14    f=  3.45316D+01    |proj g|=  6.42351D+00
+At iterate   15    f=  3.45274D+01    |proj g|=  8.20970D+00
+At iterate   16    f=  3.45255D+01    |proj g|=  6.71040D+00
+At iterate   17    f=  3.45216D+01    |proj g|=  3.05420D+00
+At iterate   18    f=  3.45209D+01    |proj g|=  1.06688D+00
+At iterate   19    f=  3.45208D+01    |proj g|=  3.47531D-01
+At iterate   20    f=  3.45208D+01    |proj g|=  2.41951D-01
+At iterate   21    f=  3.45208D+01    |proj g|=  2.25447D-01
+At iterate   22    f=  3.45208D+01    |proj g|=  2.81504D-01
+At iterate   23    f=  3.45207D+01    |proj g|=  5.12831D-01
+At iterate   24    f=  3.45203D+01    |proj g|=  1.18949D+00
+At iterate   25    f=  3.45195D+01    |proj g|=  1.92162D+00
+At iterate   26    f=  3.45173D+01    |proj g|=  4.33732D+00
+At iterate   27    f=  3.45154D+01    |proj g|=  4.84996D+00
+At iterate   28    f=  3.45131D+01    |proj g|=  5.08215D+00
+At iterate   29    f=  3.45105D+01    |proj g|=  1.05139D+01
+At iterate   30    f=  3.45065D+01    |proj g|=  8.23879D+00
+At iterate   31    f=  3.45047D+01    |proj g|=  5.33861D+00
+At iterate   32    f=  3.45039D+01    |proj g|=  2.98826D+00
+At iterate   33    f=  3.45030D+01    |proj g|=  1.25389D+00
+At iterate   34    f=  3.45027D+01    |proj g|=  1.66384D+00
+At iterate   35    f=  3.45018D+01    |proj g|=  2.69572D+00
+At iterate   36    f=  3.45014D+01    |proj g|=  2.90590D+00
+At iterate   37    f=  3.45010D+01    |proj g|=  1.49390D+00
+At iterate   38    f=  3.45006D+01    |proj g|=  2.66134D+00
+At iterate   39    f=  3.45003D+01    |proj g|=  7.53730D-01
+At iterate   40    f=  3.45002D+01    |proj g|=  4.74009D-01
+At iterate   41    f=  3.45001D+01    |proj g|=  1.19294D+00
+At iterate   42    f=  3.45001D+01    |proj g|=  2.27861D+00
+At iterate   43    f=  3.45000D+01    |proj g|=  1.32439D-01
+At iterate   44    f=  3.45000D+01    |proj g|=  1.31532D-01
+At iterate   45    f=  3.45000D+01    |proj g|=  1.34244D-01
+At iterate   46    f=  3.45000D+01    |proj g|=  1.30876D-01
+At iterate   47    f=  3.45000D+01    |proj g|=  1.85621D-01
+At iterate   48    f=  3.44999D+01    |proj g|=  8.97123D-01
+At iterate   49    f=  3.44997D+01    |proj g|=  6.53348D-01
+At iterate   50    f=  3.44992D+01    |proj g|=  2.22718D+00
+At iterate   51    f=  3.44988D+01    |proj g|=  1.51461D+00
+At iterate   52    f=  3.44984D+01    |proj g|=  4.66189D+00
+At iterate   53    f=  3.44975D+01    |proj g|=  1.45916D+00
+At iterate   54    f=  3.44973D+01    |proj g|=  8.07048D-01
+At iterate   55    f=  3.44972D+01    |proj g|=  1.64614D+00
+At iterate   56    f=  3.44972D+01    |proj g|=  7.74591D-01
+At iterate   57    f=  3.44971D+01    |proj g|=  3.16049D-01
+At iterate   58    f=  3.44971D+01    |proj g|=  3.04872D-01
+At iterate   59    f=  3.44971D+01    |proj g|=  3.90311D-01
+At iterate   60    f=  3.44970D+01    |proj g|=  3.94916D-01
+At iterate   61    f=  3.44970D+01    |proj g|=  6.69129D-01
+At iterate   62    f=  3.44970D+01    |proj g|=  2.53938D-01
+At iterate   63    f=  3.44970D+01    |proj g|=  1.23929D-01
+At iterate   64    f=  3.44970D+01    |proj g|=  1.30550D-01
+At iterate   65    f=  3.44970D+01    |proj g|=  1.83337D-01
+At iterate   66    f=  3.44970D+01    |proj g|=  2.41130D-01
+At iterate   67    f=  3.44969D+01    |proj g|=  4.69044D-01
+At iterate   68    f=  3.44969D+01    |proj g|=  9.16990D-01
+At iterate   69    f=  3.44969D+01    |proj g|=  3.00021D-01
+At iterate   70    f=  3.44969D+01    |proj g|=  1.25988D-01
+At iterate   71    f=  3.44969D+01    |proj g|=  1.25751D-01
+At iterate   72    f=  3.44969D+01    |proj g|=  1.27434D-01
+At iterate   73    f=  3.44969D+01    |proj g|=  1.59391D-01
+At iterate   74    f=  3.44969D+01    |proj g|=  4.68903D-01
+At iterate   75    f=  3.44968D+01    |proj g|=  5.00280D-01
+At iterate   76    f=  3.44967D+01    |proj g|=  6.57042D-01
+At iterate   77    f=  3.44966D+01    |proj g|=  6.51472D-01
+At iterate   78    f=  3.44966D+01    |proj g|=  4.97988D-01
+At iterate   79    f=  3.44966D+01    |proj g|=  2.66329D-01
+At iterate   80    f=  3.44965D+01    |proj g|=  1.28856D+00
+At iterate   81    f=  3.44964D+01    |proj g|=  9.18336D-01
+At iterate   82    f=  3.44963D+01    |proj g|=  8.53917D-01
+At iterate   83    f=  3.44963D+01    |proj g|=  9.67986D-01
+At iterate   84    f=  3.44962D+01    |proj g|=  7.85016D-01
+At iterate   85    f=  3.44962D+01    |proj g|=  3.34874D-01
+At iterate   86    f=  3.44961D+01    |proj g|=  5.26809D-01
+At iterate   87    f=  3.44959D+01    |proj g|=  1.20702D+00
+At iterate   88    f=  3.44957D+01    |proj g|=  1.48295D+00
+At iterate   89    f=  3.44956D+01    |proj g|=  2.31969D+00
+At iterate   90    f=  3.44955D+01    |proj g|=  1.03357D+00
+At iterate   91    f=  3.44954D+01    |proj g|=  4.95372D-01
+At iterate   92    f=  3.44953D+01    |proj g|=  2.94498D-01
+At iterate   93    f=  3.44952D+01    |proj g|=  5.54764D-01
+At iterate   94    f=  3.44950D+01    |proj g|=  1.65005D+00
+At iterate   95    f=  3.44947D+01    |proj g|=  1.86764D+00
+At iterate   96    f=  3.44945D+01    |proj g|=  1.41542D+00
+At iterate   97    f=  3.44943D+01    |proj g|=  1.77944D+00
+At iterate   98    f=  3.44940D+01    |proj g|=  1.60097D+00
+At iterate   99    f=  3.44937D+01    |proj g|=  1.89035D+00
+At iterate  100    f=  3.44934D+01    |proj g|=  3.63498D+00
+At iterate  101    f=  3.44924D+01    |proj g|=  2.60966D+00
+At iterate  102    f=  3.44914D+01    |proj g|=  3.98856D+00
+At iterate  103    f=  3.44897D+01    |proj g|=  2.04622D+00
+At iterate  104    f=  3.44883D+01    |proj g|=  2.80474D+00
+At iterate  105    f=  3.44867D+01    |proj g|=  6.39950D+00
+At iterate  106    f=  3.44857D+01    |proj g|=  3.65832D+00
+At iterate  107    f=  3.44844D+01    |proj g|=  3.34922D+00
+At iterate  108    f=  3.44838D+01    |proj g|=  2.32036D+00
+At iterate  109    f=  3.44834D+01    |proj g|=  2.71561D+00
+At iterate  110    f=  3.44830D+01    |proj g|=  5.99859D-01
+At iterate  111    f=  3.44829D+01    |proj g|=  6.91099D-01
+At iterate  112    f=  3.44829D+01    |proj g|=  4.95619D-01
+At iterate  113    f=  3.44828D+01    |proj g|=  4.55779D-01
+At iterate  114    f=  3.44827D+01    |proj g|=  1.22117D+00
+At iterate  115    f=  3.44827D+01    |proj g|=  7.13207D-01
+At iterate  116    f=  3.44826D+01    |proj g|=  4.91627D-01
+At iterate  117    f=  3.44826D+01    |proj g|=  3.71920D-01
+At iterate  118    f=  3.44825D+01    |proj g|=  5.53858D-01
+At iterate  119    f=  3.44823D+01    |proj g|=  6.68056D-01
+At iterate  120    f=  3.44822D+01    |proj g|=  1.38770D+00
+At iterate  121    f=  3.44819D+01    |proj g|=  1.83328D+00
+At iterate  122    f=  3.44815D+01    |proj g|=  1.54450D+00
+At iterate  123    f=  3.44814D+01    |proj g|=  1.08133D+00
+At iterate  124    f=  3.44813D+01    |proj g|=  1.55351D+00
+At iterate  125    f=  3.44812D+01    |proj g|=  1.44768D+00
+At iterate  126    f=  3.44811D+01    |proj g|=  1.06743D+00
+At iterate  127    f=  3.44810D+01    |proj g|=  7.76284D-01
+At iterate  128    f=  3.44809D+01    |proj g|=  6.52153D-01
+At iterate  129    f=  3.44808D+01    |proj g|=  1.92119D+00
+At iterate  130    f=  3.44806D+01    |proj g|=  1.63446D+00
+At iterate  131    f=  3.44802D+01    |proj g|=  8.79267D-01
+At iterate  132    f=  3.44801D+01    |proj g|=  1.24374D+00
+At iterate  133    f=  3.44799D+01    |proj g|=  5.50919D-01
+At iterate  134    f=  3.44798D+01    |proj g|=  9.95018D-01
+At iterate  135    f=  3.44797D+01    |proj g|=  1.74104D+00
+At iterate  136    f=  3.44796D+01    |proj g|=  1.18008D+00
+At iterate  137    f=  3.44794D+01    |proj g|=  1.31362D+00
+At iterate  138    f=  3.44792D+01    |proj g|=  1.18303D+00
+At iterate  139    f=  3.44791D+01    |proj g|=  7.91487D-01
+At iterate  140    f=  3.44790D+01    |proj g|=  1.98747D+00
+At iterate  141    f=  3.44789D+01    |proj g|=  1.17595D+00
+At iterate  142    f=  3.44788D+01    |proj g|=  7.61937D-01
+At iterate  143    f=  3.44786D+01    |proj g|=  1.17337D+00
+At iterate  144    f=  3.44785D+01    |proj g|=  1.58820D+00
+At iterate  145    f=  3.44784D+01    |proj g|=  9.32076D-01
+At iterate  146    f=  3.44783D+01    |proj g|=  1.47865D+00
+At iterate  147    f=  3.44781D+01    |proj g|=  1.32895D+00
+At iterate  148    f=  3.44780D+01    |proj g|=  7.59791D-01
+At iterate  149    f=  3.44779D+01    |proj g|=  9.95157D-01
+At iterate  150    f=  3.44778D+01    |proj g|=  1.53779D+00
+           * * *
+Tit   = total number of iterations
+Tnf   = total number of function evaluations
+Tnint = total number of segments explored during Cauchy searches
+Skip  = number of BFGS updates skipped
+Nact  = number of active bounds at final generalized Cauchy point
+Projg = norm of the final projected gradient
+F     = final function value
+           * * *
+   N    Tit     Tnf  Tnint  Skip  Nact     Projg        F
+  156    150    176      1     0     0   1.538D+00   3.448D+01
+  F =   34.477802871907372     
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT                 
+ Cauchy                time 0.000E+00 seconds.
+ Subspace minimization time 0.000E+00 seconds.
+ Line search           time 0.000E+00 seconds.
+ Total User time 0.000E+00 seconds.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to Liberation Sans ('/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf') with score of 2.050000.
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=sans-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0 to Liberation Sans ('/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf') with score of 2.050000.
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXGeneral:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to STIXGeneral ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXGeneral.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXGeneral:style=italic:variant=normal:weight=normal:stretch=normal:size=10.0 to STIXGeneral ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXGeneralItalic.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXGeneral:style=normal:variant=normal:weight=bold:stretch=normal:size=10.0 to STIXGeneral ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXGeneralBol.ttf') with score of 0.000000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXNonUnicode:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to STIXNonUnicode ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXNonUni.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXNonUnicode:style=italic:variant=normal:weight=normal:stretch=normal:size=10.0 to STIXNonUnicode ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXNonUniIta.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXNonUnicode:style=normal:variant=normal:weight=bold:stretch=normal:size=10.0 to STIXNonUnicode ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXNonUniBol.ttf') with score of 0.000000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXSizeOneSym:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to STIXSizeOneSym ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXSizOneSymReg.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXSizeTwoSym:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to STIXSizeTwoSym ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXSizTwoSymReg.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXSizeThreeSym:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to STIXSizeThreeSym ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXSizThreeSymReg.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXSizeFourSym:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to STIXSizeFourSym ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXSizFourSymReg.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=STIXSizeFiveSym:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to STIXSizeFiveSym ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/STIXSizFiveSymReg.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=cmsy10:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to cmsy10 ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/cmsy10.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=cmr10:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to cmr10 ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/cmr10.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=cmtt10:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to cmtt10 ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/cmtt10.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=cmmi10:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to cmmi10 ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/cmmi10.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=cmb10:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to cmb10 ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/cmb10.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=cmss10:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to cmss10 ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/cmss10.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=cmex10:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to cmex10 ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/cmex10.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=DejaVu Sans:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=DejaVu Sans:style=italic:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans-Oblique.ttf') with score of 0.150000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=DejaVu Sans:style=normal:variant=normal:weight=bold:stretch=normal:size=10.0 to DejaVu Sans ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans-Bold.ttf') with score of 0.000000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=DejaVu Sans Mono:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans Mono ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSansMono.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.font_manager[12825] DEBUG findfont: Matching :family=DejaVu Sans Display:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0 to DejaVu Sans Display ('/home/queensgambit/anaconda3/lib/python3.6/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSansDisplay.ttf') with score of 0.050000.
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:29 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:30 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:30 matplotlib.axes._base[12825] DEBUG update_title_pos
+2019-03-01 21:55:30 root[12825] INFO Starting test run.
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-01 21:55:44 root[12825] INFO reward=495.72352063655853, episode_len=248
+2019-03-01 21:55:45 root[12825] INFO Optimization for GP (output=0) started.
+2019-03-01 21:55:45 root[12825] INFO Optimization with L-BFGS-B started.
+HBox(children=(VBox(children=(IntProgress(value=0, max=1000), HTML(value=''))), Box(children=(HTML(value=''),))))
+2019-03-01 21:56:05 root[12825] INFO Optimizer: 				 L-BFGS-B (Scipy implementation)
+f(x_opt): 				 -8465.447
+Number of function evaluations: 	 113
+Optimization status: 			 Converged
+Time elapsed: 				 0:00:19.333510
+2019-03-01 21:56:05 root[12825] INFO 
+Name : sparse_gp
+Objective : -8465.446827923906
+Number of Parameters : 1208
+Number of Optimization Parameters : 1208
+Updates : True
+Parameters:
+  sparse_gp.               |                   value  |  constraints  |  priors
+  inducing_inputs          |                (200, 6)  |               |        
+  rbf.variance             |    0.002584632546252122  |      +ve      |        
+  rbf.lengthscale          |                    (6,)  |   0.0,300.0   |        
+  Gaussian_noise.variance  |  2.0723121810992805e-10  |  1e-10,0.001  |        
+Length scales: [294.374426 299.912401 299.710489  19.130246 299.99474   28.787563]
+2019-03-01 21:56:05 root[12825] INFO Optimization for GP (output=1) started.
+2019-03-01 21:56:05 root[12825] INFO Optimization with L-BFGS-B started.
+HBox(children=(VBox(children=(IntProgress(value=0, max=1000), HTML(value=''))), Box(children=(HTML(value=''),))))
+2019-03-01 21:56:33 root[12825] INFO Optimizer: 				 L-BFGS-B (Scipy implementation)
+f(x_opt): 				 -8332.733
+Number of function evaluations: 	 162
+Optimization status: 			 Converged
+Time elapsed: 				 0:00:28.013923
+2019-03-01 21:56:33 root[12825] INFO 
+Name : sparse_gp
+Objective : -8332.732600574382
+Number of Parameters : 1208
+Number of Optimization Parameters : 1208
+Updates : True
+Parameters:
+  sparse_gp.               |                   value  |  constraints  |  priors
+  inducing_inputs          |                (200, 6)  |               |        
+  rbf.variance             |       2.670517646644044  |      +ve      |        
+  rbf.lengthscale          |                    (6,)  |   0.0,300.0   |        
+  Gaussian_noise.variance  |  1.8769163065191284e-07  |  1e-10,0.001  |        
+Length scales: [111.856682  55.632068   0.191605  14.583675 128.449639 164.864073]
+2019-03-01 21:56:33 root[12825] INFO Optimization for GP (output=2) started.
+2019-03-01 21:56:33 root[12825] INFO Optimization with L-BFGS-B started.
+HBox(children=(VBox(children=(IntProgress(value=0, max=1000), HTML(value=''))), Box(children=(HTML(value=''),))))
+2019-03-01 21:56:39 root[12825] INFO Optimizer: 				 L-BFGS-B (Scipy implementation)
+f(x_opt): 				 -8425.101
+Number of function evaluations: 	 33
+Optimization status: 			 Converged
+Time elapsed: 				 0:00:05.816525
+2019-03-01 21:56:39 root[12825] INFO 
+Name : sparse_gp
+Objective : -8425.101403273018
+Number of Parameters : 1208
+Number of Optimization Parameters : 1208
+Updates : True
+Parameters:
+  sparse_gp.               |                  value  |  constraints  |  priors
+  inducing_inputs          |               (200, 6)  |               |        
+  rbf.variance             |  0.0005877028624194831  |      +ve      |        
+  rbf.lengthscale          |                   (6,)  |   0.0,300.0   |        
+  Gaussian_noise.variance  |  3.723387062755044e-10  |  1e-10,0.001  |        
+Length scales: [87.304335  0.294327  0.163073  1.845145  9.112737 10.288818]
+2019-03-01 21:56:39 root[12825] INFO Optimization for GP (output=3) started.
+2019-03-01 21:56:39 root[12825] INFO Optimization with L-BFGS-B started.
+HBox(children=(VBox(children=(IntProgress(value=0, max=1000), HTML(value=''))), Box(children=(HTML(value=''),))))
+Process finished with exit code 0
+

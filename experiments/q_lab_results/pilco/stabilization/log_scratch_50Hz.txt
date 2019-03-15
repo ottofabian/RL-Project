@@ -1,0 +1,123 @@
+/home/fabian/anaconda3/envs/RL/bin/python3.6 /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCORunner.py --env-name CartpoleStabRR-v0 --horizon 40 --features 25 --inducing-points 300 --initial-samples 300 --weights 1 1 1 1 1 1 --steps 20 --max-action 5 --weight-dir /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/Q_Lab_Results/cartpolestab_PILCO/continue_training/20190301-reward-529.53504-CartpoleStabRR-v0 --test
+ /home/fabian/anaconda3/envs/RL/lib/python3.6/site-packages/gym/envs/registration.py:14: PkgResourcesDeprecationWarning:Parameters to load are deprecated.  Call .resolve and .require separately.
+2019-03-04 11:05:20 root[1281] INFO Start experiment for CartpoleStabRR-v0 at 03/04/2019, 10h:05m:20s
+2019-03-04 11:05:20 root[1281] INFO Command line parameters:
+2019-03-04 11:05:20 root[1281] INFO --env-name CartpoleStabRR-v0
+2019-03-04 11:05:20 root[1281] INFO --seed 1
+2019-03-04 11:05:20 root[1281] INFO --horizon 40
+2019-03-04 11:05:20 root[1281] INFO --discount 1.0
+2019-03-04 11:05:20 root[1281] INFO --features 25
+2019-03-04 11:05:20 root[1281] INFO --inducing-points 300
+2019-03-04 11:05:20 root[1281] INFO --initial-samples 300
+2019-03-04 11:05:20 root[1281] INFO --max-samples-test-run 300
+2019-03-04 11:05:20 root[1281] INFO --weights [[1. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 0. 1.]]
+2019-03-04 11:05:20 root[1281] INFO --max-action [5.]
+2019-03-04 11:05:20 root[1281] INFO --steps 20
+2019-03-04 11:05:20 root[1281] INFO --horizon-increase 0.25
+2019-03-04 11:05:20 root[1281] INFO --cost-threshold -inf
+2019-03-04 11:05:20 root[1281] INFO --start-state [ 0.  0. -1.  0.  0.]
+2019-03-04 11:05:20 root[1281] INFO --target-state [ 0  0 -1  0  0]
+2019-03-04 11:05:20 root[1281] INFO --start-cov [[0.01 0.   0.   0.   0.  ]
+ [0.   0.01 0.   0.   0.  ]
+ [0.   0.   0.01 0.   0.  ]
+ [0.   0.   0.   0.01 0.  ]
+ [0.   0.   0.   0.   0.01]]
+2019-03-04 11:05:20 root[1281] INFO --weight-dir /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/Q_Lab_Results/cartpolestab_PILCO/continue_training/20190301-reward-529.53504-CartpoleStabRR-v0
+2019-03-04 11:05:20 root[1281] INFO --test True
+2019-03-04 11:05:20 root[1281] INFO --save-log True
+2019-03-04 11:05:20 root[1281] INFO --export-plots False
+2019-03-04 11:05:20 root[1281] INFO --no-render False
+2019-03-04 11:05:20 root[1281] INFO --monitor False
+
+
+Calibrate Cartpole:
+	Go to the Left:			✓
+	Go to the Right:		✓
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:05:41 root[1281] INFO episode reward=704.7809326052666, episode length=353.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:05:45 root[1281] INFO episode reward=2197.103363573551, episode length=1100.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:05:54 root[1281] INFO episode reward=998.6470208764076, episode length=500.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:05:58 root[1281] INFO episode reward=1332.222210407257, episode length=667.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:03 root[1281] INFO episode reward=2063.4567766189575, episode length=1033.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:07 root[1281] INFO episode reward=786.5764601826668, episode length=394.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:12 root[1281] INFO episode reward=2719.13862490654, episode length=1361.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:21 root[1281] INFO episode reward=1794.1144518852234, episode length=898.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:26 root[1281] INFO episode reward=2283.152055680752, episode length=1143.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:34 root[1281] INFO episode reward=2206.5443834662437, episode length=1104.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:38 root[1281] INFO episode reward=1968.2508329749107, episode length=985.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:41 root[1281] INFO episode reward=1494.297437608242, episode length=748.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:45 root[1281] INFO episode reward=1080.6416690349579, episode length=541.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:49 root[1281] INFO episode reward=1718.6495797634125, episode length=860.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:52 root[1281] INFO episode reward=1296.576544225216, episode length=649.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:06:57 root[1281] INFO episode reward=2877.4342461824417, episode length=1440.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:07:00 root[1281] INFO episode reward=1526.119818687439, episode length=764.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:07:03 root[1281] INFO episode reward=1272.8078968524933, episode length=637.0
+	Centering the Cart:		✓
+	Centering the Pole:		✓
+2019-03-04 11:07:07 root[1281] INFO episode reward=1344.8515500426292, episode length=673.0
+	Centering the Cart:		✓
+	Centering the Pole:		Traceback (most recent call last):
+  File "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCORunner.py", line 55, in <module>
+    main()
+  File "/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/PILCORunner.py", line 49, in main
+    evaluate_policy(pilco.policy, pilco.env, max_action=args.max_action, no_render=args.no_render, n_runs=100)
+  File "/home/fabian/SourceCode/Master/3/RL/RL-Project/PILCO/util/util.py", line 23, in evaluate_policy
+    state_prev = env.reset().flatten()
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/common.py", line 134, in reset
+    return self.env.reset()
+  File "/home/fabian/anaconda3/envs/RL/lib/python3.6/site-packages/gym/wrappers/time_limit.py", line 44, in reset
+    return self.env.reset()
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/cartpole/cartpole_rr.py", line 173, in reset
+    self._wait_for_upright_pole(verbose=verbose)
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/cartpole/cartpole_rr.py", line 123, in _wait_for_upright_pole
+    state = self._zero_sim_step()
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/cartpole/base.py", line 57, in _zero_sim_step
+    return self._sim_step([0.0])
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/cartpole/cartpole_rr.py", line 146, in _sim_step
+    pos = self._qsoc.snd_rcv(a)
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/common.py", line 34, in snd_rcv
+    self._soc.send(struct.pack(self._u_fmt, *u))
+KeyboardInterrupt
+
+Process finished with exit code 1
+

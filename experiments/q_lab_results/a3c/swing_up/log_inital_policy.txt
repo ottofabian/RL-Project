@@ -1,0 +1,281 @@
+-------------------------------------------------------------------
+Run 1: Failed after some steps, because of bad gear.
+
+/home/fabian/anaconda3/envs/RL/bin/python3.6 /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/A3CRunner.py --env-name CartpoleSwingRR-v0 --seed 1 --discount 0.99 --rollout-steps 50 --value-loss-weight 0.5 --entropy-loss-weight 0.0001 --max-action 5 --max-episode-length 3000 --max-grad-norm 1 --lr 0.001 --lr-critic 0.01 --optimizer adam --worker 1 --n-envs 1 --tau .99 --path /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar --test
+2019-03-04 10:27:19 root[32011] INFO Start experiment for CartpoleSwingRR-v0 at 03/04/2019, 09h:27m:19s
+2019-03-04 10:27:19 root[32011] INFO Command line parameters:
+2019-03-04 10:27:19 root[32011] INFO --lr 0.001
+2019-03-04 10:27:19 root[32011] INFO --lr-critic 0.01
+2019-03-04 10:27:19 root[32011] INFO --shared-model False
+2019-03-04 10:27:19 root[32011] INFO --value-loss-weight 0.5
+2019-03-04 10:27:19 root[32011] INFO --discount 0.99
+2019-03-04 10:27:19 root[32011] INFO --gae True
+2019-03-04 10:27:19 root[32011] INFO --tau 0.99
+2019-03-04 10:27:19 root[32011] INFO --entropy-loss-weight 0.0001
+2019-03-04 10:27:19 root[32011] INFO --max-grad-norm 1.0
+2019-03-04 10:27:19 root[32011] INFO --seed 1
+2019-03-04 10:27:19 root[32011] INFO --worker 1
+2019-03-04 10:27:19 root[32011] INFO --rollout-steps 50
+2019-03-04 10:27:19 root[32011] INFO --max-episode-length 3000
+2019-03-04 10:27:19 root[32011] INFO --env-name CartpoleSwingRR-v0
+2019-03-04 10:27:19 root[32011] INFO --shared-optimizer True
+2019-03-04 10:27:19 root[32011] INFO --optimizer adam
+2019-03-04 10:27:19 root[32011] INFO --lr-scheduler None
+2019-03-04 10:27:19 root[32011] INFO --test True
+2019-03-04 10:27:19 root[32011] INFO --path /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar
+2019-03-04 10:27:19 root[32011] INFO --log-dir None
+2019-03-04 10:27:19 root[32011] INFO --max-action 5.0
+2019-03-04 10:27:19 root[32011] INFO --normalizer None
+2019-03-04 10:27:19 root[32011] INFO --n-envs 1
+2019-03-04 10:27:19 root[32011] INFO --save-log True
+2019-03-04 10:27:19 root[32011] INFO --log-frequency 100
+2019-03-04 10:27:19 root[32011] INFO --edge-fear False
+2019-03-04 10:27:19 root[32011] INFO --squared-reward False
+2019-03-04 10:27:19 root[32011] INFO --no-render False
+2019-03-04 10:27:19 root[32011] INFO --monitor False
+/home/fabian/anaconda3/envs/RL/lib/python3.6/site-packages/gym/envs/registration.py:14: PkgResourcesDeprecationWarning: Parameters to load are deprecated.  Call .resolve and .require separately.
+  result = entry_point.load(False)
+Sequential(
+  (0): Linear(in_features=5, out_features=100, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=100, out_features=100, bias=True)
+  (3): ReLU()
+  (4): Linear(in_features=100, out_features=1, bias=True)
+)
+Sequential(
+  (0): Linear(in_features=5, out_features=200, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=200, out_features=200, bias=True)
+  (3): ReLU()
+)
+Sequential(
+  (0): Linear(in_features=200, out_features=1, bias=True)
+)
+Parameter containing:
+tensor([0.], requires_grad=True)
+=> loading model checkpoint '/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar'
+=> loaded model checkpoint '/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar' (T: 13881240 -- global reward: 4532.753498284313)
+=> loading optimizer checkpoint '/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar'
+=> loaded optimizer checkpoint '/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar' (T: 13881240 -- global reward: 4532.753498284313)
+2019-03-04 10:27:19 root[32015] INFO Test worker started.
+
+
+Calibrate Cartpole:
+	Go to the Left:			✓
+	Go to the Right:		✓
+	Centering the Cart:		✓
+2019-03-04 10:27:30 root[32015] INFO episode reward=151.64301 episode length=859
+	Centering the Cart:		✓
+2019-03-04 10:27:36 root[32015] INFO episode reward=286.40403 episode length=1023
+	Centering the Cart:		✓
+2019-03-04 10:27:38 root[32015] INFO episode reward=227.33467 episode length=1064
+	Centering the Cart:		✓
+2019-03-04 10:27:44 root[32015] INFO episode reward=949.25706 episode length=1691
+	Centering the Cart:		✓
+2019-03-04 10:27:49 root[32015] INFO episode reward=664.38075 episode length=1025
+	Centering the Cart:		✓
+2019-03-04 10:27:55 root[32015] INFO episode reward=660.12926 episode length=1139
+	Centering the Cart:		✓
+2019-03-04 10:28:00 root[32015] INFO episode reward=687.94978 episode length=1055
+	Centering the Cart:		✓
+2019-03-04 10:28:05 root[32015] INFO episode reward=648.04771 episode length=1045
+	Centering the Cart:		✓
+2019-03-04 10:28:12 root[32015] INFO episode reward=1833.21818 episode length=2235
+	Centering the Cart:		✓
+2019-03-04 10:28:19 root[32015] INFO episode reward=1328.85696 episode length=1805
+	Centering the Cart:		✓
+2019-03-04 10:28:24 root[32015] INFO episode reward=614.00251 episode length=1007
+	Centering the Cart:		✓
+2019-03-04 10:28:33 root[32015] INFO episode reward=3679.80414 episode length=3000
+	Centering the Cart:		✓
+2019-03-04 10:28:36 root[32015] INFO episode reward=1218.86598 episode length=1167
+	Centering the Cart:		❌
+Process Process-1:
+Traceback (most recent call last):
+  File "/home/fabian/anaconda3/envs/RL/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/fabian/anaconda3/envs/RL/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/fabian/SourceCode/Master/3/RL/RL-Project/A3C/train_test.py", line 134, in test
+    state = env.reset()
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/common.py", line 134, in reset
+    return self.env.reset()
+  File "/home/fabian/anaconda3/envs/RL/lib/python3.6/site-packages/gym/wrappers/time_limit.py", line 44, in reset
+    return self.env.reset()
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/cartpole/cartpole_rr.py", line 169, in reset
+    self._center_cart(verbose=verbose)
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/cartpole/cartpole_rr.py", line 104, in _center_cart
+    raise RuntimeError("Centering of the cart failed. |x| = {0:.2f} > {1:.2f}".format(np.abs(state[0]), self.c_lim))
+RuntimeError: Centering of the cart failed. |x| = 0.43 > 0.07
+
+Process finished with exit code 02019-03-04 10:33:53,922 Start experiment for CartpoleSwingRR-v0 at 03/04/2019, 09h:33m:53s
+
+-----------------------------------------------------------------------------------------
+Run 2: Full run, last 3 might not be valid, because human interference
+
+2019-03-04 10:33:53,923 Command line parameters:
+2019-03-04 10:33:53,923 --lr 0.001
+2019-03-04 10:33:53,923 --lr-critic 0.01
+2019-03-04 10:33:53,923 --shared-model False
+2019-03-04 10:33:53,923 --value-loss-weight 0.5
+2019-03-04 10:33:53,923 --discount 0.99
+2019-03-04 10:33:53,924 --gae True
+2019-03-04 10:33:53,924 --tau 0.99
+2019-03-04 10:33:53,924 --entropy-loss-weight 0.0001
+2019-03-04 10:33:53,924 --max-grad-norm 1.0
+2019-03-04 10:33:53,924 --seed 1
+2019-03-04 10:33:53,924 --worker 1
+2019-03-04 10:33:53,924 --rollout-steps 50
+2019-03-04 10:33:53,924 --max-episode-length 3000
+2019-03-04 10:33:53,924 --env-name CartpoleSwingRR-v0
+2019-03-04 10:33:53,924 --shared-optimizer True
+2019-03-04 10:33:53,924 --optimizer adam
+2019-03-04 10:33:53,924 --lr-scheduler None
+2019-03-04 10:33:53,925 --test True
+2019-03-04 10:33:53,925 --path /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar
+2019-03-04 10:33:53,925 --log-dir None
+2019-03-04 10:33:53,925 --max-action 5.0
+2019-03-04 10:33:53,925 --normalizer None
+2019-03-04 10:33:53,925 --n-envs 1
+2019-03-04 10:33:53,925 --save-log True
+2019-03-04 10:33:53,925 --log-frequency 100
+2019-03-04 10:33:53,925 --edge-fear False
+2019-03-04 10:33:53,925 --squared-reward False
+2019-03-04 10:33:53,925 --no-render False
+2019-03-04 10:33:53,925 --monitor False
+2019-03-04 10:33:54,045 Test worker started.
+2019-03-04 10:34:05,253 episode reward=4.11570 episode length=577
+2019-03-04 10:34:11,796 episode reward=1625.08143 episode length=2330
+2019-03-04 10:34:20,008 episode reward=2634.68736 episode length=3000
+2019-03-04 10:34:24,240 episode reward=1775.66377 episode length=1934
+2019-03-04 10:34:31,692 episode reward=2004.46251 episode length=2348
+2019-03-04 10:34:37,386 episode reward=549.71827 episode length=976
+2019-03-04 10:34:39,696 episode reward=371.90397 episode length=761
+2019-03-04 10:34:44,465 episode reward=686.91359 episode length=1043
+2019-03-04 10:34:50,864 episode reward=1586.43075 episode length=1863
+2019-03-04 10:34:59,550 episode reward=2345.78632 episode length=3000
+2019-03-04 10:35:03,699 episode reward=1198.97377 episode length=1352
+2019-03-04 10:35:08,512 episode reward=403.07799 episode length=997
+2019-03-04 10:35:13,076 episode reward=592.04570 episode length=894
+2019-03-04 10:35:18,025 episode reward=833.33540 episode length=1052
+2019-03-04 10:35:24,052 episode reward=1154.50217 episode length=1354
+2019-03-04 10:35:29,058 episode reward=836.80927 episode length=1116
+2019-03-04 10:35:34,415 episode reward=2023.61295 episode length=1198
+2019-03-04 10:35:39,057 episode reward=1491.77336 episode length=908
+2019-03-04 10:35:44,171 episode reward=1465.70245 episode length=904
+2019-03-04 10:35:49,856 episode reward=474.12888 episode length=1156
+2019-03-04 10:35:53,367 Time: 00h 01m 48s, T=13881240 -- n_runs=20 -- mean total reward=1202.93628  +/- 711.18320 -- mean episode length=1438.15000 +/- 705.68904 -- global reward=4532.75350
+
+--------------------------------
+Run 3: Aborted because cartpole failed again, did not move all of the sudden
+
+/home/fabian/anaconda3/envs/RL/bin/python3.6 /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/A3CRunner.py --env-name CartpoleSwingRR-v0 --seed 1 --discount 0.99 --rollout-steps 50 --value-loss-weight 0.5 --entropy-loss-weight 0.0001 --max-action 5 --max-episode-length 3000 --max-grad-norm 1 --lr 0.001 --lr-critic 0.01 --optimizer adam --worker 1 --n-envs 1 --tau .99 --path /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar --test
+2019-03-04 10:36:15 root[32504] INFO Start experiment for CartpoleSwingRR-v0 at 03/04/2019, 09h:36m:15s
+2019-03-04 10:36:15 root[32504] INFO Command line parameters:
+2019-03-04 10:36:15 root[32504] INFO --lr 0.001
+2019-03-04 10:36:15 root[32504] INFO --lr-critic 0.01
+2019-03-04 10:36:15 root[32504] INFO --shared-model False
+2019-03-04 10:36:15 root[32504] INFO --value-loss-weight 0.5
+2019-03-04 10:36:15 root[32504] INFO --discount 0.99
+2019-03-04 10:36:15 root[32504] INFO --gae True
+2019-03-04 10:36:15 root[32504] INFO --tau 0.99
+2019-03-04 10:36:15 root[32504] INFO --entropy-loss-weight 0.0001
+2019-03-04 10:36:15 root[32504] INFO --max-grad-norm 1.0
+2019-03-04 10:36:15 root[32504] INFO --seed 1
+2019-03-04 10:36:15 root[32504] INFO --worker 1
+2019-03-04 10:36:15 root[32504] INFO --rollout-steps 50
+2019-03-04 10:36:15 root[32504] INFO --max-episode-length 3000
+2019-03-04 10:36:15 root[32504] INFO --env-name CartpoleSwingRR-v0
+2019-03-04 10:36:15 root[32504] INFO --shared-optimizer True
+2019-03-04 10:36:15 root[32504] INFO --optimizer adam
+2019-03-04 10:36:15 root[32504] INFO --lr-scheduler None
+2019-03-04 10:36:15 root[32504] INFO --test True
+2019-03-04 10:36:15 root[32504] INFO --path /home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar
+2019-03-04 10:36:15 root[32504] INFO --log-dir None
+2019-03-04 10:36:15 root[32504] INFO --max-action 5.0
+2019-03-04 10:36:15 root[32504] INFO --normalizer None
+2019-03-04 10:36:15 root[32504] INFO --n-envs 1
+2019-03-04 10:36:15 root[32504] INFO --save-log True
+2019-03-04 10:36:15 root[32504] INFO --log-frequency 100
+2019-03-04 10:36:15 root[32504] INFO --edge-fear False
+2019-03-04 10:36:15 root[32504] INFO --squared-reward False
+2019-03-04 10:36:15 root[32504] INFO --no-render False
+2019-03-04 10:36:15 root[32504] INFO --monitor False
+/home/fabian/anaconda3/envs/RL/lib/python3.6/site-packages/gym/envs/registration.py:14: PkgResourcesDeprecationWarning: Parameters to load are deprecated.  Call .resolve and .require separately.
+  result = entry_point.load(False)
+Sequential(
+  (0): Linear(in_features=5, out_features=100, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=100, out_features=100, bias=True)
+  (3): ReLU()
+  (4): Linear(in_features=100, out_features=1, bias=True)
+)
+Sequential(
+  (0): Linear(in_features=5, out_features=200, bias=True)
+  (1): ReLU()
+  (2): Linear(in_features=200, out_features=200, bias=True)
+  (3): ReLU()
+)
+Sequential(
+  (0): Linear(in_features=200, out_features=1, bias=True)
+)
+Parameter containing:
+tensor([0.], requires_grad=True)
+=> loading model checkpoint '/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar'
+=> loaded model checkpoint '/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar' (T: 13881240 -- global reward: 4532.753498284313)
+=> loading optimizer checkpoint '/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar'
+=> loaded optimizer checkpoint '/home/fabian/SourceCode/Master/3/RL/RL-Project/Experiments/best_models/SwingUp/a2c/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar' (T: 13881240 -- global reward: 4532.753498284313)
+2019-03-04 10:36:16 root[32508] INFO Test worker started.
+
+
+Calibrate Cartpole:
+	Go to the Left:			✓
+	Go to the Right:		✓
+	Centering the Cart:		✓
+2019-03-04 10:36:26 root[32508] INFO episode reward=92.36250 episode length=852
+	Centering the Cart:		✓
+2019-03-04 10:36:30 root[32508] INFO episode reward=317.01770 episode length=959
+	Centering the Cart:		✓
+2019-03-04 10:36:36 root[32508] INFO episode reward=369.23783 episode length=978
+	Centering the Cart:		✓
+2019-03-04 10:36:39 root[32508] INFO episode reward=58.69269 episode length=988
+	Centering the Cart:		✓
+2019-03-04 10:36:43 root[32508] INFO episode reward=208.36639 episode length=1056
+	Centering the Cart:		✓
+2019-03-04 10:36:48 root[32508] INFO episode reward=286.11048 episode length=778
+	Centering the Cart:		✓
+2019-03-04 10:36:53 root[32508] INFO episode reward=862.88341 episode length=1514
+	Centering the Cart:		✓
+2019-03-04 10:36:59 root[32508] INFO episode reward=1407.06997 episode length=1816
+	Centering the Cart:		✓
+2019-03-04 10:37:05 root[32508] INFO episode reward=1283.91589 episode length=1339
+	Centering the Cart:		✓
+2019-03-04 10:37:11 root[32508] INFO episode reward=1261.85135 episode length=1937
+	Centering the Cart:		✓
+2019-03-04 10:37:16 root[32508] INFO episode reward=322.85241 episode length=703
+	Centering the Cart:		✓
+2019-03-04 10:37:19 root[32508] INFO episode reward=263.45981 episode length=782
+	Centering the Cart:		✓
+2019-03-04 10:37:28 root[32508] INFO episode reward=2053.30600 episode length=3000
+	Centering the Cart:		✓
+2019-03-04 10:37:34 root[32508] INFO episode reward=277.00166 episode length=947
+	Centering the Cart:		❌
+Process Process-1:
+Traceback (most recent call last):
+  File "/home/fabian/anaconda3/envs/RL/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/fabian/anaconda3/envs/RL/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/fabian/SourceCode/Master/3/RL/RL-Project/A3C/train_test.py", line 134, in test
+    state = env.reset()
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/common.py", line 134, in reset
+    return self.env.reset()
+  File "/home/fabian/anaconda3/envs/RL/lib/python3.6/site-packages/gym/wrappers/time_limit.py", line 44, in reset
+    return self.env.reset()
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/cartpole/cartpole_rr.py", line 169, in reset
+    self._center_cart(verbose=verbose)
+  File "/home/fabian/SourceCode/Master/3/clients/quanser_robots/cartpole/cartpole_rr.py", line 104, in _center_cart
+    raise RuntimeError("Centering of the cart failed. |x| = {0:.2f} > {1:.2f}".format(np.abs(state[0]), self.c_lim))
+RuntimeError: Centering of the cart failed. |x| = 0.19 > 0.07
+
+Process finished with exit code 0
