@@ -372,8 +372,8 @@ def parse_args(args: list) -> argparse.Namespace:
                              'for shared model. (default: 0.5)')
     parser.add_argument('--discount', type=float, default=0.99,
                         help='Discount factor for rewards. (default: 0.99)')
-    parser.add_argument('--gae', default=True, action='store_true',
-                        help='Enable general advantage estimation. (default: True)')
+    parser.add_argument('--no-gae', default=False, action='store_true',
+                        help='Disable general advantage estimation. (default: False)')
     parser.add_argument('--tau', type=float, default=0.99,
                         help='Adjusts the bias-variance tradeoff for GAE. (default: 0.99)')
     parser.add_argument('--entropy-loss-weight', type=float, default=1e-4,
@@ -389,8 +389,8 @@ def parse_args(args: list) -> argparse.Namespace:
                         help='Number of environment for A2C (--worker 1) in one batch. (default: 5)')
     parser.add_argument('--max-episode-length', type=int, default=5000,
                         help='Maximum length of an episode. (default: 5000)')
-    parser.add_argument('--shared-optimizer', default=True, action='store_true',
-                        help='Use optimizer with shared statistics. (default: True)')
+    parser.add_argument('--no-shared-optimizer', default=False, action='store_true',
+                        help='Use optimizer with shared statistics. (default: False)')
     parser.add_argument('--optimizer', type=str, default="adam",
                         help='Type of optimizer, supported: [rmsprop, adam]. (default: adam)')
     parser.add_argument('--lr-scheduler', type=str, default=None,
@@ -407,7 +407,7 @@ def parse_args(args: list) -> argparse.Namespace:
                         help='Weight location for the models to load. (default: None)')
     parser.add_argument('--log-dir', type=str, default=None,
                         help='Directory for monitor logging of each environment. (default: None)')
-    parser.add_argument('--no_log', default=False, action='store_true',
+    parser.add_argument('--no-log', default=False, action='store_true',
                         help='Avoid exporting a log file to the log directory. (default: False)')
     parser.add_argument('--log-frequency', default=100,
                         help='Defines how often a sample is logged to tensorboard to avoid unnecessary bloating. '
@@ -415,12 +415,12 @@ def parse_args(args: list) -> argparse.Namespace:
     parser.add_argument('--edge-fear-threshold', type=float, default=None,
                         help='Threshold when crossed gives negative rewards to avoid suicidal policies. '
                              'This reward shaping is meant for evaluation and not part of the original environment. '
-                             '(default: False)')
+                             '(default: None)')
     parser.add_argument('--squared-reward', default=False, action='store_true',
                         help='Manipulates the reward by squaring it.'
                              'This reward shaping is meant for evaluation and not part of the original environment. '
                              '(default: False)')
-    parser.add_argument('--scale_reward', type=float, default=None,
+    parser.add_argument('--scale-reward', type=float, default=None,
                         help='Multiply reward by specified factor. '
                              'This reward shaping is meant for evaluation and not part of the original environment. '
                              '(default: None)')

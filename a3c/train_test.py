@@ -331,7 +331,7 @@ def train(args, worker_id: int, global_model: Union[ActorNetwork, ActorCriticNet
         for i in reversed(range(args.rollout_steps)):
             # G can be seen essentially as the return over the course of the rollout
             G = rewards[i] + args.discount * terminals[i] * G
-            if args.gae:
+            if not args.no_gae:
                 # Generalized Advantage Estimation
                 td_error = rewards[i] + args.discount * terminals[i] * values[i + 1] - values[i]
                 # terminals here to "reset" advantages to 0, because reset ist called internally in the env
