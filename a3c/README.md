@@ -24,25 +24,9 @@ Training run from scratch:
 python3 my/path/to/a3c_runner.py
 ```
 
-Training run from an existing policy:
+Continue training run from an existing policy:
 ```bash
 python3 my/path/to/a3c_runner.py --path my_model_path
-```
-e.g. load pretrained models in test mode:
-
-### CartpoleStabShort-v0 (500Hz)
-```bash
-python3 a3c_runner.py --env-name CartpoleStabShort-v0 --max-action 5 --test --path experiments/best_models/a3c/stabilization/simulation/model_split_T-53420290_global-7597.67863_test-9999.97380.pth.tar
-```
-
-### CartpoleSwingShort-v0 (500Hz)
-```bash
-python3 a3c_runner.py --env-name CartpoleSwingShort-v0 --max-action 10 --test --path experiments/best_models/a3c/swing_up/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar
-```
-
-### Qube-v0 (500Hz)
-```bash
-python3 a3c_runner.py --env-name Qube-v0 --max-action 5 --test --path experiments/best_models/a3c/qube/model_split_T-164122000_global-3.66047_test-5.51714.pth.tar
 ```
 
 More console arguments (e.g. hyperparameter changes) can be added to the run, for details see
@@ -64,4 +48,21 @@ source activate my_env
 2) Execute the [a3c_runner](../a3c_runner.py) script
 ```bash
 python3 my/path/to/a3c_runner.py --path my_model_path --test
+```
+
+e.g. load pretrained models in test mode:
+
+### CartpoleStabShort-v0 (500Hz)
+```bash
+python3 a3c_runner.py --env-name CartpoleStabShort-v0 --max-action 5 --test --path experiments/best_models/a3c/stabilization/simulation/model_split_T-53420290_global-7597.67863_test-9999.97380.pth.tar
+```
+
+### CartpoleSwingShort-v0 (500Hz)
+```bash
+python3 a3c_runner.py --env-name CartpoleSwingShort-v0 --max-action 10 --test --path experiments/best_models/a3c/swing_up/model_split_T-13881240_global-4532.753498284313_test-19520.67601316739.pth.tar
+```
+
+### Qube-v0 (500Hz)
+```bash
+python3 a3c_runner.py --env-name Qube-v0 --max-action 5 --test --path experiments/best_models/a3c/qube/model_split_T-164122000_global-3.66047_test-5.51714.pth.tar
 ```
