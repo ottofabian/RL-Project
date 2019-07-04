@@ -7,7 +7,7 @@ Supervision: [Jan Peters](https://www.ias.informatik.tu-darmstadt.de/Member/JanP
 
 ## Authors
 - [Johannes Czech](https://github.com/QueensGambit)
-- [Fabian Otto](https://github.com/BoboDance)
+- [Fabian Otto](https://github.com/ottofabian)
 
 ## Algorithms
 - [A3C](a3c/README.md)
