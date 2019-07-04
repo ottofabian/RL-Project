@@ -68,8 +68,8 @@ Log files for all runs will be saved to `./experiments/logs/`.
 Our comprehensive report can be found [here](./Czech_Otto_Lab_Report.pdf)
 ```bibtex
 @software{bobodance_project_2019,  
-	title = {Project Lab Reinforcement Learning, {TU} Darmstadt, {WS}18/19: {BoboDance}/{RL}-Project},  
-	url = {https://github.com/BoboDance/RL-Project},  
+	title = {Project Lab Reinforcement Learning, {TU} Darmstadt, {WS}18/19: {ottofabian}/{RL}-Project},  
+	url = {https://github.com/ottofabian/RL-Project},  
 	shorttitle = {Project Lab Reinforcement Learning, {TU} Darmstadt, {WS}18/19},  
 	author = {{Otto, Fabian and Czech, Johannes}},  
 	urldate = {2019-03-15},  
