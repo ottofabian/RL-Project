@@ -67,7 +67,7 @@ Log files for all runs will be saved to `./experiments/logs/`.
 ## Citation
 Our comprehensive report can be found [here](./Czech_Otto_Lab_Report.pdf)
 ```bibtex
-@software{bobodance_project_2019,  
+@software{otto_czech_2019,  
 	title = {Project Lab Reinforcement Learning, {TU} Darmstadt, {WS}18/19: {ottofabian}/{RL}-Project},  
 	url = {https://github.com/ottofabian/RL-Project},  
 	shorttitle = {Project Lab Reinforcement Learning, {TU} Darmstadt, {WS}18/19},  
